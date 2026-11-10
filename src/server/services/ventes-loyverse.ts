@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { articlesCaisse, lignesShift, shifts, sites, synchrosLoyverse, ventesShift } from "@/db/schema";
 import { estEncadrant, type Acteur } from "../acteur";
@@ -222,8 +222,25 @@ export async function importerVentesShift(
     for (const v of valeurs) totaux.set(v.produitId, (totaux.get(v.produitId) ?? 0) + v.quantite);
 
     await db.transaction(async (tx) => {
+      // Deux imports du même shift peuvent partir en même temps (écran Ventes et récapitulatif, deux
+      // appareils) : le verrou sur le shift les fait passer l'un après l'autre. Sans lui, le second
+      // efface les anciennes lignes mais pas celles que le premier vient d'insérer → doublon de clé.
+      await tx.select({ id: shifts.id }).from(shifts).where(eq(shifts.id, shiftId)).for("update");
       await tx.delete(ventesShift).where(eq(ventesShift.shiftId, shiftId));
-      if (valeurs.length) await tx.insert(ventesShift).values(valeurs);
+      if (valeurs.length) {
+        await tx
+          .insert(ventesShift)
+          .values(valeurs)
+          .onConflictDoUpdate({
+            target: [ventesShift.shiftId, ventesShift.produitId, ventesShift.canalId],
+            set: {
+              quantite: sql`excluded.quantite`,
+              prixUnitaire: sql`excluded.prix_unitaire`,
+              montant: sql`excluded.montant`,
+              source: sql`excluded.source`,
+            },
+          });
+      }
       await tx.update(lignesShift).set({ ventes: 0 }).where(eq(lignesShift.shiftId, shiftId));
       for (const [produitId, total] of totaux) {
         await tx
@@ -251,10 +268,24 @@ export async function importerVentesShift(
   } catch (e) {
     await db
       .insert(synchrosLoyverse)
-      .values({ shiftId, debut, fin, statut: "erreur", erreur: e instanceof Error ? e.message.slice(0, 500) : String(e), utilisateurId: acteur.id })
+      .values({ shiftId, debut, fin, statut: "erreur", erreur: messageErreur(e).slice(0, 500), utilisateurId: acteur.id })
       .catch(() => undefined);
     throw e;
   }
+}
+
+/**
+ * Message lisible d'un échec : pour une requête refusée par la base, la cause réelle (contrainte,
+ * coupure de connexion…) plutôt que le texte de la requête et ses paramètres.
+ */
+export function messageErreur(e: unknown): string {
+  if (!(e instanceof Error)) return String(e);
+  const c = e.cause as { message?: string; code?: string } | undefined;
+  if (c?.message && e.message.startsWith("Failed query")) {
+    const requete = e.message.match(/^Failed query: (\w+(?: into| from)? "?\w+"?)/)?.[1] ?? "requête";
+    return `Erreur base de données (${requete}) : ${c.message}${c.code ? ` [${c.code}]` : ""}`;
+  }
+  return e.message;
 }
 
 export async function derniereSynchro(db: Db, shiftId: string) {

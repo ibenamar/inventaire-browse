@@ -32,6 +32,9 @@ export async function nouvelleConnexion(): Promise<{ db: Db; fermer: () => void 
 
 /** Coupure de connexion (et non erreur SQL) : l'opération peut être retentée sur une connexion neuve. */
 export function estCoupureConnexion(e: unknown): boolean {
-  const m = e instanceof Error ? `${(e as { code?: string }).code ?? ""} ${e.message}` : String(e);
+  if (!(e instanceof Error)) return /CONNECTION_(CLOSED|ENDED|DESTROYED)/.test(String(e));
+  // Drizzle enveloppe l'erreur du pilote : la coupure est dans la cause.
+  const c = e.cause as { code?: string; message?: string } | undefined;
+  const m = `${(e as { code?: string }).code ?? ""} ${e.message} ${c?.code ?? ""} ${c?.message ?? ""}`;
   return /CONNECTION_(CLOSED|ENDED|DESTROYED)|CONNECT_TIMEOUT|ECONNRESET|EPIPE|socket hang up/i.test(m);
 }

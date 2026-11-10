@@ -11,7 +11,7 @@ import { importerArticles, lireExportCsv } from "@/server/services/loyverse";
 import { affecter } from "@/server/services/planning";
 import { cloturerShift, detailShift, ouvrirShift, saisirQuantite } from "@/server/services/shifts";
 import { enregistrerCreneaux, listerCreneaux } from "@/server/services/sites";
-import { agregerRecus, importerVentesShift, type RecuLoyverse } from "@/server/services/ventes-loyverse";
+import { agregerRecus, importerVentesShift, messageErreur, type RecuLoyverse } from "@/server/services/ventes-loyverse";
 
 const COFFEE = "00d876f7-d5e4-4079-8c89-42f435cf5157";
 let db: Db;
@@ -119,6 +119,13 @@ describe("import des ventes d'un shift", () => {
     expect((await db.select().from(synchrosLoyverse)).length).toBe(2);
   });
 
+  it("deux imports simultanés du même shift ne créent pas de doublon", async () => {
+    const { f } = fauxLoyverse(RECUS);
+    const t = new Date("2026-11-16T15:30:00Z");
+    await Promise.all([1, 2, 3].map(() => importerVentesShift(db, shiftId, direction, t, { jeton: "x", fetch: f })));
+    expect((await detailShift(db, shiftId)).lignes.find((l) => l.ref === "P001")!.ventes).toBe(2);
+  });
+
   it("après clôture, seul un encadrant peut réimporter ; les erreurs sont journalisées", async () => {
     const d = await detailShift(db, shiftId);
     for (const l of d.lignes.filter((x) => x.suiviStock)) {
@@ -137,5 +144,14 @@ describe("import des ventes d'un shift", () => {
     const journal = await db.select().from(synchrosLoyverse);
     expect(journal.filter((j) => j.statut === "erreur")).toHaveLength(1);
     expect((await db.select().from(shifts).where(eq(shifts.id, shiftId)))[0].statut).toBe("cloture");
+  });
+});
+
+describe("message d'erreur d'un import", () => {
+  it("donne la cause réelle d'une requête refusée, sans les paramètres", () => {
+    const cause = Object.assign(new Error('duplicate key value violates unique constraint "ventes_shift_pkey"'), { code: "23505" });
+    const e = new Error('Failed query: insert into "ventes_shift" ("shift_id") values ($1)\nparams: abc', { cause });
+    expect(messageErreur(e)).toBe('Erreur base de données (insert into "ventes_shift") : duplicate key value violates unique constraint "ventes_shift_pkey" [23505]');
+    expect(messageErreur(new Error("Loyverse injoignable"))).toBe("Loyverse injoignable");
   });
 });
