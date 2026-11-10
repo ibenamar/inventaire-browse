@@ -1,130 +1,163 @@
 # Feuille de route — Application d'inventaire inter-shifts (Browse)
 
-> Basée sur l'analyse du fichier de suivi existant : voir [ANALYSE.md](ANALYSE.md).
+> Basée sur l'analyse du fichier de suivi existant et les décisions du 10/11/2026 : voir [ANALYSE.md](ANALYSE.md).
 
 ## 1. Objectif
 
 Remplacer le classeur Excel dupliqué chaque jour par une application qui :
 
-1. permet aux équipes de **saisir le stock en quelques minutes** à partir d'une grille de produits illustrés par **leur photo** ;
-2. **enchaîne les shifts** : le stock de clôture d'un shift devient le stock d'ouverture du suivant, et tout écart est attribué au bon shift ;
-3. donne à l'administration une **vision consolidée et historisée** du stock, de ses variations, des écarts et des besoins de réapprovisionnement, par site et par produit.
+1. permet aux équipes de **saisir le stock en quelques minutes**, sur tablette ou téléphone, à partir d'une grille de produits illustrés par **leur photo** ;
+2. **enchaîne les shifts** (jusqu'à 3 par jour : 7h–15h, 15h–20h, 20h–3h/4h) : le stock de clôture d'un shift devient le stock d'ouverture du suivant, et tout écart est attribué au bon shift et à son responsable ;
+3. organise les shifts à l'avance grâce à un **planning prévisionnel** désignant un **responsable d'inventaire** par shift ;
+4. récupère automatiquement les **ventes depuis Loyverse** ;
+5. donne à l'administration une **vision consolidée et historisée** du stock, de ses variations, des pertes, des écarts et des besoins de réapprovisionnement, par site et par produit.
 
 ## 2. Utilisateurs et rôles
 
 | Rôle | Accès |
 |---|---|
-| **Employé** | Ouvrir / clôturer un shift de son site, saisir comptages, entrées, ventes, pertes |
-| **Responsable de site** | + corriger / valider les shifts de son site, voir les rapports de son site |
-| **Administrateur** | + catalogue (produits, photos, prix, coûts), sites, utilisateurs, tous les rapports, exports |
+| **Employé** (1 à 2 par shift) | Rejoindre le shift prévu, saisir comptages, entrées et pertes |
+| **Responsable d'inventaire** (1 par shift, désigné dans le planning) | + ouvrir le shift, valider le comptage et **clôturer** le shift (signature) |
+| **Manager de site** | + préparer le planning de son site, réaffecter un responsable absent, corriger / valider les shifts, rapports du site |
+| **Administrateur** | + catalogue (produits, photos, prix, coûts), sites et créneaux, utilisateurs, connexion Loyverse, tous les rapports, exports |
 
 ## 3. Périmètre fonctionnel
 
-### 3.1 Application de saisie (tablette / smartphone, PWA)
+### 3.1 Planning prévisionnel
 
-- Connexion rapide par **code PIN** individuel, choix du site mémorisé sur l'appareil.
-- **Ouverture de shift** : ouverture pré-remplie depuis la clôture précédente ; recomptage optionnel (ou obligatoire selon le site).
-- **Grille de comptage** : cartes produit avec photo, nom, unité ; saisie par boutons `−` / `+` et pavé numérique ; filtre par catégorie ; recherche ; indicateur « compté / restant ».
-- Saisie des **entrées** (avec origine : labo, fournisseur, transfert), **ventes**, **pertes** (avec motif : casse, périmé, offert, repas staff).
-- **Clôture** : comptage final, récapitulatif des écarts avec alerte sur les écarts anormaux, commentaire, validation.
-- Sauvegarde automatique à chaque saisie ; tolérance aux coupures réseau.
+- Créneaux paramétrables par site (2 ou 3 shifts ; heure de fin de nuit 3h ou 4h).
+- Vue semaine par site : pour chaque créneau, l'équipe (1 à 2 employés) et le **responsable d'inventaire**.
+- Duplication d'une semaine type ; réaffectation en cas d'absence (tracée).
+- Contrôles : shift sans responsable, employé planifié sur deux sites en même temps.
+- Suivi prévu / réalisé : shifts non ouverts, non clôturés ou clôturés en retard.
 
-### 3.2 Interface d'administration (web)
+### 3.2 Application de saisie (téléphone / tablette, PWA mobile-first)
 
-- **Tableau de bord** : CA, écarts (valeur au coût et au prix de vente), produits à réapprovisionner, shifts non clôturés — par site et consolidé.
-- **Évolution du stock** : courbe par produit / site sur une période, détail des mouvements shift par shift.
-- **Rapports d'écarts** : classement des produits et des shifts les plus déficitaires, écarts de passation par équipe.
+- Connexion par **code PIN individuel** ; l'appareil reste attaché à son site.
+- L'écran d'accueil propose le **shift en cours d'après le planning** et affiche son responsable.
+- **Ouverture** : stock pré-rempli depuis la clôture du shift précédent ; recomptage optionnel ou obligatoire selon le site (écart de passation).
+- **Grille de comptage** : cartes produit avec photo, nom et unité (pièce, **part**, bouteille) ; boutons `−` / `+` et pavé numérique ; filtre par catégorie ; recherche ; progression « compté / restant ». Mise en page 2 colonnes sur téléphone, 4 à 5 sur tablette.
+- **Entrées** : réception de production ou de livraison ; pour les cakes, saisie en gâteaux entiers ou en parts (conversion automatique).
+- **Pertes** : quantité + motif **Péremption** ou **Endommagé** + commentaire et photo facultatifs.
+- **Ventes** : importées de Loyverse à la clôture ; affichées en lecture seule ; saisie manuelle si l'import échoue.
+- **Clôture** (par le responsable d'inventaire) : comptage final, récapitulatif des écarts avec alerte sur les écarts anormaux, commentaire, signature.
+- Sauvegarde à chaque saisie ; tolérance aux coupures réseau.
+
+### 3.3 Intégration Loyverse
+
+- Connexion par jeton d'accès API Loyverse (stocké côté serveur).
+- Correspondance **produit ↔ article Loyverse** (par SKU ou identifiant d'article) et **site ↔ magasin Loyverse**.
+- Import des **reçus** de la plage horaire du shift, agrégés par produit, remboursements déduits.
+- Option : import initial des articles et des prix de vente depuis Loyverse.
+- Relance manuelle de l'import et journal des synchronisations.
+
+### 3.4 Interface d'administration (web)
+
+- **Tableau de bord** : CA, pertes (par motif), écarts (valeur au coût et au prix de vente), produits à réapprovisionner, shifts non clôturés — par site et consolidé.
+- **Évolution du stock** : courbe par produit / site sur une période, détail shift par shift.
+- **Rapports d'écarts** : produits et shifts les plus déficitaires, écarts par responsable d'inventaire, écarts de passation.
+- **Rapports de pertes** : péremption vs endommagé, par produit et par site (aide à ajuster la production).
 - **Historique des shifts** : consultation, correction tracée, validation.
-- **Catalogue** : produits, catégories, photos, unité, prix, coût, type (inventorié / vente seule), activation, stock minimum par site.
-- **Sites et utilisateurs**.
-- **Exports** Excel / CSV (format compatible avec le fichier actuel).
+- **Catalogue** : produits, catégories, photos, unité, parts par gâteau, prix, coût, type (inventorié / vente seule), correspondance Loyverse, stock minimum **par site**.
+- **Sites, créneaux, utilisateurs**.
+- **Exports** Excel / CSV.
 
 ## 4. Modèle de données
 
 ```
-Site(id, nom, type[boutique|labo], mode_ouverture[reprise|recomptage], actif)
+Site(id, nom, type[boutique|labo], mode_ouverture[reprise|recomptage],
+     loyverse_store_id, actif)
+Creneau(id, site_id, nom, heure_debut, heure_fin, ordre, actif)     -- ex. 07:00–15:00, 20:00–04:00
 Categorie(id, nom, ordre)
-Produit(id, ref, nom, categorie_id, unite, format, prix_vente, cout, photo_url,
-        suivi_stock[bool], actif, ordre)
+Produit(id, ref, nom, categorie_id, unite[piece|part|bouteille], format,
+        parts_par_gateau, prix_vente, cout, photo_url, suivi_stock[bool],
+        loyverse_item_id, loyverse_sku, actif, ordre)
 ProduitSite(produit_id, site_id, stock_minimum, actif)
 Utilisateur(id, nom, pin_hash, role, sites[])
-Shift(id, site_id, date, creneau, statut[ouvert|cloture|valide],
-      ouvert_par, ouvert_le, cloture_par, cloture_le, valide_par, commentaire,
-      shift_precedent_id)
+Shift(id, site_id, creneau_id, journee, debut_prevu, fin_prevue,   -- journee = date d'exploitation
+      responsable_id, statut[planifie|ouvert|cloture|valide],
+      ouvert_par, ouvert_le, cloture_par, cloture_le, valide_par,
+      commentaire, shift_precedent_id, ventes_importees_le)
+EquipeShift(shift_id, utilisateur_id)                               -- 1 à 2 employés
 LigneShift(shift_id, produit_id, ouverture_theorique, ouverture_comptee,
-           entrees, ventes, pertes, transferts_in, transferts_out,
-           stock_reel_fin)                      -- les calculs sont dérivés
+           entrees, ventes, pertes_peremption, pertes_endommage,
+           transferts_in, transferts_out, stock_reel_fin)           -- calculs dérivés
 Mouvement(id, shift_id, produit_id, type[entree|vente|perte|transfert|ajustement],
-          quantite, motif, origine_site_id, utilisateur_id, horodatage)
+          quantite, motif[peremption|endommage], commentaire, photo_url,
+          origine_site_id, source[manuel|loyverse], utilisateur_id, horodatage)
+SyncLoyverse(id, shift_id, debut, fin, statut, nb_recus, erreur, horodatage)
 JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 ```
-
-Le stock courant d'un site = `stock_reel_fin` du dernier shift clôturé ; l'historique des `LigneShift` alimente directement les courbes d'évolution.
 
 ## 5. Choix techniques proposés
 
 | Besoin | Proposition | Raison |
 |---|---|---|
-| Front saisie + admin | **Next.js (React) + TypeScript**, PWA installable | Une seule base de code, installable sur tablette, mode hors-ligne |
-| Backend / BDD | **Supabase** (PostgreSQL, Auth, Storage) | Base relationnelle adaptée à l'historique, stockage des photos, droits par rôle (RLS) |
-| UI | Tailwind CSS + composants accessibles | Gros boutons tactiles, rapidité de développement |
-| Graphiques | Recharts | Courbes d'évolution du stock |
-| Hors-ligne | File d'attente locale (IndexedDB) + synchronisation | Wi-Fi boutique non garanti |
-| Tests | Vitest (règles de calcul) + Playwright (parcours de saisie) | Les calculs d'écart doivent être fiables |
-| Hébergement | Vercel + Supabase (offre gratuite suffisante au démarrage) | Coût faible, déploiement continu depuis GitHub |
-
-> Alternative possible si vous préférez un hébergement unique : Laravel + MySQL. À trancher à l'étape 0.
+| Front saisie + admin | **Next.js (React) + TypeScript**, PWA installable, mobile-first | Une seule base de code pour téléphone, tablette et admin |
+| Backend / BDD | **Supabase** (PostgreSQL, Auth, Storage, Edge Functions) | Historique relationnel, photos, droits par rôle (RLS), tâches serveur |
+| Loyverse | Fonction serveur appelant l'API Loyverse (reçus, articles, magasins) | Le jeton API ne quitte jamais le serveur |
+| UI | Tailwind CSS, grandes zones tactiles | Saisie rapide au doigt |
+| Graphiques | Recharts | Évolution du stock, pertes, écarts |
+| Hors-ligne | File d'attente locale (IndexedDB) + synchronisation | Wi-Fi boutique non garanti, notamment la nuit |
+| Dates / fuseau | Heure du Maroc (`Africa/Casablanca`) ; journée d'exploitation calculée au serveur | Shift de nuit à cheval sur deux dates |
+| Tests | Vitest (calculs, rattachement des shifts de nuit) + Playwright (parcours) | Fiabilité des écarts |
+| Hébergement | Vercel + Supabase | Coût faible, déploiement continu depuis GitHub |
 
 ## 6. Phases
 
-### Phase 0 — Cadrage et données (préalable)
+### Phase 0 — Cadrage et données
 - [x] Analyse du fichier Excel existant ([ANALYSE.md](ANALYSE.md))
 - [x] Extraction du catalogue ([`data/catalogue.csv`](../data/catalogue.csv))
-- [ ] Réponses aux questions ouvertes (ANALYSE.md §4)
-- [ ] Compléter le catalogue : prix de vente, coût, unité de comptage, type (inventorié / vente seule), stock minimum par site
-- [ ] Collecter une photo par produit (format carré, ≥ 600×600 px)
-- [ ] Valider la pile technique et l'hébergement
-- [ ] Maquettes des 3 écrans clés : grille de comptage, clôture, tableau de bord
+- [x] Décisions : créneaux, cakes à la part, stock minimum par site, planning + responsable, motifs de perte, Loyverse, téléphone / tablette, 1–2 employés
+- [ ] Réponses aux questions restantes ([ANALYSE.md §5](ANALYSE.md))
+- [ ] Liste des sites avec leurs créneaux (2 ou 3 shifts, fin de nuit 3h ou 4h)
+- [ ] Compléter le catalogue : prix, coût, unité, parts par gâteau, type (inventorié / vente seule), stock minimum par site
+- [ ] Collecter une photo par produit (carrée, ≥ 600×600 px) — vérifier si Loyverse en contient déjà
+- [ ] Obtenir un jeton API Loyverse et la liste des magasins / articles (SKU)
+- [ ] Maquettes des 4 écrans clés : planning, grille de comptage, clôture, tableau de bord
 
-**Livrable** : catalogue complet + maquettes validées.
+**Livrable** : catalogue complet, créneaux par site, accès Loyverse, maquettes validées.
 
-### Phase 1 — MVP saisie inter-shifts
+### Phase 1 — MVP saisie inter-shifts et planning
 - [ ] Initialisation du projet, CI, déploiement de recette
-- [ ] Schéma de base de données, import du catalogue CSV, import des photos
-- [ ] Authentification par PIN, rôles, rattachement aux sites
-- [ ] Ouverture de shift avec reprise automatique de la clôture précédente
-- [ ] Grille de comptage avec photos, filtres par catégorie, recherche
-- [ ] Saisie entrées / ventes / pertes (avec motif)
-- [ ] Clôture : comptage final, calcul théorique / écart / valeur, récapitulatif
+- [ ] Schéma de base de données, import du catalogue CSV et des photos
+- [ ] Sites, créneaux, utilisateurs, PIN, rôles
+- [ ] **Planning** : vue semaine, équipe et responsable d'inventaire par shift, duplication de semaine
+- [ ] Ouverture du shift planifié, reprise automatique de la clôture précédente (y compris nuit → matin)
+- [ ] Grille de comptage avec photos (téléphone et tablette)
+- [ ] Entrées (avec conversion gâteau → parts) et pertes (péremption / endommagé)
+- [ ] Ventes en saisie manuelle (en attendant Loyverse)
+- [ ] Clôture par le responsable d'inventaire : théorique, écart, valeur, récapitulatif
 - [ ] Recomptage d'ouverture et écart de passation (option par site)
-- [ ] Tests unitaires des règles de calcul (cas de l'exemple Excel : Mango Can 12 + 6 − 9 − 1 = 8, compté 7 → écart −1)
+- [ ] Tests des règles de calcul et du rattachement des shifts de nuit à la journée d'exploitation
 - [ ] Pilote sur **un site** en parallèle du fichier Excel pendant 1 semaine
 
-**Critère de sortie** : un shift complet saisi en moins de 10 minutes sur tablette ; résultats identiques au fichier Excel sur la semaine pilote.
+**Critère de sortie** : un shift complet saisi en moins de 10 minutes sur téléphone ; résultats identiques au fichier Excel sur la semaine pilote.
 
-### Phase 2 — Administration et suivi du stock
-- [ ] Gestion du catalogue (CRUD, photos, prix, coûts, archivage)
-- [ ] Gestion des sites, des utilisateurs et des stocks minimum par site
+### Phase 2 — Loyverse et administration
+- [ ] Connexion Loyverse, correspondance articles / magasins
+- [ ] Import automatique des ventes à la clôture, saisie manuelle en secours, journal des synchronisations
+- [ ] Gestion du catalogue (CRUD, photos, prix, coûts, archivage, stock minimum par site)
 - [ ] Tableau de bord consolidé et par site
 - [ ] Courbes d'évolution du stock par produit / site
-- [ ] Rapports d'écarts (par produit, par shift, par équipe, écarts de passation)
+- [ ] Rapports d'écarts (produit, shift, responsable, passation) et de pertes (par motif)
 - [ ] Alertes de réapprovisionnement
-- [ ] Correction / validation des shifts par le responsable, journal d'audit
+- [ ] Suivi prévu / réalisé du planning (shifts non ouverts ou non clôturés)
+- [ ] Correction / validation des shifts, journal d'audit
 - [ ] Exports Excel / CSV
 - [ ] Déploiement sur **tous les sites**, arrêt du fichier Excel
 
 ### Phase 3 — Flux et fiabilisation
 - [ ] Transferts labo → boutiques et entre boutiques (envoi / réception rapprochés)
 - [ ] Bon de réapprovisionnement généré à partir des alertes
-- [ ] Import des ventes depuis la caisse / plateformes (CSV, puis API si disponible)
 - [ ] Mode hors-ligne complet avec synchronisation
 - [ ] Contrôles de vraisemblance (quantité inhabituelle, écart > seuil)
-- [ ] Notifications (shift non clôturé, écart important, rupture)
+- [ ] Notifications (shift non clôturé, responsable non désigné, écart important, rupture)
 
 ### Phase 4 — Évolutions
-- [ ] Inventaire des ingrédients pour les produits préparés à la commande (recettes / fiches techniques)
-- [ ] Gestion des DLC / périmés
-- [ ] Prévision des besoins de production par site et par jour de semaine
+- [ ] Inventaire des ingrédients pour les produits préparés à la commande
+- [ ] Suivi des DLC pour anticiper la péremption
+- [ ] Prévision de production par site, jour de semaine et créneau (ventes Loyverse + pertes)
 - [ ] Multilingue (FR / AR / EN)
 
 ## 7. Indicateurs de réussite
@@ -132,17 +165,21 @@ Le stock courant d'un site = `stock_reel_fin` du dernier shift clôturé ; l'his
 | Indicateur | Cible |
 |---|---|
 | Temps de saisie d'un shift complet | < 10 min |
-| Shifts clôturés le jour même | 100 % |
+| Shifts planifiés avec un responsable désigné | 100 % |
+| Shifts clôturés à l'heure prévue | 100 % |
+| Ventes importées automatiquement de Loyverse | > 95 % des shifts |
+| Pertes par péremption | en baisse grâce au suivi par produit |
 | Valeur des écarts non expliqués | en baisse mois après mois |
-| Ruptures sur produits suivis | en baisse grâce aux alertes |
 | Fichiers Excel en circulation | 0 après la phase 2 |
 
 ## 8. Risques
 
 | Risque | Parade |
 |---|---|
-| Catalogue incomplet (prix, coûts, photos) au démarrage | Phase 0 bloquante ; produits sans prix non activables |
+| Catalogue incomplet (prix, coûts, photos) au démarrage | Phase 0 bloquante ; produits sans prix non activables ; import depuis Loyverse si possible |
+| Articles Loyverse sans SKU ou nommés différemment | Écran de correspondance manuelle, produits non associés signalés |
+| Ventes passées après l'heure de clôture (décalage caisse) | Import sur l'heure réelle de clôture ; ventes tardives rattachées au shift suivant et signalées |
+| Shift de nuit à cheval sur deux dates | Notion de journée d'exploitation, tests dédiés |
+| Responsable absent | Réaffectation par le manager, tracée |
 | Adoption par les équipes | Écran tactile très simple, pilote sur un site, formation de 15 min |
 | Réseau instable en boutique | PWA + file d'attente hors-ligne |
-| Erreurs de comptage | Photos, unités claires, contrôles de vraisemblance |
-| Ambiguïté sur les produits à la commande | Décision explicite « inventorié / vente seule » par produit |

@@ -60,9 +60,9 @@ Sites proposés dans la liste déroulante : **2 Mars, Anfa, Hay Hassani, Palmier
 | C7 | Le stock d'ouverture est **recompté à la main** chaque jour, sans lien avec la clôture de la veille | Les pertes entre deux shifts (nuit, passation) sont invisibles | **Logique inter-shifts** : l'ouverture est pré-remplie avec la clôture du shift précédent ; un recomptage d'ouverture fait apparaître un **écart de passation** |
 | C8 | Historique = onglets dupliqués et renommés | Aucune consolidation, pas de courbe d'évolution, risque d'écraser des formules, pas d'audit | Base de données centrale + interface d'administration |
 | C9 | Valeur de l'écart calculée au **prix de vente** | Mesure le manque à gagner, pas la perte réelle | Afficher les deux : valeur au coût (perte réelle) et au prix de vente (manque à gagner) |
-| C10 | « Pertes / offerts » regroupés | Impossible de distinguer casse, périmé, offert client, repas staff | Pertes avec **motif** obligatoire |
+| C10 | « Pertes / offerts » regroupés | Impossible de distinguer les causes | Pertes avec **motif** obligatoire : péremption ou endommagé |
 | C11 | « Entrées » regroupe production et livraisons | Pas de traçabilité de la provenance (labo, fournisseur, autre site) | Entrées avec **origine** ; « Browse Sweets » semble être le laboratoire de production → transferts labo → sites (à confirmer) |
-| C12 | Ventes ressaisies depuis la caisse | Double saisie, erreurs | Saisie manuelle au MVP, **import caisse** (CSV puis API) ensuite |
+| C12 | Ventes ressaisies depuis la caisse (Loyverse) | Double saisie, erreurs | **Import automatique depuis l’API Loyverse**, saisie manuelle en secours |
 | C13 | Aucune photo des produits | Erreurs d'identification lors du comptage | Photo obligatoire par produit, affichée en grille dans l'écran de comptage |
 | C14 | Validation de données uniquement « entier ≥ 0 » | Fautes de frappe (ex. 100 au lieu de 10) non détectées | Contrôle de vraisemblance : alerte si écart > seuil ou quantité très supérieure à l'habitude |
 
@@ -71,11 +71,12 @@ Sites proposés dans la liste déroulante : **2 Mars, Anfa, Hay Hassani, Palmier
 ### 3.1 Cycle de vie d'un shift
 
 ```
- (aucun)  ──ouvrir──▶  OUVERT  ──clôturer (comptage final)──▶  CLÔTURÉ  ──valider (manager)──▶  VALIDÉ (verrouillé)
+ PLANIFIÉ ──ouvrir──▶  OUVERT  ──clôturer (comptage final)──▶  CLÔTURÉ  ──valider (manager)──▶  VALIDÉ (verrouillé)
                          │
                          └─ saisies en cours : entrées, ventes, pertes
 ```
 
+- Un shift est créé à l'avance dans le **planning** (site, date, créneau, équipe, responsable d'inventaire).
 - Un seul shift **ouvert** par site à la fois.
 - Un shift clôturé n'est modifiable que par un manager (avec trace dans le journal d'audit) ; un shift validé est verrouillé.
 
@@ -102,15 +103,36 @@ alerte_réappro        = stock_réel_fin < stock_minimum(site, produit)
 | **Reprise** (par défaut) | L'ouverture = clôture précédente, pas de recomptage | Rapide ; passation de confiance |
 | **Recomptage** | L'équipe entrante recompte ; l'écart de passation est enregistré | Contrôle fort des pertes entre équipes |
 
-## 4. Questions ouvertes (à valider avant le développement)
+## 4. Décisions validées (10/11/2026)
 
-1. **Shifts** : combien de shifts par jour et par site (ex. matin / soir) ? Horaires ?
-2. **Browse Sweets** : est-ce le laboratoire central qui produit et livre les 4 boutiques, ou un 5ᵉ point de vente ?
-3. **Cakes** : vendus entiers, à la part, ou les deux ? Combien de parts par gâteau ?
+| Sujet | Décision | Conséquence pour l'app |
+|---|---|---|
+| **Shifts** | 2 ou 3 shifts par jour selon le site : **7h–15h**, **15h–20h**, **20h–3h/4h** | Créneaux paramétrables par site ; le shift de nuit déborde après minuit et reste rattaché à la **journée d'exploitation** du jour où il commence |
+| **Cakes** | Vendus **à la part** | Unité de comptage = part ; entrée d'un gâteau entier convertie en parts (`parts_par_gateau` par produit) |
+| **Stock minimum** | Paramétrage **par site** | Table `ProduitSite` (déjà prévue) |
+| **Planning** | Planning prévisionnel des shifts avec un **responsable d'inventaire** désigné | Nouveau module Planning ; le responsable d'inventaire signe le comptage du shift |
+| **Pertes** | Deux motifs : **Péremption** et **Endommagé** (impropre à la vente) | Motif obligatoire ; la notion « offerts » du fichier Excel est abandonnée |
+| **Caisse** | **Loyverse** | Import automatique des ventes par l'API Loyverse (reçus), sur la plage horaire du shift |
+| **Matériel** | Tablette **ou** téléphone | Interface mobile-first, responsive, installable (PWA) |
+| **Équipe** | **1 à 2 employés** par shift | Équipe du shift tracée ; PIN individuel pour attribuer chaque saisie |
+
+### 4.1 Règles complémentaires issues des décisions
+
+- **Journée d'exploitation** : un shift appartient à la date de son début. Le shift 20h–4h du 10/11 est rattaché au 10/11, même s'il se termine le 11/11 à 4h.
+- **Enchaînement** : sur un site à 3 shifts, l'ordre est matin → après-midi → nuit → matin du lendemain. La clôture de la nuit alimente l'ouverture du matin suivant ; l'écart de passation éventuel est attribué au shift qui a clôturé.
+- **Responsable d'inventaire** : un par shift, désigné à l'avance dans le planning. Lui seul (ou un manager) peut clôturer le shift. En cas d'absence, le manager réaffecte la responsabilité ; le changement est tracé.
+- **Ventes Loyverse** : les reçus dont l'horodatage est compris entre l'ouverture et la clôture du shift sont agrégés par produit (correspondance produit ↔ article / SKU Loyverse). Les remboursements sont déduits. La saisie manuelle reste possible si l'API est indisponible.
+- **Pertes** : chaque perte = quantité + motif (péremption / endommagé) + commentaire facultatif + photo facultative.
+
+## 5. Questions restant ouvertes
+
+1. **Browse Sweets** : laboratoire central qui livre les 4 boutiques, ou 5ᵉ point de vente ?
+2. **Sites** : lesquels ont 2 shifts, lesquels en ont 3 ? Le shift de nuit finit-il à 3h ou à 4h selon le site ?
+3. **Cakes** : combien de parts par gâteau (même nombre pour tous ?) ; les gâteaux arrivent-ils entiers ou déjà découpés ?
 4. **Produits à la commande** (crêpes, pancakes, waffles, fettuccini) : confirmez-vous qu'ils sont hors inventaire (ventes seules) ?
 5. **P057 à P063** : produits supprimés ou à réintégrer ?
-6. **Prix, coûts, stocks minimum** : qui fournit les valeurs ? Sont-ils identiques sur tous les sites ?
-7. **Caisse** : quel logiciel / quelles plateformes de livraison ? Un export CSV des ventes est-il disponible ?
-8. **Matériel** : saisie sur tablette au comptoir, sur smartphone, ou les deux ? Connexion Wi-Fi fiable en boutique ?
-9. **Utilisateurs** : nombre d'employés par site ; connexion par code PIN partagé ou individuel ?
-10. **Photos** : existe-t-il des visuels produits (site, réseaux sociaux) ou faut-il les prendre ?
+6. **Prix et coûts** : qui les fournit ? Les prix de vente sont-ils déjà dans Loyverse (on pourra alors les importer) ?
+7. **Loyverse** : un seul compte avec plusieurs magasins, ou un compte par site ? Les articles ont-ils un SKU ? L'accès API (jeton) est-il activé ?
+8. **Réseau** : le Wi-Fi est-il fiable en boutique, notamment la nuit ?
+9. **Photos** : visuels existants (Loyverse, site web, réseaux sociaux) ou à prendre ?
+10. **Planning** : qui le prépare (manager de site ou administration) et à quel horizon (semaine, mois) ?
