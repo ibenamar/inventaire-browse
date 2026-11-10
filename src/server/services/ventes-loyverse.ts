@@ -5,6 +5,7 @@ import { estEncadrant, type Acteur } from "../acteur";
 import { tracer } from "../audit";
 import { ErreurMetier, exiger } from "../erreurs";
 import { lireMagasinsLoyverse, URL_API_LOYVERSE } from "./loyverse";
+import { aAccesAuSite } from "./utilisateurs";
 
 /**
  * Import des ventes d'un shift depuis les reçus Loyverse du magasin du site.
@@ -192,6 +193,7 @@ export async function importerVentesShift(
   const f = opts.fetch ?? fetch;
   const [s] = await db.select().from(shifts).where(eq(shifts.id, shiftId));
   exiger(s, "Shift introuvable");
+  exiger(await aAccesAuSite(db, acteur.id, s.siteId), "Vous n'êtes pas rattaché à ce site");
   exiger(s.statut !== "planifie", "Le shift n'est pas encore ouvert");
   exiger(s.statut === "ouvert" || estEncadrant(acteur), "Seul un manager peut réimporter les ventes d'un shift clôturé");
   exiger(s.statut !== "valide", "Ce shift est validé : ses ventes ne peuvent plus être modifiées");

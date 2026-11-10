@@ -741,6 +741,7 @@ export async function forcerCloture(db: Db, shiftId: string, acteur: Acteur, mai
   exiger(estEncadrant(acteur), "Seul un manager peut forcer la clôture");
   exiger(motif.trim().length >= 5, "Indiquer le motif de la clôture forcée");
   const d = await detailShift(db, shiftId);
+  await exigerAcces(db, d.shift, acteur);
   exigerOuvert(d.shift);
   await db.transaction(async (tx) => {
     for (const l of d.lignes) {

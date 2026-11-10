@@ -133,6 +133,8 @@ export async function creerBon(
 export async function expedierBon(db: Db, bonId: string, shiftId: string, acteur: Acteur, maintenant: Date) {
   const { s } = await shiftDeSaisie(db, shiftId, acteur);
   await db.transaction(async (tx) => {
+    // Verrou sur le shift d'expédition : deux expéditions simultanées ne puisent pas deux fois dans le même stock.
+    await tx.select({ id: shifts.id }).from(shifts).where(eq(shifts.id, shiftId)).for("update");
     const b = await lireBon(tx as unknown as Db, bonId, true);
     exiger(b.statut === "prepare", b.statut === "annule" ? "Ce bon est annulé" : "Ce bon a déjà été expédié");
     exiger(b.siteOrigineId === s.siteId, "Ce bon ne part pas de ce site");
@@ -232,6 +234,9 @@ export async function annulerBon(db: Db, bonId: string, acteur: Acteur) {
     }
   }
   await db.transaction(async (tx) => {
+    // Relu sous verrou : une réception simultanée ne peut pas être effacée par l'annulation.
+    const x = await lireBon(tx as unknown as Db, bonId, true);
+    exiger(x.statut === b.statut, "Le bon vient de changer d'état : rechargez la page");
     await tx.delete(mouvements).where(eq(mouvements.bonId, bonId));
     await tx.update(bonsLivraison).set({ statut: "annule" }).where(eq(bonsLivraison.id, bonId));
   });

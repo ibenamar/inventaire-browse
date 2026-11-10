@@ -1,9 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { utilisateurs, type Role } from "@/db/schema";
 import type { Acteur } from "@/server/acteur";
+import { aAccesAuSite } from "@/server/services/utilisateurs";
 import { getDb } from "./db";
 
 const COOKIE_SESSION = "inv_session";
@@ -28,7 +29,9 @@ const optionsCookie = (maxAge: number) => ({
 });
 
 export async function ouvrirSession(acteur: Acteur, siteId: string) {
-  const jeton = await new SignJWT({ site: siteId })
+  const db = await getDb();
+  const [u] = await db.select({ v: utilisateurs.versionSession }).from(utilisateurs).where(eq(utilisateurs.id, acteur.id));
+  const jeton = await new SignJWT({ site: siteId, v: u?.v ?? 0 })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(acteur.id)
     .setIssuedAt()
@@ -40,7 +43,16 @@ export async function ouvrirSession(acteur: Acteur, siteId: string) {
   c.set(COOKIE_SITE, siteId, optionsCookie(365 * 24 * 3600));
 }
 
+/** Déconnexion : le jeton est aussi révoqué côté serveur (une copie du cookie ne sert plus à rien). */
 export async function fermerSession() {
+  const s = await lireSession();
+  if (s) {
+    const db = await getDb();
+    await db
+      .update(utilisateurs)
+      .set({ versionSession: sql`${utilisateurs.versionSession} + 1` })
+      .where(eq(utilisateurs.id, s.acteur.id));
+  }
   (await cookies()).delete(COOKIE_SESSION);
 }
 
@@ -67,6 +79,10 @@ export async function lireSession(): Promise<Session | null> {
     const db = await getDb();
     const [u] = await db.select().from(utilisateurs).where(eq(utilisateurs.id, payload.sub));
     if (!u || !u.actif) return null;
+    // Jeton révoqué (déconnexion, changement de PIN, de rôle ou de sites).
+    if ((payload.v ?? 0) !== u.versionSession) return null;
+    // Rattachement au site toujours valable.
+    if (!(await aAccesAuSite(db, u.id, payload.site))) return null;
     return { acteur: { id: u.id, nom: u.nom, role: u.role }, siteId: payload.site };
   } catch {
     return null;

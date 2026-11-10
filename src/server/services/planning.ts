@@ -191,6 +191,7 @@ export async function affecter(db: Db, a: Affectation, acteur: Acteur): Promise<
 export async function retirerAffectation(db: Db, shiftId: string, acteur: Acteur) {
   const [s] = await db.select().from(shifts).where(eq(shifts.id, shiftId));
   exiger(s, "Shift introuvable");
+  exiger(await aAccesAuSite(db, acteur.id, s.siteId), "Vous n'êtes pas rattaché au site de ce shift");
   exiger(s.statut === "planifie", "Un shift déjà ouvert ne peut pas être retiré du planning");
   await db.delete(shifts).where(eq(shifts.id, shiftId));
   await tracer(db, acteur.id, "retirer", "shift", shiftId, { journee: s.journee, creneau: s.nomCreneau });

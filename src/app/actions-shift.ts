@@ -122,6 +122,8 @@ export async function actionCloturer(shiftId: string, _etat: unknown, form: Form
     revalidatePath("/", "layout");
     redirect(`/shift/${shiftId}/cloture`);
   }
+  // Les ventes viennent d'être réimportées : le récapitulatif se recharge avec les chiffres à jour.
+  revalidatePath(`/shift/${shiftId}`, "layout");
   return r;
 }
 

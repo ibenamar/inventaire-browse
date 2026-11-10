@@ -6,7 +6,9 @@ export type Cellule = string | number | null | undefined;
 
 const cellule = (v: Cellule): string => {
   if (v === null || v === undefined) return "";
-  const t = typeof v === "number" ? (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ",")) : v;
+  // Texte commençant par = + - @ : Excel l'exécuterait comme une formule (injection) — on le neutralise.
+  const t =
+    typeof v === "number" ? (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ",")) : /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
   return /[";\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
 };
 

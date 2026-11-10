@@ -103,9 +103,24 @@ describe("connexion par PIN", () => {
     expect((await authentifier(db, amine.id, "1111", t)).ok).toBe(true);
     for (let i = 0; i < 4; i++) expect((await authentifier(db, amine.id, "0000", t)).ok).toBe(false);
     const r = await authentifier(db, amine.id, "0000", t);
-    expect(r.ok === false && r.message).toContain("bloqué");
+    expect(r.ok === false && r.message).toContain("Trop d'essais. Réessayez dans 5 min");
     expect((await authentifier(db, amine.id, "1111", t)).ok).toBe(false);
     expect((await authentifier(db, amine.id, "1111", at("2026-11-13T08:06:00Z"))).ok).toBe(true);
+  });
+
+  it("des essais envoyés en parallèle ne dépassent pas la limite, et les blocages s'allongent", async () => {
+    const t = at("2026-11-13T09:00:00Z");
+    const essais = await Promise.all(Array.from({ length: 20 }, () => authentifier(db, amine.id, "0000", t)));
+    const verifies = essais.filter((e) => !e.ok && e.message.startsWith("Code incorrect")).length;
+    expect(verifies).toBe(5);
+    // Même le bon code est refusé pendant le blocage.
+    expect((await authentifier(db, amine.id, "1111", t)).ok).toBe(false);
+    // Deuxième série d'échecs : blocage de 10 min.
+    const t2 = at("2026-11-13T09:06:00Z");
+    for (let i = 0; i < 4; i++) await authentifier(db, amine.id, "0000", t2);
+    const r = await authentifier(db, amine.id, "0000", t2);
+    expect(r.ok === false && r.message).toContain("10 min");
+    expect((await authentifier(db, amine.id, "1111", at("2026-11-13T09:17:00Z"))).ok).toBe(true);
   });
 });
 

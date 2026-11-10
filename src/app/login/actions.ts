@@ -13,9 +13,9 @@ export async function connexion(_etat: { erreur?: string } | null, form: FormDat
   const db = await getDb();
   const site = await lireSite(db, siteId).catch(() => null);
   if (!site || site.statut !== "actif") return { erreur: "Site inconnu ou pas encore ouvert" };
+  if (!(await aAccesAuSite(db, utilisateurId, siteId))) return { erreur: "Vous n'êtes pas rattaché à ce site" };
   const r = await authentifier(db, utilisateurId, pin, new Date());
   if (!r.ok) return { erreur: r.message };
-  if (!(await aAccesAuSite(db, utilisateurId, siteId))) return { erreur: "Vous n'êtes pas rattaché à ce site" };
   await ouvrirSession(r.acteur, siteId);
   redirect("/");
 }

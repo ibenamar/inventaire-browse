@@ -206,6 +206,8 @@ export const utilisateurs = pgTable("utilisateurs", {
   role: text("role", { enum: ROLES }).notNull().default("employe"),
   actif: boolean("actif").notNull().default(true),
   echecsPin: integer("echecs_pin").notNull().default(0),
+  /** Incrémentée au changement de PIN, de rôle ou de sites, à la désactivation et à la déconnexion : invalide les sessions ouvertes. */
+  versionSession: integer("version_session").notNull().default(0),
   bloqueJusqua: horodatage("bloque_jusqua"),
   creeLe: horodatage("cree_le").notNull().defaultNow(),
 });

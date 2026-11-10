@@ -50,6 +50,13 @@
       "when": 1794342421663,
       "tag": "0006_evolutions",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794343073068,
+      "tag": "0007_securite_sessions",
+      "breakpoints": true
     }
   ]
 }

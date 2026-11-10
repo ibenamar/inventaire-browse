@@ -128,6 +128,14 @@ export const TAILLE_MAX_PHOTO = 1_500_000;
 
 export async function enregistrerPhoto(db: Db, produitId: string, donnees: Uint8Array, contentType: string, acteur: Acteur) {
   exiger(/^image\/(jpeg|png|webp)$/.test(contentType), "Format d'image non pris en charge (JPEG, PNG ou WebP)");
+  // Le contenu doit être réellement une image du type annoncé (signature du fichier).
+  const debut = (n: number) => Array.from(donnees.slice(0, n));
+  const signatures: Record<string, () => boolean> = {
+    "image/jpeg": () => debut(3).join() === "255,216,255",
+    "image/png": () => debut(8).join() === "137,80,78,71,13,10,26,10",
+    "image/webp": () => String.fromCharCode(...debut(4)) === "RIFF" && String.fromCharCode(...Array.from(donnees.slice(8, 12))) === "WEBP",
+  };
+  exiger(signatures[contentType]?.(), "Le fichier n'est pas une image valide");
   exiger(donnees.byteLength > 0 && donnees.byteLength <= TAILLE_MAX_PHOTO, "Image trop lourde (1,5 Mo maximum)");
   const [p] = await db.select({ photoId: produits.photoId }).from(produits).where(eq(produits.id, produitId));
   exiger(p, "Produit introuvable");
