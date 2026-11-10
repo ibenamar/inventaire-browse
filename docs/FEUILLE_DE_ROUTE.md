@@ -187,30 +187,28 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [x] Exports Excel (CSV français) : détail par shift et produit, synthèse par produit, sur la période et le site du tableau de bord
 - [ ] Déploiement sur les **2 points de vente ouverts**, arrêt du fichier Excel ; activation des 3 autres à leur ouverture
 
-### Phase 3 — Laboratoire : production et livraisons
-- [ ] Site de type laboratoire, rôle équipe labo
-- [ ] Saisie de la production (cakes en gâteaux entiers)
-- [ ] Bons de livraison : préparation, expédition
-- [ ] Réception au point de vente pendant le shift, alimentation automatique des entrées (conversion en parts)
-- [ ] Écarts de livraison, shift labo quotidien avec comptage du stock de produits finis
-- [ ] Rapports production / livraisons / écarts
-- [ ] Transferts entre points de vente (même mécanisme que les livraisons)
+### Phase 3 — Laboratoire : production et livraisons (fait)
+- [x] Site de type laboratoire (connexion, planning, remontées) ; l'équipe labo est rattachée au site
+- [x] Saisie de la production (cakes en gâteaux entiers, stock tenu en parts)
+- [x] Bons de livraison : préparation, expédition (sortie du stock, refusée au-delà du stock disponible)
+- [x] Réception au point de vente par n'importe quel équipier, quantités pré-remplies, alimentation automatique des entrées
+- [x] Écarts de livraison, shift labo quotidien avec comptage des produits finis **et des ingrédients** (décimales)
+- [x] Rapports production / livraisons / écarts / consommation d'ingrédients (onglet Laboratoire)
+- [x] Transferts entre points de vente (même mécanisme que les livraisons)
 
-> Les phases 2 et 3 peuvent être inversées si le suivi du labo est prioritaire.
+### Phase 4 — Fiabilisation (fait, sauf hors-ligne)
+- [x] Bon de réapprovisionnement préparé à partir des alertes (onglet Réappro.)
+- [ ] Mode hors-ligne complet — non fait : Wi-Fi fiable ; la saisie réessaie et prévient en cas de coupure
+- [x] Contrôles de vraisemblance : quantité inhabituelle signalée ; écart important (≥ 3 unités ou 100 MAD) à expliquer pour clôturer ; expédition limitée au stock
+- [x] Alertes sur l'accueil des managers et le tableau de bord (shift non clôturé, remontée manquante, créneau sans responsable, écart important, rupture, livraison en attente, DLC) — sans envoi par e-mail ou message (à prévoir si besoin)
 
-### Phase 4 — Fiabilisation
-- [ ] Bon de réapprovisionnement généré à partir des alertes
-- [ ] Mode hors-ligne complet (optionnel, le Wi-Fi étant fiable)
-- [ ] Contrôles de vraisemblance (quantité inhabituelle, écart > seuil)
-- [ ] Notifications (shift non clôturé, responsable non désigné, écart important, rupture)
-
-### Phase 5 — Évolutions
-- [ ] **Calcul du coût de revient** à partir des fiches techniques (ingrédients × prix d'achat)
-- [ ] **Suivi de la production des préparations** (crêpes, pancakes, waffles, fettuccini…) et rapprochement avec les ventes Loyverse
-- [ ] Inventaire des ingrédients pour les produits préparés à la commande
-- [ ] Suivi des DLC pour anticiper la péremption
-- [ ] Prévision de production **du labo** par point de vente, jour de semaine et créneau (ventes Loyverse + pertes)
-- [ ] Multilingue (FR / AR / EN)
+### Phase 5 — Évolutions (fait, sauf multilingue)
+- [x] **Coût de revient** calculé à partir des fiches techniques (ingrédients × coût en vigueur), applicable en un clic
+- [x] **Préparations à la commande** : consommation théorique d'ingrédients = ventes Loyverse × recette, comparée au comptage
+- [x] Inventaire des ingrédients en point de vente (case « aussi compté dans les points de vente »)
+- [x] Suivi des DLC : stock plus ancien que la durée de conservation signalé (premier entré, premier sorti)
+- [x] Prévision de production **du labo** par point de vente et jour de semaine (ventes + pertes, minimum, stocks, livraisons en route) — pas encore par créneau
+- [ ] Multilingue (FR / AR / EN) — à cadrer : arabe standard ou darija, écrans concernés, relecture par des locuteurs
 
 ## 7. Indicateurs de réussite
 

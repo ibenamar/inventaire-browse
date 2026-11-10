@@ -72,6 +72,15 @@ Grille de produits avec photo. Pour chaque produit : boutons **−** / **+** ou 
 
 ### 6.2 Réceptions
 Ce qui arrive pendant le shift : livraison du laboratoire, boissons du fournisseur, dépannage d'un autre point de vente.
+
+**Livraison du laboratoire avec bon** : quand le labo a expédié un bon, l'étape Réceptions de l'écran du shift affiche « 1 livraison à réceptionner ». **N'importe quel membre de l'équipe** la réceptionne :
+1. Ouvrir le bon (n°, heure d'expédition, liste des produits).
+2. Les quantités sont **pré-remplies avec ce qui a été expédié** (les cakes en parts : « Expédié : 2 gâteaux (16 parts) »). Corriger seulement ce qui manque ou est arrivé abîmé.
+3. En cas d'écart, expliquer dans le commentaire, puis **« Réceptionner »**. Les quantités reçues deviennent les entrées du shift ; l'écart est signalé au labo et au manager.
+
+Un bon ne se réceptionne qu'une fois, même si deux équipiers valident en même temps.
+
+**Autres réceptions** (boissons, livraison sans bon) :
 1. Choisir l'**origine** (et un commentaire, ex. n° de bon).
 2. Saisir les quantités reçues ; pour un cake, choisir **Gâteaux** ou **Parts** (1 gâteau = 8 parts, converti automatiquement).
 3. **« Enregistrer la réception »**.
@@ -94,6 +103,9 @@ La liste des réceptions enregistrées s'affiche dessous ; une erreur se supprim
 Compter **tout le stock réellement présent**, produit par produit. **Saisir 0** pour un produit épuisé (une case vide = « pas encore compté »).
 Le stock théorique **n'est pas affiché** pendant le comptage : on compte ce qu'on voit, sans être influencé.
 
+### 6.6 Transférer vers un autre point de vente
+Lien « Transférer des produits vers un autre point de vente » sous les étapes : choisir le site, saisir les quantités, puis **Préparer** (bon en attente) ou **Expédier** (les produits sortent de votre stock). Le site destinataire le réceptionne comme une livraison du labo. On ne peut pas expédier plus que le stock disponible.
+
 ### Enregistrement des saisies
 - Chaque valeur s'enregistre **toute seule** une demi-seconde après la saisie : pas de bouton « enregistrer » dans les grilles.
 - En haut : « Enregistrement… », puis « Tout est enregistré » ou « Terminé ✓ ».
@@ -101,7 +113,8 @@ Le stock théorique **n'est pas affiché** pendant le comptage : on compte ce qu
 - Fermer ou recharger la page pendant un enregistrement déclenche un **avertissement**.
 
 Contrôles sur les saisies :
-- quantités entières, positives (0 accepté) ;
+- quantités entières, positives (0 accepté) ; décimales (virgule) pour les ingrédients au kg ou au litre ;
+- une quantité inhabituelle (ex. 1 000 pièces, un zéro de trop) est signalée en orange : **vérifier**, sans blocage ;
 - une perte doit avoir un motif et une quantité d'au moins 1 ;
 - les produits « préparés à la commande » (crêpes, pancakes, waffles, fettuccini) ne se comptent pas : seules leurs ventes sont suivies ;
 - plus aucune saisie possible par l'équipe une fois le shift clôturé.
@@ -119,7 +132,7 @@ Le calcul, pour chaque produit :
 > **Théorique** = ouverture + réceptions − ventes − pertes
 > **Écart** = compté − théorique (négatif = il manque des produits : vente non passée en caisse, perte non déclarée, erreur de comptage)
 
-Avant de clôturer, le responsable **vérifie les écarts** et recompte si besoin, puis ajoute un **commentaire de passation** (facultatif) et touche **« Clôturer et signer le shift »**.
+Avant de clôturer, le responsable **vérifie les écarts** et recompte si besoin, puis ajoute un **commentaire de passation** et touche **« Clôturer et signer le shift »**. Le commentaire est **obligatoire en cas d'écart important** (au moins 3 unités sur un produit, ou 100 MAD au total) : le récapitulatif l'annonce et liste les produits concernés.
 
 Contrôles à la clôture :
 - seul le **responsable** du shift (ou un manager) peut clôturer ; les autres voient le récapitulatif en lecture ;
@@ -148,7 +161,50 @@ Chaque shift planifié reçoit un statut, visible par les managers (onglet Remon
 
 Pour chaque responsable d'inventaire : nombre de shifts, taux de remontée à l'heure, valeur des écarts et des pertes de ses shifts — sur la semaine ou le mois.
 
-## 10. Résumé : la journée type
+## 10. Alertes et réapprovisionnement (manager / direction)
+
+**Alertes** : l'accueil des managers et le tableau de bord listent ce qui demande une action :
+
+| Alerte | Signification |
+|---|---|
+| Non clôturé | shift encore ouvert 30 min après sa fin prévue |
+| Remontée manquante | shift planifié jamais ouvert |
+| Sans responsable | créneau d'aujourd'hui ou de demain non planifié |
+| Écart important | dernier shift clôturé avec un écart d'au moins 3 unités ou 100 MAD |
+| Rupture | produit à 0 au dernier comptage alors qu'un minimum est fixé |
+| Livraison en attente | bon expédié depuis plus de 6 h et toujours pas réceptionné |
+| DLC dépassée ? | stock plus ancien que la durée de conservation du produit (à vérifier puis déclarer en perte) |
+
+**Réapprovisionnement** (onglet Réappro.) : produits sous leur stock minimum au dernier comptage, avec la quantité à fournir (déduction faite des bons déjà en route, cakes arrondis au gâteau entier). « Préparer le bon du laboratoire » crée le bon : l'équipe du labo l'ajuste et l'expédie. Les boissons sont listées « à commander au fournisseur ».
+
+## 11. Le laboratoire
+
+Le laboratoire fonctionne comme un point de vente : planning avec un responsable, connexion sur le site « Laboratoire », ouverture, comptages, clôture. Ses étapes :
+
+| Étape | Ce qu'on fait |
+|---|---|
+| **Production** | ce qui sort du four ou de la préparation ; les cakes se saisissent **en gâteaux entiers** (convertis en parts) |
+| **Réceptions** | ingrédients et fournitures reçus des fournisseurs (décimales acceptées : 2,5 kg) |
+| **Livraisons** | bons de livraison vers les points de vente : choisir le site, les quantités, puis **Préparer** ou **Expédier** au départ du livreur |
+| **Pertes** | comme au point de vente |
+| **Comptage** | produits finis (cakes en gâteaux entiers) **et ingrédients** |
+
+Contrôles :
+- on ne peut pas **expédier plus que le stock** : saisir d'abord la production ;
+- un bon préparé s'annule par l'équipe du labo ; un bon expédié non reçu, par un manager seulement (la sortie de stock est retirée) ; un bon reçu ne s'annule plus.
+
+À la clôture, pour un **ingrédient**, la différence entre le théorique et le compté n'est pas un écart mais la **consommation** du shift, valorisée au coût. Si les produits ont une **fiche technique**, la consommation attendue (production × recette) est affichée : « +0,5 vs fiche » signale une surconsommation.
+
+L'onglet **Laboratoire** (managers, direction) présente : la **prévision de production** du jour choisi (moyenne des ventes des 4 mêmes jours de semaine, stock minimum, stocks et livraisons en route), la production par jour, les livraisons par point de vente, les écarts de livraison, la consommation des ingrédients et les pertes du labo.
+
+## 12. Catalogue : ingrédients, fiches techniques, conservation (direction)
+
+- **Ingrédient** : Catalogue › Nouveau produit › « Ingrédient du laboratoire », en kg, litre, pièce, sachet, boîte ou bouteille. Coché « aussi compté dans les points de vente », il est compté dans les points de vente pour suivre les préparations à la commande (crêpes, pancakes…).
+- **Produit fabriqué par le laboratoire** : case sur la fiche produit ; il est compté au labo et livré aux points de vente.
+- **Fiche technique** : ingrédients et quantités pour un gâteau entier (ou une unité). Elle donne le coût de la recette et par part ; « Appliquer comme coût de revient » l'enregistre. Elle sert aussi à calculer la consommation théorique d'ingrédients.
+- **Durée de conservation** (jours) : alimente l'alerte « DLC dépassée ? ».
+
+## 13. Résumé : la journée type
 
 | Moment | Qui | Action |
 |---|---|---|
