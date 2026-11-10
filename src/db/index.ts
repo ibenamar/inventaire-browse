@@ -22,6 +22,44 @@ export async function creerDbPglite(dossier?: string): Promise<Db> {
   return db as unknown as Db;
 }
 
+type Requete = PromiseLike<unknown> & { values(): PromiseLike<unknown> };
+type ClientPg = { unsafe(...a: unknown[]): Requete; begin(...a: unknown[]): PromiseLike<unknown> };
+
+/**
+ * Fait passer les requêtes d'une connexion une à une : chacune n'est envoyée qu'une fois la précédente
+ * terminée (réussie ou non). En production (Cloudflare Workers → pooler Supabase), plusieurs requêtes
+ * simultanées sur une même connexion restaient sans réponse, alors qu'en série elles répondent en
+ * quelques dizaines de millisecondes (diagnostic /api/sante du 10/11/2026). Une transaction occupe la
+ * file jusqu'à sa fin ; ses requêtes passent par sa propre connexion réservée.
+ */
+export function serialiser<C extends object>(client: C): C {
+  let file: Promise<unknown> = Promise.resolve();
+  const enFile = <T>(f: () => PromiseLike<T>): Promise<T> => {
+    const r = file.then(f, f) as Promise<T>;
+    file = r.catch(() => undefined);
+    return r;
+  };
+  return new Proxy(client, {
+    get(cible, prop, recepteur) {
+      const c = cible as unknown as ClientPg;
+      if (prop === "unsafe") {
+        return (...args: unknown[]) => {
+          // Les requêtes postgres.js ne partent qu'au premier « then » : on les crée au moment de leur tour.
+          const lancer = () => c.unsafe(...args);
+          return {
+            values: () => enFile(() => lancer().values()),
+            then: <A, B>(ok?: (v: unknown) => A | PromiseLike<A>, ko?: (e: unknown) => B | PromiseLike<B>) =>
+              enFile(() => lancer()).then(ok, ko),
+          };
+        };
+      }
+      if (prop === "begin") return (...args: unknown[]) => enFile(() => c.begin(...args));
+      const v = Reflect.get(cible, prop, recepteur);
+      return typeof v === "function" ? v.bind(cible) : v;
+    },
+  });
+}
+
 export async function creerConnexionPostgres(url: string): Promise<{ db: Db; fermer: () => void }> {
   const { default: postgres } = await import("postgres");
   const { drizzle } = await import("drizzle-orm/postgres-js");
@@ -32,7 +70,7 @@ export async function creerConnexionPostgres(url: string): Promise<{ db: Db; fer
   // (max_pipeline est une option prise en charge par postgres.js mais absente de ses types.)
   const client = postgres(url, { prepare: false, max: 1, max_pipeline: 1, connect_timeout: 10 } as Parameters<typeof postgres>[1]);
   return {
-    db: drizzle(client, { schema }) as unknown as Db,
+    db: drizzle(serialiser(client), { schema }) as unknown as Db,
     // Fermeture immédiate, sans attendre l'accusé de fermeture du serveur : sur Cloudflare Workers,
     // une tâche encore en attente après la réponse est interrompue (avertissement « waitUntil »).
     fermer: () => {
