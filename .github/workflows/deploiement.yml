@@ -55,6 +55,14 @@ jobs:
             echo "::error::Le jeton n'a pas accès aux Workers du compte indiqué dans CLOUDFLARE_ACCOUNT_ID. Vérifier que ce secret contient l'Account ID (et non le Zone ID de browse.ma) et que le jeton (modèle « Edit Cloudflare Workers ») inclut ce compte. Comptes visibles par le jeton : ${comptes:-aucun}"
             exit 1
           fi
+          # Droit sur l'application elle-même (« Workers Scripts : Edit ») : « introuvable » (10007)
+          # est normal avant le premier déploiement ; une erreur d'accès signale un droit manquant.
+          w=$(api "/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/inventaire-browse/settings")
+          if [ "$(echo "$w" | jq -r '.success')" != "true" ] && ! echo "$w" | jq -e '.errors[]? | select(.code == 10007)' > /dev/null; then
+            echo "Réponse Cloudflare : $(echo "$w" | jq -c '.errors')"
+            echo "::error::Le jeton ne peut pas gérer l'application inventaire-browse : dans la politique du compte, ajouter « Workers Scripts » en mode Edit."
+            exit 1
+          fi
           z=$(api "/zones?name=browse.ma")
           if [ "$(echo "$z" | jq -r '.result | length')" = "0" ] || [ "$(echo "$z" | jq -r '.success')" != "true" ]; then
             echo "::error::Le jeton n'a pas accès à la zone browse.ma : dans le jeton, ajouter la zone browse.ma (Zone Resources)."
