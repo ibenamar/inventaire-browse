@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { MODES_OUVERTURE, ROLES, STATUTS_SITE, UNITES } from "@/db/schema";
 import type { Journee } from "@/domain/temps";
 import { journeeLocale } from "@/domain/temps";
-import { getDb } from "@/lib/db";
+import { estCoupureConnexion, getDb, nouvelleConnexion } from "@/lib/db";
 import { executer, type Resultat } from "@/lib/resultat";
 import { ErreurMetier, exiger } from "@/server/erreurs";
 import {
@@ -18,7 +18,8 @@ import {
 } from "@/server/services/caisse";
 import { ajouterCout, enregistrerPhoto, modifierProduit } from "@/server/services/catalogue";
 import { CORRESPONDANCES_LOYVERSE } from "@/server/correspondances-loyverse";
-import { importerArticles, lireArticlesLoyverse, lireExportCsv, type RapportImport } from "@/server/services/loyverse";
+import { importerArticles, lireArticlesLoyverse, lireExportCsv, type RapportImport, type VarianteAplatie } from "@/server/services/loyverse";
+import type { Acteur } from "@/server/acteur";
 import { affecter, dupliquerPeriode, retirerAffectation } from "@/server/services/planning";
 import { enregistrerCreneaux, modifierMagasinSite, modifierSite, type SaisieCreneau } from "@/server/services/sites";
 import { aAccesAuSite, creerUtilisateur, modifierUtilisateur } from "@/server/services/utilisateurs";
@@ -184,7 +185,7 @@ export async function actionImporterLoyverse(): Promise<Resultat<RapportImport>>
     const jeton = process.env.LOYVERSE_TOKEN;
     exiger(jeton, "Jeton Loyverse non configuré (variable LOYVERSE_TOKEN)");
     const articles = await avecDetail(() => lireArticlesLoyverse(jeton));
-    const r = await avecDetail(async () => importerArticles(await getDb(), articles, acteur, CORRESPONDANCES_LOYVERSE));
+    const r = await avecDetail(() => importerAvecReprise(articles, acteur));
     revalidatePath("/admin/catalogue");
     return r;
   });
@@ -251,7 +252,7 @@ export async function actionImporterCsvLoyverse(form: FormData): Promise<Resulta
     exiger(f instanceof Blob && f.size > 0, "Choisir le fichier exporté depuis Loyverse");
     exiger(f.size < 5_000_000, "Fichier trop volumineux");
     const articles = await avecDetail(async () => lireExportCsv(await f.text()));
-    const r = await avecDetail(async () => importerArticles(await getDb(), articles, acteur, CORRESPONDANCES_LOYVERSE));
+    const r = await avecDetail(() => importerAvecReprise(articles, acteur));
     revalidatePath("/admin/loyverse");
     revalidatePath("/admin/catalogue", "layout");
     return r;
@@ -290,6 +291,27 @@ export async function actionChercherArticles(recherche: string): Promise<Resulta
     exiger(r.length >= 2, "Saisir au moins 2 caractères");
     return articlesARattacher(await getDb(), { recherche: r }, 50);
   });
+}
+
+/**
+ * Import sur une connexion neuve, ouverte après la lecture des articles (appel Loyverse de plusieurs
+ * secondes), avec une seconde tentative en cas de coupure : l'import est rejouable sans effet de bord.
+ */
+async function importerAvecReprise(articles: VarianteAplatie[], acteur: Acteur): Promise<RapportImport> {
+  for (let essai = 1; ; essai++) {
+    const { db, fermer } = await nouvelleConnexion();
+    try {
+      return await importerArticles(db, articles, acteur, CORRESPONDANCES_LOYVERSE);
+    } catch (e) {
+      if (essai < 2 && estCoupureConnexion(e)) {
+        console.warn("Import Loyverse : connexion coupée, nouvelle tentative", e);
+        continue;
+      }
+      throw e;
+    } finally {
+      fermer();
+    }
+  }
 }
 
 /** Pour les écrans de la direction : message technique réel plutôt que le message générique. */

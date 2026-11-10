@@ -63,3 +63,12 @@ describe("file d'attente des requêtes d'une connexion", () => {
     expect(c.options).toBe(client.options);
   });
 });
+
+describe("reconnaissance d'une coupure de connexion", () => {
+  it("distingue une coupure (rejouable) d'une erreur SQL", async () => {
+    const { estCoupureConnexion } = await import("@/lib/db");
+    expect(estCoupureConnexion(Object.assign(new Error("write CONNECTION_CLOSED aws-0-eu-central-1.pooler.supabase.com:6543"), { code: "CONNECTION_CLOSED" }))).toBe(true);
+    expect(estCoupureConnexion(new Error("read ECONNRESET"))).toBe(true);
+    expect(estCoupureConnexion(new Error('duplicate key value violates unique constraint "x"'))).toBe(false);
+  });
+});

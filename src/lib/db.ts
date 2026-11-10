@@ -19,3 +19,19 @@ export const getDb = cache(async (): Promise<Db> => {
   }
   return getDbProcessus();
 });
+
+/**
+ * Connexion neuve, dédiée à une opération longue (import), fermée à la fin. Évite d'écrire sur une
+ * connexion restée inactive pendant un appel externe (le pooler peut l'avoir fermée entre-temps).
+ */
+export async function nouvelleConnexion(): Promise<{ db: Db; fermer: () => void }> {
+  const url = process.env.DATABASE_URL;
+  if (url) return creerConnexionPostgres(url);
+  return { db: await getDbProcessus(), fermer: () => undefined };
+}
+
+/** Coupure de connexion (et non erreur SQL) : l'opération peut être retentée sur une connexion neuve. */
+export function estCoupureConnexion(e: unknown): boolean {
+  const m = e instanceof Error ? `${(e as { code?: string }).code ?? ""} ${e.message}` : String(e);
+  return /CONNECTION_(CLOSED|ENDED|DESTROYED)|CONNECT_TIMEOUT|ECONNRESET|EPIPE|socket hang up/i.test(m);
+}
