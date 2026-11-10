@@ -12,6 +12,7 @@ import {
   MOTIFS_PERTE,
   produits,
   produitsSites,
+  recettes,
   shifts,
   sites,
   utilisateurs,
@@ -191,7 +192,7 @@ export async function ouvrirShift(db: Db, shiftId: string, acteur: Acteur, maint
   const [site] = await db.select({ type: sites.type }).from(sites).where(eq(sites.id, s.siteId));
   // Laboratoire : ses ingrédients et les produits qu'il fabrique ; point de vente : les produits.
   const prods = (await db.select().from(produits).where(eq(produits.actif, true))).filter((p) =>
-    site?.type === "laboratoire" ? p.nature === "ingredient" || p.fabriqueLabo : p.nature === "produit",
+    site?.type === "laboratoire" ? p.nature === "ingredient" || p.fabriqueLabo : p.nature === "produit" || p.ingredientPointsDeVente,
   );
   const minimums = new Map(
     (await db.select().from(produitsSites).where(eq(produitsSites.siteId, s.siteId))).map((m) => [m.produitId, m]),
@@ -269,6 +270,8 @@ export interface LigneDetail {
   pertes: number;
   /** Expédié sur des bons de livraison. */
   sorties: number;
+  /** Ingrédients : consommation attendue d'après les fiches techniques (null sans fiche). */
+  consommationTheorique?: number | null;
   pertesPeremption: number;
   pertesEndommage: number;
   stockReelFin: number | null;
@@ -345,6 +348,7 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
     if (m !== null) x.montant = Math.round(((x.montant ?? 0) + m) * 100) / 100;
     parProduit.set(v.produitId, x);
   }
+  const theorique = await consommationTheorique(db, shiftId, rows, ag);
   return rows.map(({ l, ...p }) => {
     const vc = parProduit.get(l.produitId);
     const a = ag.get(`${shiftId}:${l.produitId}`) ?? agregatsVides();
@@ -356,6 +360,7 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
       pertes: a.pertes,
       sorties: a.sorties,
       ingredient: p.nature === "ingredient",
+      consommationTheorique: p.nature === "ingredient" && theorique ? (theorique.get(l.produitId) ?? 0) : null,
       stockReelFin: l.stockReelFin,
       prixVente: l.prixVente,
       cout: l.cout,
@@ -374,6 +379,36 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
       calcul: calculerLigne(entree),
     };
   });
+}
+
+/**
+ * Consommation théorique d'ingrédients du shift, d'après les fiches techniques : au laboratoire,
+ * la production × recette ; en point de vente, les ventes des préparations à la commande × recette.
+ * Null si le shift ne compte aucun ingrédient ou si aucune fiche technique n'existe.
+ */
+async function consommationTheorique(
+  db: Db,
+  shiftId: string,
+  rows: { l: { produitId: string; ventes: number; suiviStock: boolean }; nature: string; partsParGateau: number | null }[],
+  ag: Map<string, Agregats>,
+): Promise<Map<string, number> | null> {
+  if (!rows.some((r) => r.nature === "ingredient")) return null;
+  const rec = await db.select().from(recettes);
+  if (!rec.length) return null;
+  const [sh] = await db.select({ type: sites.type }).from(shifts).innerJoin(sites, eq(sites.id, shifts.siteId)).where(eq(shifts.id, shiftId));
+  const res = new Map<string, number>();
+  for (const r of rows) {
+    if (r.nature !== "produit") continue;
+    // Quantité « faite » pendant le shift, en unités de recette (gâteaux entiers pour les cakes).
+    const faite =
+      sh?.type === "laboratoire" ? (ag.get(`${shiftId}:${r.l.produitId}`)?.production ?? 0) : r.l.suiviStock ? 0 : r.l.ventes;
+    if (!faite) continue;
+    const unites = r.partsParGateau ? faite / r.partsParGateau : faite;
+    for (const x of rec.filter((y) => y.produitId === r.l.produitId)) {
+      res.set(x.ingredientId, arrondiQ((res.get(x.ingredientId) ?? 0) + unites * x.quantite));
+    }
+  }
+  return res;
 }
 
 export interface DetailShift {

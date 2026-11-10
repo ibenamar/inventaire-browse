@@ -1,5 +1,7 @@
 import { Carte, cx, formatMad, Kpi, Message, Pastille, Titre } from "@/components/ui";
-import { formatLocal, libelleJournee } from "@/domain/temps";
+import Link from "next/link";
+import { ajouterJours, estJournee, formatLocal, jourIso, journeeLocale, libelleJournee, NOMS_JOURS } from "@/domain/temps";
+import { previsionProduction, SEMAINES_HISTORIQUE } from "@/server/services/prevision";
 import { formatQuantite, libelleQuantite, UNITE_PLURIEL } from "@/domain/unites";
 import { getDb } from "@/lib/db";
 import { rapportLabo } from "@/server/services/livraisons";
@@ -12,7 +14,11 @@ const jj = (j: string) => `${j.slice(8, 10)}/${j.slice(5, 7)}`;
 const enGateaux = (q: number, p: { unite: string; partsParGateau: number | null }) =>
   p.unite === "part" && p.partsParGateau ? formatQuantite(Math.round((q / p.partsParGateau) * 100) / 100) : formatQuantite(q);
 
-export default async function Laboratoire({ searchParams }: { searchParams: Promise<{ site?: string; vue?: string; date?: string }> }) {
+export default async function Laboratoire({
+  searchParams,
+}: {
+  searchParams: Promise<{ site?: string; vue?: string; date?: string; prevision?: string }>;
+}) {
   const { acteur } = await exigerEncadrant();
   const db = await getDb();
   const sp = await searchParams;
@@ -28,6 +34,10 @@ export default async function Laboratoire({ searchParams }: { searchParams: Prom
       </>
     );
   const r = await rapportLabo(db, labo.id, p.du, p.au);
+  const demain = ajouterJours(journeeLocale(new Date()), 1);
+  const jourPrevision = sp.prevision && estJournee(sp.prevision) ? sp.prevision : demain;
+  const prev = await previsionProduction(db, jourPrevision);
+  const lienPrevision = (j: string) => `?${new URLSearchParams({ ...(sp as Record<string, string>), prevision: j })}`;
   const totalBons = r.livraisons.reduce((t, l) => t + l.bons, 0);
   const bonsEcart = r.livraisons.reduce((t, l) => t + l.avecEcart, 0);
 
@@ -48,6 +58,60 @@ export default async function Laboratoire({ searchParams }: { searchParams: Prom
         <Kpi label="Bons avec écart" valeur={bonsEcart} ton={bonsEcart ? "rouge" : totalBons ? "vert" : undefined} />
         <Kpi label="Ingrédients consommés (coût)" valeur={formatMad(r.valeurConsommation)} />
       </div>
+
+      <Carte className="mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">Prévision de production · {libelleJournee(jourPrevision)}</h2>
+          <div className="flex gap-1 text-sm">
+            <Link href={lienPrevision(ajouterJours(jourPrevision, -1))} scroll={false} className="rounded-lg px-2 py-1 ring-1 ring-stone-300" aria-label="Jour précédent">
+              ‹
+            </Link>
+            <Link href={lienPrevision(ajouterJours(jourPrevision, 1))} scroll={false} className="rounded-lg px-2 py-1 ring-1 ring-stone-300" aria-label="Jour suivant">
+              ›
+            </Link>
+          </div>
+        </div>
+        <p className="mb-2 text-sm text-stone-500">
+          Moyenne des ventes et pertes des {SEMAINES_HISTORIQUE} derniers {NOMS_JOURS[jourIso(jourPrevision)].toLowerCase()}s par point de vente, plus le stock
+          minimum, moins le stock au dernier comptage et ce qui est en route ; moins le stock du labo. Une aide à la décision, à ajuster.
+        </p>
+        {prev.lignes.some((x) => x.aProduire > 0) ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead className="text-xs text-stone-500">
+                <tr>
+                  <th className="py-1 text-left">Produit</th>
+                  {prev.sites.map((n) => (
+                    <th key={n} className="px-1 text-right">
+                      {n}
+                    </th>
+                  ))}
+                  <th className="px-1 text-right">Stock labo</th>
+                  <th className="text-right">À produire</th>
+                </tr>
+              </thead>
+              <tbody>
+                {prev.lignes
+                  .filter((x) => x.aProduire > 0)
+                  .map((x) => (
+                    <tr key={x.produitId} className="border-t border-stone-100">
+                      <td className="py-1.5">{x.produit}</td>
+                      {prev.sites.map((n) => (
+                        <td key={n} className="px-1 text-right tabular-nums" title={x.parSite[n] ? `Besoin ${formatQuantite(x.parSite[n].besoin)}, stock ${formatQuantite(x.parSite[n].stock)}, en route ${formatQuantite(x.parSite[n].enRoute)}` : undefined}>
+                          {x.parSite[n]?.aLivrer ? enGateaux(x.parSite[n].aLivrer, x) : ""}
+                        </td>
+                      ))}
+                      <td className="px-1 text-right tabular-nums">{x.stockLabo ? enGateaux(x.stockLabo, x) : ""}</td>
+                      <td className="text-right font-bold tabular-nums">{libelleQuantite(x.aProduire, x)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-stone-500">Rien à produire d&apos;après l&apos;historique (ou pas encore assez de shifts clôturés).</p>
+        )}
+      </Carte>
 
       <Carte>
         <h2 className="font-semibold">Production par jour</h2>
@@ -176,7 +240,8 @@ export default async function Laboratoire({ searchParams }: { searchParams: Prom
               <thead className="text-xs text-stone-500">
                 <tr>
                   <th className="py-1 text-left">Ingrédient</th>
-                  <th className="text-right">Quantité</th>
+                  <th className="text-right">Réelle</th>
+                  <th className="text-right">Fiche</th>
                   <th className="text-right">Valeur</th>
                 </tr>
               </thead>
@@ -186,6 +251,9 @@ export default async function Laboratoire({ searchParams }: { searchParams: Prom
                     <td className="py-1.5">{c.produit}</td>
                     <td className={cx("text-right whitespace-nowrap tabular-nums", c.quantite < 0 && "text-amber-700")}>
                       {formatQuantite(c.quantite)} {UNITE_PLURIEL[c.unite]}
+                    </td>
+                    <td className={cx("text-right whitespace-nowrap tabular-nums", c.theorique !== null && c.quantite > c.theorique && "font-semibold text-red-700")}>
+                      {c.theorique === null ? "—" : formatQuantite(c.theorique)}
                     </td>
                     <td className="text-right whitespace-nowrap tabular-nums">{c.coutConnu ? formatMad(c.valeur) : <span className="text-stone-400">coût inconnu</span>}</td>
                   </tr>

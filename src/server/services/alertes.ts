@@ -5,6 +5,8 @@ import { creneauxDuJour, intervalleCreneau } from "@/domain/creneaux";
 import { TOLERANCE_CLOTURE_MIN } from "@/domain/remontees";
 import { ajouterJours, formatLocal, heureLocale, journeeLocale, libelleJournee } from "@/domain/temps";
 import { ecartsImportants } from "@/domain/vraisemblance";
+import { libelleQuantite } from "@/domain/unites";
+import { stockPerime } from "./prevision";
 import { lignesCalculees } from "./shifts";
 import { listerCreneaux } from "./sites";
 
@@ -12,7 +14,7 @@ import { listerCreneaux } from "./sites";
  * Alertes d'exploitation pour les encadrants : ce qui demande une action maintenant.
  * Calculées à la demande (pas d'envoi) et affichées sur le tableau de bord et l'accueil.
  */
-export type TypeAlerte = "non_cloture" | "manquant" | "non_planifie" | "ecart" | "rupture" | "livraison_en_attente";
+export type TypeAlerte = "non_cloture" | "manquant" | "non_planifie" | "ecart" | "rupture" | "livraison_en_attente" | "peremption";
 
 export interface Alerte {
   type: TypeAlerte;
@@ -95,6 +97,19 @@ export async function alertesExploitation(db: Db, siteIds: string[], maintenant:
         site: nomsSites.get(siteId)!,
         message: `Rupture au dernier comptage : ${ruptures.map((l) => l.nom).join(", ")}`,
         lien: `/admin/reappro`,
+      });
+  }
+
+  // Stock probablement au-delà de sa durée de conservation (à vérifier, puis à déclarer en perte).
+  for (const siteId of siteIds) {
+    const perimes = await stockPerime(db, siteId, maintenant);
+    if (perimes.length)
+      res.push({
+        type: "peremption",
+        gravite: "haute",
+        site: nomsSites.get(siteId)!,
+        message: `Date limite probablement dépassée : ${perimes.map((p) => `${p.produit} (${libelleQuantite(p.quantite, p)}, conservation ${p.duree} j)`).join(", ")}. Vérifier et déclarer en perte.`,
+        lien: null,
       });
   }
 

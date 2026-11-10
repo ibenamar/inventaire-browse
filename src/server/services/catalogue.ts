@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, lte } from "drizzle-orm";
 import type { Db } from "@/db";
-import { categories, coutsProduit, NATURES_PRODUIT, photos, produits, produitsSites, sites, UNITES, UNITES_DECIMALES } from "@/db/schema";
+import { categories, coutsProduit, NATURES_PRODUIT, photos, produits, produitsSites, recettes, sites, UNITES, UNITES_DECIMALES } from "@/db/schema";
 import { estQuantiteValide } from "@/domain/calculs";
 import type { Journee } from "@/domain/temps";
 import type { Acteur } from "../acteur";
@@ -21,6 +21,8 @@ export interface ProduitVue {
   suiviStock: boolean;
   nature: (typeof NATURES_PRODUIT)[number];
   fabriqueLabo: boolean;
+  ingredientPointsDeVente: boolean;
+  dureeConservationJours: number | null;
   photoId: string | null;
   actif: boolean;
   ordre: number;
@@ -42,6 +44,8 @@ export async function listerProduits(db: Db, opts: { actifsSeulement?: boolean }
       suiviStock: produits.suiviStock,
       nature: produits.nature,
       fabriqueLabo: produits.fabriqueLabo,
+      ingredientPointsDeVente: produits.ingredientPointsDeVente,
+      dureeConservationJours: produits.dureeConservationJours,
       photoId: produits.photoId,
       actif: produits.actif,
       ordre: produits.ordre,
@@ -69,6 +73,9 @@ export interface SaisieProduit {
   suiviStock: boolean;
   /** Fabriqué par le laboratoire (compté au labo, livré aux points de vente). */
   fabriqueLabo?: boolean;
+  /** Ingrédient : aussi compté dans les points de vente (préparations à la commande). */
+  ingredientPointsDeVente?: boolean;
+  dureeConservationJours?: number | null;
   actif: boolean;
 }
 
@@ -81,6 +88,10 @@ export async function modifierProduit(db: Db, id: string, v: SaisieProduit, acte
     "Nombre de parts invalide",
   );
   exiger(v.unite !== "part" || v.partsParGateau, "Indiquer le nombre de parts par gâteau");
+  exiger(
+    v.dureeConservationJours === undefined || v.dureeConservationJours === null || (Number.isInteger(v.dureeConservationJours) && v.dureeConservationJours > 0 && v.dureeConservationJours <= 365),
+    "Durée de conservation invalide (nombre de jours entre 1 et 365)",
+  );
   await db
     .update(produits)
     .set({ ...v, nom: v.nom.trim(), format: v.format?.trim() || null })
@@ -214,4 +225,75 @@ export async function definirStocksMinimum(db: Db, produitId: string, valeurs: {
       .onConflictDoUpdate({ target: [produitsSites.produitId, produitsSites.siteId], set: { stockMinimum: v.stockMinimum } });
   }
   await tracer(db, acteur.id, "stocks_minimum", "produit", produitId, { valeurs });
+}
+
+// ---------------------------------------------------------------------------
+// Fiches techniques et coût de revient calculé
+// ---------------------------------------------------------------------------
+
+export interface LigneRecette {
+  ingredientId: string;
+  ingredient: string;
+  unite: (typeof UNITES)[number];
+  quantite: number;
+  coutUnitaire: number | null;
+  cout: number | null;
+}
+
+/**
+ * Fiche technique d'un produit (pour un gâteau entier si le produit se vend en parts) et son coût :
+ * Σ quantité × coût en vigueur de l'ingrédient. `coutParUnite` est ramené à l'unité de stock (la part).
+ */
+export async function lireRecette(db: Db, produitId: string, journee: Journee) {
+  const [p] = await db.select().from(produits).where(eq(produits.id, produitId));
+  exiger(p, "Produit introuvable");
+  const rows = await db
+    .select({ ingredientId: recettes.ingredientId, ingredient: produits.nom, unite: produits.unite, quantite: recettes.quantite })
+    .from(recettes)
+    .innerJoin(produits, eq(produits.id, recettes.ingredientId))
+    .where(eq(recettes.produitId, produitId))
+    .orderBy(asc(produits.nom));
+  const lignes: LigneRecette[] = [];
+  for (const r of rows) {
+    const c = await coutEnVigueur(db, r.ingredientId, journee);
+    lignes.push({ ...r, coutUnitaire: c, cout: c === null ? null : Math.round(c * r.quantite * 100) / 100 });
+  }
+  const complet = lignes.length > 0 && lignes.every((l) => l.cout !== null);
+  const total = Math.round(lignes.reduce((t, l) => t + (l.cout ?? 0), 0) * 100) / 100;
+  const parGateau = p.unite === "part" && p.partsParGateau ? p.partsParGateau : null;
+  return {
+    lignes,
+    complet,
+    /** Coût de la recette (un gâteau entier, ou une unité). */
+    coutRecette: total,
+    parGateau,
+    coutParUnite: parGateau ? Math.round((total / parGateau) * 100) / 100 : total,
+  };
+}
+
+export async function enregistrerRecette(db: Db, produitId: string, lignes: { ingredientId: string; quantite: number }[], acteur: Acteur) {
+  const [p] = await db.select().from(produits).where(eq(produits.id, produitId));
+  exiger(p, "Produit introuvable");
+  exiger(p.nature === "produit", "Un ingrédient n'a pas de fiche technique");
+  const utiles = lignes.filter((l) => l.quantite !== 0);
+  exiger(new Set(utiles.map((l) => l.ingredientId)).size === utiles.length, "Un ingrédient apparaît deux fois");
+  const ingredients = new Set((await db.select({ id: produits.id }).from(produits).where(eq(produits.nature, "ingredient"))).map((x) => x.id));
+  for (const l of utiles) {
+    exiger(ingredients.has(l.ingredientId), "Ingrédient inconnu");
+    exiger(Number.isFinite(l.quantite) && l.quantite > 0 && l.quantite <= 100000, "Quantité invalide dans la fiche technique");
+  }
+  await db.transaction(async (tx) => {
+    await tx.delete(recettes).where(eq(recettes.produitId, produitId));
+    if (utiles.length) await tx.insert(recettes).values(utiles.map((l) => ({ produitId, ...l })));
+  });
+  await tracer(db, acteur.id, "fiche_technique", "produit", produitId, { lignes: utiles });
+}
+
+/** Enregistre le coût calculé de la fiche technique comme coût de revient en vigueur. */
+export async function appliquerCoutRecette(db: Db, produitId: string, journee: Journee, acteur: Acteur) {
+  const r = await lireRecette(db, produitId, journee);
+  exiger(r.lignes.length, "La fiche technique est vide");
+  exiger(r.complet, "Le coût d'au moins un ingrédient est inconnu : saisissez-le sur sa fiche");
+  await ajouterCout(db, produitId, r.coutParUnite, journee, acteur);
+  return r.coutParUnite;
 }

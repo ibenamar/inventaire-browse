@@ -16,7 +16,7 @@ import {
   retirerArticle,
   type ArticleARattacher,
 } from "@/server/services/caisse";
-import { ajouterCout, creerProduit, definirStocksMinimum, enregistrerPhoto, modifierProduit } from "@/server/services/catalogue";
+import { ajouterCout, appliquerCoutRecette, creerProduit, definirStocksMinimum, enregistrerPhoto, enregistrerRecette, modifierProduit } from "@/server/services/catalogue";
 import { redirect } from "next/navigation";
 import { CORRESPONDANCES_LOYVERSE } from "@/server/correspondances-loyverse";
 import { importerArticles, lireArticlesLoyverse, lireExportCsv, type RapportImport, type VarianteAplatie } from "@/server/services/loyverse";
@@ -151,6 +151,8 @@ export async function actionModifierProduit(id: string, _e: unknown, form: FormD
         prixVente: nombreOuNull(form.get("prixVente")),
         suiviStock: form.get("suiviStock") === "on",
         fabriqueLabo: form.get("fabriqueLabo") === "on",
+        ingredientPointsDeVente: form.get("ingredientPointsDeVente") === "on",
+        dureeConservationJours: nombreOuNull(form.get("dureeConservationJours")),
         actif: form.get("actif") === "on",
       },
       acteur,
@@ -381,4 +383,22 @@ export async function actionPreparerReappro(siteId: string): Promise<Resultat> {
       ? { ok: true as const, message: `Bon n° ${(r.valeur as { numero: number }).numero} préparé au laboratoire : l'équipe du labo l'ajuste et l'expédie.` }
       : r,
   );
+}
+
+export async function actionEnregistrerRecette(produitId: string, lignes: { ingredientId: string; quantite: number }[]): Promise<Resultat> {
+  const r = await executer(async () => {
+    const { acteur } = await exigerDirection();
+    await enregistrerRecette(await getDb(), produitId, lignes, acteur);
+  }, "Fiche technique enregistrée");
+  revalidatePath(`/admin/catalogue/${produitId}`);
+  return r;
+}
+
+export async function actionAppliquerCoutRecette(produitId: string): Promise<Resultat> {
+  const r = await executer(async () => {
+    const { acteur } = await exigerDirection();
+    return appliquerCoutRecette(await getDb(), produitId, journeeLocale(new Date()), acteur);
+  });
+  revalidatePath(`/admin/catalogue/${produitId}`);
+  return r.ok ? { ok: true, message: `Coût de revient mis à jour : ${String(r.valeur).replace(".", ",")} MAD` } : r;
 }

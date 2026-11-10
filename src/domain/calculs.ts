@@ -20,6 +20,8 @@ export interface LigneEntree {
   sorties?: number;
   /** Ingrédient : la différence théorique − compté est une consommation, pas un écart. */
   ingredient?: boolean;
+  /** Ingrédients : consommation attendue d'après les fiches techniques (production ou ventes × recette). */
+  consommationTheorique?: number | null;
   stockReelFin: number | null;
   prixVente: number | null;
   cout: number | null;
@@ -36,6 +38,8 @@ export interface LigneCalculee {
   /** Ingrédients : quantité consommée (théorique − compté) et sa valeur au coût. */
   consommation: number | null;
   valeurConsommation: number | null;
+  /** Consommation réelle − théorique (positif = surconsommation : gaspillage, perte non déclarée…). */
+  ecartConsommation: number | null;
   valeurEcartVente: number | null;
   valeurEcartCout: number | null;
   valeurPertesVente: number | null;
@@ -66,6 +70,10 @@ export function calculerLigne(l: LigneEntree): LigneCalculee {
     ecart,
     consommation,
     valeurConsommation: fois(consommation, l.cout),
+    ecartConsommation:
+      consommation !== null && l.consommationTheorique !== null && l.consommationTheorique !== undefined
+        ? arrondiQ(consommation - l.consommationTheorique)
+        : null,
     valeurEcartVente: fois(ecart, l.prixVente),
     valeurEcartCout: fois(ecart, l.cout),
     valeurPertesVente: fois(l.pertes, l.prixVente),

@@ -9,6 +9,7 @@ const LIBELLES: Record<Alerte["type"], string> = {
   ecart: "Écart important",
   rupture: "Rupture",
   livraison_en_attente: "Livraison en attente",
+  peremption: "DLC dépassée ?",
 };
 
 /** Alertes d'exploitation à traiter, les plus urgentes d'abord. */

@@ -370,7 +370,16 @@ export interface RapportLabo {
   livraisons: { destination: string; bons: number; recus: number; enAttente: number; avecEcart: number }[];
   ecartsLivraison: { bonId: string; numero: number; destination: string; recuLe: Date | null; produit: string; unite: Unite; partsParGateau: number | null; expedie: number; recu: number }[];
   enAttente: BonVue[];
-  consommation: { produitId: string; produit: string; unite: Unite; quantite: number; valeur: number | null; coutConnu: boolean }[];
+  consommation: {
+    produitId: string;
+    produit: string;
+    unite: Unite;
+    quantite: number;
+    /** Consommation attendue d'après les fiches techniques (null sans fiche). */
+    theorique: number | null;
+    valeur: number | null;
+    coutConnu: boolean;
+  }[];
   valeurConsommation: number;
   pertes: { produitId: string; produit: string; unite: Unite; partsParGateau: number | null; quantite: number }[];
   shiftsClos: number;
@@ -448,8 +457,9 @@ export async function rapportLabo(db: Db, siteId: string, du: string, au: string
   for (const s of clos) {
     for (const l of await lignesCalculees(db, s.id)) {
       if (l.calcul.consommation !== null && l.calcul.consommation !== 0) {
-        const x = conso.get(l.produitId) ?? { produitId: l.produitId, produit: l.nom, unite: l.unite, quantite: 0, valeur: 0, coutConnu: true };
+        const x = conso.get(l.produitId) ?? { produitId: l.produitId, produit: l.nom, unite: l.unite, quantite: 0, theorique: null, valeur: 0, coutConnu: true };
         x.quantite = arrondiQ(x.quantite + l.calcul.consommation);
+        if (l.consommationTheorique !== null && l.consommationTheorique !== undefined) x.theorique = arrondiQ((x.theorique ?? 0) + l.consommationTheorique);
         if (l.calcul.valeurConsommation === null) x.coutConnu = false;
         else x.valeur = Math.round(((x.valeur ?? 0) + l.calcul.valeurConsommation) * 100) / 100;
         conso.set(l.produitId, x);

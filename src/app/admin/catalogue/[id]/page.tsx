@@ -5,7 +5,8 @@ import { journeeLocale } from "@/domain/temps";
 import { getDb } from "@/lib/db";
 import { ErreurMetier } from "@/server/erreurs";
 import { listerArticles, listerCanaux } from "@/server/services/caisse";
-import { coutEnVigueur, historiqueCouts, lireProduit, stocksMinimum } from "@/server/services/catalogue";
+import { coutEnVigueur, historiqueCouts, lireProduit, lireRecette, listerProduits, stocksMinimum } from "@/server/services/catalogue";
+import { FicheTechnique } from "./FicheTechnique";
 import { exigerDirection } from "../../acces";
 import { ArticlesCaisse, FormulaireCout, FormulaireProduit, FormulaireStocksMinimum, PrisePhoto } from "./Formulaires";
 
@@ -21,6 +22,8 @@ export default async function Produit({ params }: { params: Promise<{ id: string
   const cout = await coutEnVigueur(db, id, aujourdhui);
   const historique = await historiqueCouts(db, id);
   const [articles, canaux, minimums] = await Promise.all([listerArticles(db, { produitId: id }), listerCanaux(db), stocksMinimum(db, id)]);
+  const recette = p.nature === "produit" ? await lireRecette(db, id, aujourdhui) : null;
+  const ingredients = p.nature === "produit" ? (await listerProduits(db, { actifsSeulement: true })).filter((x) => x.nature === "ingredient") : [];
   return (
     <>
       <Link href="/admin/catalogue" className="text-sm font-semibold text-marque-700">
@@ -63,6 +66,22 @@ export default async function Produit({ params }: { params: Promise<{ id: string
                 En dessous de ce niveau au comptage de clôture, le produit apparaît dans les alertes de réapprovisionnement. Vide = pas d&apos;alerte.
               </p>
               <FormulaireStocksMinimum produitId={p.id} unite={p.unite} minimums={minimums} />
+            </Carte>
+          )}
+          {recette && (
+            <Carte>
+              <h2 className="mb-1 text-lg font-semibold">Fiche technique</h2>
+              <p className="mb-3 text-sm text-stone-600">
+                Ingrédients de la recette : ils donnent le coût de revient calculé et la consommation théorique d&apos;ingrédients (production du
+                labo, ventes des préparations), comparée à la consommation réelle.
+              </p>
+              <FicheTechnique
+                produitId={p.id}
+                ingredients={ingredients.map((x) => ({ id: x.id, nom: x.nom, unite: x.unite }))}
+                lignes={recette.lignes.map((l) => ({ ingredientId: l.ingredientId, quantite: l.quantite }))}
+                pour={recette.parGateau ? `un gâteau entier (${recette.parGateau} parts)` : "une unité"}
+                cout={recette.lignes.length ? { recette: recette.coutRecette, parUnite: recette.coutParUnite, complet: recette.complet, libelleUnite: recette.parGateau ? "part" : "unité" } : null}
+              />
             </Carte>
           )}
           <Carte>

@@ -44,9 +44,18 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
           <input name="format" defaultValue={p.format ?? ""} placeholder="ex. 330 ml" className={classesChamp} />
         </Champ>
       )}
+      <Champ label="Durée de conservation (jours)" aide="Facultatif. Le stock plus ancien que cette durée est signalé aux managers (date limite probablement dépassée).">
+        <input name="dureeConservationJours" inputMode="numeric" defaultValue={p.dureeConservationJours ?? ""} placeholder="—" className={classesChamp} />
+      </Champ>
       <div className="grid content-end gap-2">
         {p.nature === "ingredient" ? (
-          <input type="hidden" name="suiviStock" value="on" />
+          <>
+            <input type="hidden" name="suiviStock" value="on" />
+            <label className="flex items-center gap-2">
+              <input type="checkbox" name="ingredientPointsDeVente" defaultChecked={p.ingredientPointsDeVente} className="size-5" />
+              Aussi compté dans les points de vente (préparations à la commande : crêpes, pancakes…)
+            </label>
+          </>
         ) : (
           <>
             <label className="flex items-center gap-2">

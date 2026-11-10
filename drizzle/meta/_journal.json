@@ -43,6 +43,13 @@
       "when": 1794340535428,
       "tag": "0005_laboratoire",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794342421663,
+      "tag": "0006_evolutions",
+      "breakpoints": true
     }
   ]
 }

@@ -90,6 +90,10 @@ export const produits = pgTable(
     nature: text("nature", { enum: NATURES_PRODUIT }).notNull().default("produit"),
     /** Produit fabriqué par le laboratoire : compté dans le stock du labo et livré aux points de vente. */
     fabriqueLabo: boolean("fabrique_labo").notNull().default(false),
+    /** Ingrédient aussi compté dans les points de vente (préparations à la commande : crêpes, pancakes…). */
+    ingredientPointsDeVente: boolean("ingredient_points_de_vente").notNull().default(false),
+    /** Durée de conservation en jours (DLC) : sert à repérer le stock probablement périmé. */
+    dureeConservationJours: integer("duree_conservation_jours"),
     photoId: uuid("photo_id").references(() => photos.id, { onDelete: "set null" }),
     actif: boolean("actif").notNull().default(true),
     ordre: integer("ordre").notNull().default(0),
@@ -148,6 +152,24 @@ export const prixArticlesMagasins = pgTable(
     disponible: boolean("disponible").notNull().default(true),
   },
   (t) => [primaryKey({ columns: [t.articleId, t.magasin] })],
+);
+
+/**
+ * Fiche technique : ingrédients d'un produit, pour un gâteau entier (produits en parts) ou une unité.
+ * Sert au coût de revient calculé et à la consommation théorique d'ingrédients.
+ */
+export const recettes = pgTable(
+  "recettes",
+  {
+    produitId: uuid("produit_id")
+      .notNull()
+      .references(() => produits.id, { onDelete: "cascade" }),
+    ingredientId: uuid("ingredient_id")
+      .notNull()
+      .references(() => produits.id, { onDelete: "cascade" }),
+    quantite: numeric("quantite", { precision: 12, scale: 4, mode: "number" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.produitId, t.ingredientId] })],
 );
 
 /** Coût de revient historisé (saisi dans l'application). */

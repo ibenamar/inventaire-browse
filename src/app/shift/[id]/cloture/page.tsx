@@ -187,6 +187,12 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
                     {l.nature === "ingredient" ? (
                       <td className="px-2 py-1.5 text-right text-xs whitespace-nowrap text-stone-600 tabular-nums">
                         {l.calcul.consommation !== null ? `conso ${q(l.calcul.consommation)}` : "—"}
+                        {l.calcul.ecartConsommation !== null && l.calcul.ecartConsommation !== 0 && (
+                          <span className={cx("block font-semibold", l.calcul.ecartConsommation > 0 ? "text-red-700" : "text-amber-700")}>
+                            {l.calcul.ecartConsommation > 0 ? "+" : ""}
+                            {q(l.calcul.ecartConsommation)} vs fiche
+                          </span>
+                        )}
                       </td>
                     ) : (
                       <CelluleEcart v={l.calcul.ecart} />
