@@ -45,6 +45,23 @@ jobs:
             exit 1
           fi
 
+      - name: Vérifier l'accès Cloudflare
+        run: |
+          api() { curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4$1"; }
+          r=$(api "/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts")
+          if [ "$(echo "$r" | jq -r '.success')" != "true" ]; then
+            echo "Réponse Cloudflare : $(echo "$r" | jq -c '.errors')"
+            comptes=$(api "/accounts" | jq -r '[.result[]? | "\(.name) (\(.id))"] | join(", ")')
+            echo "::error::Le jeton n'a pas accès aux Workers du compte indiqué dans CLOUDFLARE_ACCOUNT_ID. Vérifier que ce secret contient l'Account ID (et non le Zone ID de browse.ma) et que le jeton (modèle « Edit Cloudflare Workers ») inclut ce compte. Comptes visibles par le jeton : ${comptes:-aucun}"
+            exit 1
+          fi
+          z=$(api "/zones?name=browse.ma")
+          if [ "$(echo "$z" | jq -r '.result | length')" = "0" ] || [ "$(echo "$z" | jq -r '.success')" != "true" ]; then
+            echo "::error::Le jeton n'a pas accès à la zone browse.ma : dans le jeton, ajouter la zone browse.ma (Zone Resources)."
+            exit 1
+          fi
+          echo "Accès Cloudflare vérifié : compte et zone browse.ma."
+
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -68,6 +85,11 @@ jobs:
       - name: Construire
         run: npx opennextjs-cloudflare build
 
+      # Publier d'abord : au premier déploiement, le Worker doit exister avant de recevoir ses secrets.
+      # Les secrets déjà enregistrés sont conservés d'un déploiement à l'autre.
+      - name: Déployer sur inventaire.browse.ma
+        run: npx opennextjs-cloudflare deploy
+
       - name: Envoyer les secrets de l'application
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -79,9 +101,6 @@ jobs:
             > secrets.json
           npx wrangler secret bulk secrets.json
           rm secrets.json
-
-      - name: Déployer sur inventaire.browse.ma
-        run: npx opennextjs-cloudflare deploy
 
       - name: Vérifier que le site répond
         run: |
