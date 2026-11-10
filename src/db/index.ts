@@ -22,12 +22,19 @@ export async function creerDbPglite(dossier?: string): Promise<Db> {
   return db as unknown as Db;
 }
 
-export async function creerConnexionPostgres(url: string): Promise<{ db: Db; fermer: () => Promise<void> }> {
+export async function creerConnexionPostgres(url: string): Promise<{ db: Db; fermer: () => void }> {
   const { default: postgres } = await import("postgres");
   const { drizzle } = await import("drizzle-orm/postgres-js");
   // prepare: false — requis par le pooler de connexions de Supabase (mode transaction).
   const client = postgres(url, { prepare: false, max: 1 });
-  return { db: drizzle(client, { schema }) as unknown as Db, fermer: () => client.end({ timeout: 5 }) };
+  return {
+    db: drizzle(client, { schema }) as unknown as Db,
+    // Fermeture immédiate, sans attendre l'accusé de fermeture du serveur : sur Cloudflare Workers,
+    // une tâche encore en attente après la réponse est interrompue (avertissement « waitUntil »).
+    fermer: () => {
+      void client.end({ timeout: 0 }).catch(() => undefined);
+    },
+  };
 }
 
 export async function creerDbPostgres(url: string): Promise<Db> {
