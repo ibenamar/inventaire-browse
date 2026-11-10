@@ -43,9 +43,9 @@ function Etape({
 
 export default async function HubShift({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { d, estResponsable } = await chargerShift(id);
+  const { d, estResponsable, modeCorrection, peutSaisir } = await chargerShift(id);
   if (d.shift.statut === "planifie") redirect("/");
-  if (d.shift.statut !== "ouvert") redirect(`/shift/${id}/cloture`);
+  if (!peutSaisir) redirect(`/shift/${id}/cloture`);
   const a = d.avancement;
   const nbEntrees = d.mouvements.filter((m) => m.type === "entree").length;
   const nbPertes = d.mouvements.filter((m) => m.type === "perte").length;
@@ -89,7 +89,7 @@ export default async function HubShift({ params }: { params: Promise<{ id: strin
         fait={a.compteesFin === a.aCompterFin}
       />
       <LienBouton href={`/shift/${id}/cloture`} grand variante={estResponsable ? "primaire" : "secondaire"} className="mt-2">
-        {estResponsable ? "Vérifier et clôturer le shift" : "Voir le récapitulatif"}
+        {modeCorrection ? "Retour au récapitulatif" : estResponsable ? "Vérifier et clôturer le shift" : "Voir le récapitulatif"}
       </LienBouton>
     </div>
   );

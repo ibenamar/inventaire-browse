@@ -62,6 +62,18 @@ function exigerOuvert(s: Shift) {
   exiger(s.statut === "ouvert", s.statut === "planifie" ? "Le shift n'est pas encore ouvert" : "Le shift est clôturé");
 }
 
+/**
+ * Saisie possible : pendant le shift ; après clôture, seulement par un manager (correction tracée) ;
+ * jamais après validation. Renvoie vrai s'il s'agit d'une correction.
+ */
+function exigerModifiable(s: Shift, acteur: Acteur): boolean {
+  exiger(s.statut !== "planifie", "Le shift n'est pas encore ouvert");
+  exiger(s.statut !== "valide", "Ce shift est validé : il ne peut plus être modifié");
+  if (s.statut === "ouvert") return false;
+  exiger(estEncadrant(acteur), "Le shift est clôturé : seul un manager peut le corriger");
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Accueil : quel shift ouvrir / continuer ?
 // ---------------------------------------------------------------------------
@@ -458,7 +470,7 @@ export async function saisirQuantite(
   exiger(["ouvertureComptee", "stockReelFin"].includes(champ), "Champ invalide");
   exiger(valeur === null || estQuantiteValide(valeur), "Quantité invalide (nombre entier positif)");
   const s = await lireShift(db, shiftId);
-  exigerOuvert(s);
+  const correction = exigerModifiable(s, acteur);
   await exigerAcces(db, s, acteur);
   const [l] = await db
     .select()
@@ -466,10 +478,24 @@ export async function saisirQuantite(
     .where(and(eq(lignesShift.shiftId, shiftId), eq(lignesShift.produitId, produitId)));
   exiger(l, "Produit absent de ce shift");
   exiger(l.suiviStock, "Ce produit n'est pas suivi en stock (vente seule)");
+  if (correction) exiger(valeur !== null, "Un shift clôturé doit rester entièrement compté");
   await db
     .update(lignesShift)
     .set({ [champ]: valeur, modifieLe: maintenant, modifiePar: acteur.id })
     .where(and(eq(lignesShift.shiftId, shiftId), eq(lignesShift.produitId, produitId)));
+  if (correction && l[champ] !== valeur) {
+    await tracer(db, acteur.id, "corriger", "shift", shiftId, { champ, produitId, avant: l[champ], apres: valeur });
+    // Le stock compté à la clôture est l'ouverture du shift suivant : on la met à jour.
+    if (champ === "stockReelFin") {
+      const suivants = await db.select({ id: shifts.id }).from(shifts).where(eq(shifts.shiftPrecedentId, shiftId));
+      for (const x of suivants) {
+        await db
+          .update(lignesShift)
+          .set({ ouvertureTheorique: valeur })
+          .where(and(eq(lignesShift.shiftId, x.id), eq(lignesShift.produitId, produitId)));
+      }
+    }
+  }
 }
 
 /**
@@ -488,13 +514,14 @@ export async function saisirVentes(
   const q = quantite ?? 0;
   exiger(estQuantiteValide(q), "Quantité invalide (nombre entier positif)");
   const s = await lireShift(db, shiftId);
-  exigerOuvert(s);
+  const correction = exigerModifiable(s, acteur);
   await exigerAcces(db, s, acteur);
   const [l] = await db
     .select()
     .from(lignesShift)
     .where(and(eq(lignesShift.shiftId, shiftId), eq(lignesShift.produitId, produitId)));
   exiger(l, "Produit absent de ce shift");
+  if (correction) await tracer(db, acteur.id, "corriger", "shift", shiftId, { champ: "ventes", produitId, canalId, apres: q });
   const [canal] = await db.select().from(canauxVente).where(eq(canauxVente.id, canalId));
   exiger(canal, "Canal de vente inconnu");
   const prix = await prixSurCanal(db, produitId, canalId, s.siteId);
@@ -550,8 +577,9 @@ export async function ajouterEntrees(
   const utiles = saisies.filter((e) => e.quantite !== 0);
   exiger(utiles.length, "Aucune quantité saisie");
   const s = await lireShift(db, shiftId);
-  exigerOuvert(s);
+  const correction = exigerModifiable(s, acteur);
   await exigerAcces(db, s, acteur);
+  if (correction) await tracer(db, acteur.id, "corriger", "shift", shiftId, { champ: "entrees", saisies, origine });
   const valeurs = [];
   for (const e of utiles) {
     exiger(estQuantiteValide(e.quantite), "Quantité invalide");
@@ -578,8 +606,9 @@ export async function ajouterPerte(
   exiger(MOTIFS_PERTE.includes(v.motif), "Choisir le motif : péremption ou endommagé");
   exiger(estQuantiteValide(v.quantite) && v.quantite > 0, "Quantité invalide");
   const s = await lireShift(db, shiftId);
-  exigerOuvert(s);
+  const correction = exigerModifiable(s, acteur);
   await exigerAcces(db, s, acteur);
+  if (correction) await tracer(db, acteur.id, "corriger", "shift", shiftId, { champ: "perte", ...v });
   const p = await produitDuShift(db, shiftId, v.produitId);
   await db.insert(mouvements).values({
     shiftId,
@@ -596,7 +625,7 @@ export async function supprimerMouvement(db: Db, mouvementId: string, acteur: Ac
   const [m] = await db.select().from(mouvements).where(eq(mouvements.id, mouvementId));
   exiger(m, "Saisie introuvable");
   const s = await lireShift(db, m.shiftId);
-  exigerOuvert(s);
+  exigerModifiable(s, acteur);
   await exigerAcces(db, s, acteur);
   exiger(m.utilisateurId === acteur.id || estEncadrant(acteur) || s.responsableId === acteur.id, "Vous ne pouvez supprimer que vos propres saisies");
   await db.delete(mouvements).where(eq(mouvements.id, mouvementId));
@@ -652,3 +681,13 @@ export async function forcerCloture(db: Db, shiftId: string, acteur: Acteur, mai
   await tracer(db, acteur.id, "forcer_cloture", "shift", shiftId, { motif });
 }
 
+
+/** Validation d'un shift clôturé par un manager : il est ensuite verrouillé. */
+export async function validerShift(db: Db, shiftId: string, acteur: Acteur, maintenant: Date) {
+  exiger(estEncadrant(acteur), "Seul un manager peut valider un shift");
+  const s = await lireShift(db, shiftId);
+  await exigerAcces(db, s, acteur);
+  exiger(s.statut === "cloture", s.statut === "valide" ? "Ce shift est déjà validé" : "Seul un shift clôturé peut être validé");
+  await db.update(shifts).set({ statut: "valide", validePar: acteur.id, valideLe: maintenant }).where(eq(shifts.id, shiftId));
+  await tracer(db, acteur.id, "valider", "shift", shiftId);
+}

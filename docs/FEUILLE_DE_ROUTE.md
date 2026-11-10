@@ -183,7 +183,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [x] Rapports d'écarts (produit, shift, responsable, passation) et de pertes (par motif)
 - [x] Alertes de réapprovisionnement
 - [x] Tableau de responsabilisation : remontées et écarts par responsable d'inventaire, sur la semaine / le mois
-- [ ] Correction / validation des shifts, journal d'audit
+- [x] Correction / validation des shifts par un manager (correction tracée, comptage de fin répercuté sur l'ouverture du shift suivant, shift validé verrouillé), journal d'audit consultable
 - [ ] Exports Excel / CSV
 - [ ] Déploiement sur les **2 points de vente ouverts**, arrêt du fichier Excel ; activation des 3 autres à leur ouverture
 

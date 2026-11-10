@@ -6,8 +6,8 @@ import { EnteteEtape } from "../EnteteEtape";
 
 export default async function Ouverture({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { d } = await chargerShift(id);
-  if (d.shift.statut !== "ouvert") redirect(`/shift/${id}/cloture`);
+  const { d, peutSaisir } = await chargerShift(id);
+  if (!peutSaisir) redirect(`/shift/${id}/cloture`);
   const lignes = d.lignes.filter((l) => ouvertureACompter(d.shift.modeOuverture, l));
   return (
     <>

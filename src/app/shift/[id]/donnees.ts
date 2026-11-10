@@ -36,5 +36,8 @@ export const chargerShift = cache(async (id: string) => {
       }
     : null;
   const loyverseConfigure = Boolean(process.env.LOYVERSE_TOKEN?.trim());
-  return { session, d, estResponsable, synchro, loyverseConfigure };
+  // Après clôture, un manager peut corriger le shift (chaque modification est tracée) tant qu'il n'est pas validé.
+  const modeCorrection = d.shift.statut === "cloture" && estEncadrant(session.acteur);
+  const peutSaisir = d.shift.statut === "ouvert" || modeCorrection;
+  return { session, d, estResponsable, synchro, loyverseConfigure, modeCorrection, peutSaisir };
 });

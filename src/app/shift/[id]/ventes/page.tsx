@@ -17,8 +17,8 @@ export default async function Ventes({
   searchParams: Promise<{ canal?: string }>;
 }) {
   const { id } = await params;
-  const { d, session, synchro, loyverseConfigure } = await chargerShift(id);
-  if (d.shift.statut !== "ouvert") redirect(`/shift/${id}/cloture`);
+  const { d, session, synchro, loyverseConfigure, peutSaisir } = await chargerShift(id);
+  if (!peutSaisir) redirect(`/shift/${id}/cloture`);
   const canaux = await listerCanaux(await getDb());
   const { canal: code } = await searchParams;
   const canal = canaux.find((c) => c.code === code) ?? canaux[0];
@@ -59,10 +59,10 @@ export default async function Ventes({
           <>
             <VentesLoyverse
               shiftId={id}
-              ouvert
+              ouvert={d.shift.statut === "ouvert"}
               peutReimporter={estEncadrant(session.acteur)}
               derniere={synchro}
-              auto
+              auto={d.shift.statut === "ouvert"}
               lienAdmin={session.acteur.role === "direction"}
             />
             <Message>

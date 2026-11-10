@@ -19,6 +19,7 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
           { href: "/admin/utilisateurs", libelle: "Utilisateurs" },
           { href: "/admin/sites", libelle: "Sites & créneaux" },
           { href: "/admin/loyverse", libelle: "Loyverse" },
+          { href: "/admin/journal", libelle: "Journal" },
         ]
       : []),
   ];

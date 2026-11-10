@@ -14,7 +14,7 @@ const STATUTS = {
 
 export default async function LayoutShift({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { session, d } = await chargerShift(id);
+  const { session, d, modeCorrection } = await chargerShift(id);
   const s = d.shift;
   const st = STATUTS[s.statut];
   return (
@@ -36,6 +36,14 @@ export default async function LayoutShift({ children, params }: { children: Reac
           </p>
         </div>
       </div>
+      {modeCorrection && (
+        <div className="border-b border-amber-200 bg-amber-50">
+          <p className="mx-auto max-w-6xl px-4 py-2 text-sm text-amber-900">
+            Shift clôturé : vous pouvez le corriger en tant que manager. Chaque modification est enregistrée dans le journal ; la correction du
+            comptage de fin met à jour l&apos;ouverture du shift suivant.
+          </p>
+        </div>
+      )}
       <main className="mx-auto max-w-6xl px-4 py-4">{children}</main>
     </>
   );

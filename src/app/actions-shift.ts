@@ -18,6 +18,7 @@ import {
   saisirQuantite,
   saisirVentes,
   supprimerMouvement,
+  validerShift,
   type ChampQuantite,
   type SaisieEntree,
 } from "@/server/services/shifts";
@@ -127,5 +128,12 @@ export async function actionForcerCloture(shiftId: string, _etat: unknown, form:
     revalidatePath("/", "layout");
     redirect(`/shift/${shiftId}/cloture`);
   }
+  return r;
+}
+
+export async function actionValider(shiftId: string): Promise<Resultat> {
+  const { acteur } = await exigerSession(["manager", "direction"]);
+  const r = await executer(async () => validerShift(await getDb(), shiftId, acteur, new Date()));
+  revalidatePath(`/shift/${shiftId}`, "layout");
   return r;
 }

@@ -194,6 +194,7 @@ export async function importerVentesShift(
   exiger(s, "Shift introuvable");
   exiger(s.statut !== "planifie", "Le shift n'est pas encore ouvert");
   exiger(s.statut === "ouvert" || estEncadrant(acteur), "Seul un manager peut réimporter les ventes d'un shift clôturé");
+  exiger(s.statut !== "valide", "Ce shift est validé : ses ventes ne peuvent plus être modifiées");
   const { debut, fin } = await fenetreVentes(db, shiftId, maintenant);
   try {
     const storeId = await magasinLoyverse(db, s.siteId, opts.jeton, f);

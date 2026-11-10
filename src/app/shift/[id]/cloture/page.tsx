@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { Fragment } from "react";
-import { cx, formatMad, formatSigne, Kpi, Message } from "@/components/ui";
+import { cx, formatMad, formatSigne, Kpi, LienBouton, Message } from "@/components/ui";
+import { BoutonAction } from "@/components/BoutonAction";
+import { actionValider } from "@/app/actions-shift";
+import { getDb } from "@/lib/db";
+import { utilisateurs } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { formatLocal } from "@/domain/temps";
 import { estEncadrant } from "@/server/acteur";
 import { ouvertureACompter, type LigneDetail } from "@/server/services/shifts";
@@ -19,6 +24,9 @@ function CelluleEcart({ v }: { v: number | null }) {
 export default async function Cloture({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { d, session, estResponsable, synchro, loyverseConfigure } = await chargerShift(id);
+  const validePar = d.shift.validePar
+    ? ((await (await getDb()).select({ nom: utilisateurs.nom }).from(utilisateurs).where(eq(utilisateurs.id, d.shift.validePar)))[0]?.nom ?? null)
+    : null;
   const s = d.shift;
   const ouvert = s.statut === "ouvert";
   const suivis = d.lignes.filter((l) => l.suiviStock);
@@ -43,6 +51,25 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           {s.clotureForcee ? "Clôture forcée" : "Clôturé"} le {formatLocal(s.clotureLe)}
           {s.commentaire ? `\n« ${s.commentaire} »` : ""}
         </Message>
+      )}
+      {s.statut === "valide" && (
+        <Message ton="succes">
+          Validé{s.valideLe ? ` le ${formatLocal(s.valideLe)}` : ""}
+          {validePar ? ` par ${validePar}` : ""} : ce shift est verrouillé.
+        </Message>
+      )}
+      {s.statut === "cloture" && estEncadrant(session.acteur) && (
+        <div className="flex flex-wrap items-start gap-2">
+          <LienBouton href={`/shift/${id}`} variante="secondaire">
+            Corriger ce shift
+          </LienBouton>
+          <BoutonAction
+            action={actionValider.bind(null, id)}
+            confirmation="Valider ce shift ? Il ne pourra plus être modifié."
+          >
+            Valider le shift
+          </BoutonAction>
+        </div>
       )}
 
       {loyverseConfigure && (

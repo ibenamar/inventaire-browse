@@ -8,8 +8,8 @@ import { FormulairePerte } from "./FormulairePerte";
 
 export default async function Pertes({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { d, session } = await chargerShift(id);
-  if (d.shift.statut !== "ouvert") redirect(`/shift/${id}/cloture`);
+  const { d, session, peutSaisir } = await chargerShift(id);
+  if (!peutSaisir) redirect(`/shift/${id}/cloture`);
   const peutSupprimer = (auteur: string) =>
     auteur === session.acteur.id || estEncadrant(session.acteur) || d.shift.responsableId === session.acteur.id;
   return (

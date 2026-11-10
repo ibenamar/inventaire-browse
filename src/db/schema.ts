@@ -220,6 +220,8 @@ export const shifts = pgTable(
     cloturePar: uuid("cloture_par").references(() => utilisateurs.id),
     clotureLe: horodatage("cloture_le"),
     clotureForcee: boolean("cloture_forcee").notNull().default(false),
+    validePar: uuid("valide_par").references(() => utilisateurs.id),
+    valideLe: horodatage("valide_le"),
     commentaire: text("commentaire"),
     shiftPrecedentId: uuid("shift_precedent_id"),
     ventesSource: text("ventes_source", { enum: ["manuel", "loyverse"] }).notNull().default("manuel"),

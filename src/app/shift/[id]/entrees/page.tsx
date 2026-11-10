@@ -10,8 +10,8 @@ const ORIGINES = { labo: "Laboratoire", fournisseur: "Fournisseur", autre_site: 
 
 export default async function Entrees({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { d, session } = await chargerShift(id);
-  if (d.shift.statut !== "ouvert") redirect(`/shift/${id}/cloture`);
+  const { d, session, peutSaisir } = await chargerShift(id);
+  if (!peutSaisir) redirect(`/shift/${id}/cloture`);
   const peutSupprimer = (auteur: string) =>
     auteur === session.acteur.id || estEncadrant(session.acteur) || d.shift.responsableId === session.acteur.id;
   return (
