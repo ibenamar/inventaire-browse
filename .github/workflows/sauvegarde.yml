@@ -1,0 +1,45 @@
+# Sauvegarde quotidienne de la base (Supabase gratuit n'en fait pas) vers Cloudflare R2.
+# Secrets GitHub requis : DATABASE_URL (connexion directe ou session pooler, port 5432),
+# R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
+name: Sauvegarde quotidienne
+
+on:
+  schedule:
+    - cron: "17 2 * * *" # 02:17 UTC
+  workflow_dispatch:
+
+jobs:
+  sauvegarder:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Vérifier la configuration
+        id: config
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Secret DATABASE_URL absent : sauvegarde ignorée."
+            echo "actif=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "actif=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Installer pg_dump 17
+        if: steps.config.outputs.actif == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+      - name: Exporter et envoyer vers R2
+        if: steps.config.outputs.actif == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          set -euo pipefail
+          FICHIER="inventaire-$(date -u +%Y-%m-%d).sql.gz"
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" --no-owner --no-privileges --schema=public | gzip > "$FICHIER"
+          aws s3 cp "$FICHIER" "s3://${{ secrets.R2_BUCKET }}/$FICHIER" \
+            --endpoint-url "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+          echo "Sauvegarde $FICHIER envoyée ($(du -h "$FICHIER" | cut -f1))."

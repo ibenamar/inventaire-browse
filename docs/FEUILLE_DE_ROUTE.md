@@ -109,19 +109,22 @@ SyncLoyverse(id, shift_id, debut, fin, statut, nb_recus, erreur, horodatage)
 JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 ```
 
-## 5. Choix techniques proposés
+## 5. Choix techniques (validés — option A, 0 €/mois)
 
-| Besoin | Proposition | Raison |
+| Besoin | Choix | Raison |
 |---|---|---|
-| Front saisie + admin | **Next.js (React) + TypeScript**, PWA installable, mobile-first | Une seule base de code pour téléphone, tablette et admin |
-| Backend / BDD | **Supabase** (PostgreSQL, Auth, Storage, Edge Functions) | Historique relationnel, photos, droits par rôle (RLS), tâches serveur |
-| Loyverse | Fonction serveur appelant l'API Loyverse (reçus, articles, magasins) | Le jeton API ne quitte jamais le serveur |
-| UI | Tailwind CSS, grandes zones tactiles | Saisie rapide au doigt |
-| Graphiques | Recharts | Évolution du stock, pertes, écarts |
-| Coupures réseau | Reprise automatique des envois en cas de coupure brève | Wi-Fi fiable en boutique : pas de mode hors-ligne complet au MVP |
-| Dates / fuseau | Heure du Maroc (`Africa/Casablanca`) ; journée d'exploitation calculée au serveur | Shift de nuit à cheval sur deux dates |
-| Tests | Vitest (calculs, rattachement des shifts de nuit) + Playwright (parcours) | Fiabilité des écarts |
-| Hébergement | Vercel + Supabase | Coût faible, déploiement continu depuis GitHub |
+| Front saisie + admin | **Next.js 16 (React 19) + TypeScript**, PWA installable, mobile-first | Une seule base de code pour téléphone, tablette et admin |
+| Base de données | **PostgreSQL** (Supabase gratuit en production, PGlite embarqué en développement et en test) via **Drizzle ORM** | Historique relationnel ; SQL standard, donc portable vers une autre offre |
+| Hébergement | **Cloudflare Workers** (adaptateur OpenNext), offre gratuite à usage commercial | Remplace Vercel, dont l'offre gratuite interdit l'usage commercial |
+| Photos | Stockées en base (≈ 100 Ko par produit après compression côté téléphone) | Aucun service de stockage supplémentaire à gérer |
+| Authentification | PIN individuel haché (PBKDF2), session signée, droits vérifiés dans chaque action serveur | Rapide pour les équipes, chaque saisie est attribuée |
+| Loyverse | Appels serveur à l'API Loyverse (articles, prix ; reçus en phase 2) | Le jeton API ne quitte jamais le serveur |
+| UI | Tailwind CSS 4, grandes zones tactiles | Saisie rapide au doigt |
+| Graphiques | Recharts (phase 2) | Évolution du stock, pertes, écarts |
+| Coupures réseau | Nouvelle tentative automatique, alerte si la page est quittée pendant un envoi | Wi-Fi fiable : pas de mode hors-ligne complet |
+| Dates / fuseau | `Africa/Casablanca` via la base de fuseaux du système ; journée d'exploitation calculée au serveur | Shifts de nuit à cheval sur deux dates, changements d'heure |
+| Tests | Vitest (règles et services sur base réelle) + parcours navigateur Playwright | Fiabilité des écarts |
+| Sauvegarde | Export quotidien par GitHub Actions vers Cloudflare R2 | L'offre gratuite Supabase n'inclut pas de sauvegarde |
 
 ## 6. Phases
 
@@ -141,20 +144,22 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 **Livrable** : catalogue complet, créneaux par site, accès Loyverse, maquettes validées.
 
 ### Phase 1 — MVP saisie inter-shifts et planning
-- [ ] Initialisation du projet, CI, déploiement de recette
-- [ ] Schéma de base de données, import du catalogue CSV
-- [ ] Import des articles, SKU et prix de vente depuis Loyverse (si le jeton est disponible ; sinon saisie des prix dans le catalogue)
-- [ ] Sites, utilisateurs, PIN, rôles
-- [ ] **Paramétrage des créneaux** par site et par jour, avec fin le lendemain et contrôle des chevauchements
-- [ ] **Planning** : vue semaine et mois, équipe et responsable d'inventaire par shift, duplication de semaine
-- [ ] Suivi des remontées : statut de chaque shift planifié (à l'heure, en retard, manquant)
-- [ ] Ouverture du shift planifié, reprise automatique de la clôture précédente (y compris nuit → matin)
-- [ ] Grille de comptage avec photos (téléphone et tablette)
-- [ ] Entrées (avec conversion gâteau → parts) et pertes (péremption / endommagé)
-- [ ] Ventes en saisie manuelle (en attendant Loyverse)
-- [ ] Clôture par le responsable d'inventaire : théorique, écart, valeur, récapitulatif
-- [ ] Recomptage d'ouverture et écart de passation (option par site)
-- [ ] Tests des règles de calcul et des shifts à cheval sur deux jours (rattachement, chevauchement, enchaînement nuit → matin, passage semaine → week-end, changement d'heure)
+- [x] Initialisation du projet, CI (types, tests, build), configuration Cloudflare
+- [ ] Déploiement de recette (comptes Supabase et Cloudflare à créer)
+- [x] Schéma de base de données, import du catalogue CSV
+- [x] Import des articles, SKU et prix de vente depuis Loyverse (développé et testé sur réponses simulées ; à valider avec le jeton réel)
+- [x] Sites, utilisateurs, PIN, rôles
+- [x] **Paramétrage des créneaux** par site et par jour, avec fin le lendemain et contrôle des chevauchements
+- [x] **Planning** : vue semaine et mois, équipe et responsable d'inventaire par shift, duplication de semaine
+- [x] Suivi des remontées : statut de chaque shift planifié (à l'heure, en retard, manquant)
+- [x] Ouverture du shift planifié, reprise automatique de la clôture précédente (y compris nuit → matin)
+- [x] Grille de comptage avec photos (téléphone et tablette)
+- [x] Entrées (avec conversion gâteau → parts) et pertes (péremption / endommagé)
+- [x] Ventes en saisie manuelle (en attendant Loyverse)
+- [x] Clôture par le responsable d'inventaire : théorique, écart, valeur, récapitulatif
+- [x] Recomptage d'ouverture et écart de passation (option par site)
+- [x] Tests des règles de calcul et des shifts à cheval sur deux jours (rattachement, chevauchement, enchaînement nuit → matin, passage semaine → week-end, changement d'heure)
+- [x] Prise de photo produit depuis le téléphone, coût de revient historisé (avancés de la phase 2)
 - [ ] Pilote sur **un des 2 points de vente ouverts** en parallèle du fichier Excel pendant 1 semaine
 
 **Critère de sortie** : un shift complet saisi en moins de 10 minutes sur téléphone ; résultats identiques au fichier Excel sur la semaine pilote.
@@ -162,7 +167,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 ### Phase 2 — Loyverse et administration
 - [ ] Correspondance site ↔ magasin Loyverse
 - [ ] Import automatique des ventes à la clôture, saisie manuelle en secours, journal des synchronisations
-- [ ] Gestion du catalogue (CRUD, **photo prise depuis le téléphone**, **coût de revient** historisé, archivage, stock minimum par site)
+- [ ] Gestion du catalogue : création de produits, stock minimum par site (modification, photo et coût de revient livrés en phase 1)
 - [ ] Tableau de bord consolidé et par site
 - [ ] Courbes d'évolution du stock par produit / site
 - [ ] Rapports d'écarts (produit, shift, responsable, passation) et de pertes (par motif)

@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --color-marque-50: #fdf6ef;
+  --color-marque-100: #f9e8d6;
+  --color-marque-200: #f1cda9;
+  --color-marque-500: #b8662b;
+  --color-marque-600: #9c5222;
+  --color-marque-700: #7d401d;
+  --color-marque-900: #3f2210;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: #faf8f6;
+  color: #1c1917;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
