@@ -25,8 +25,8 @@ export default async function Reappro() {
           Aucun produit sous le stock minimum. Les minimums se règlent sur chaque{" "}
           <Link href="/admin/catalogue" className="underline">
             fiche produit
-          </Link>
-          .
+          </Link>{" "}
+          et s&apos;appliquent à partir du prochain shift ouvert de chaque site.
         </Message>
       )}
       <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
@@ -68,7 +68,7 @@ export default async function Reappro() {
 
 function Tableau({ lignes }: { lignes: Awaited<ReturnType<typeof besoinsReappro>>[number]["besoins"] }) {
   return (
-    <table className="w-full text-sm">
+    <div className="overflow-x-auto"><table className="w-full text-sm">
       <thead className="text-xs text-stone-500">
         <tr>
           <th className="py-1 text-left">Produit</th>
@@ -90,6 +90,6 @@ function Tableau({ lignes }: { lignes: Awaited<ReturnType<typeof besoinsReappro>
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }

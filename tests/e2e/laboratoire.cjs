@@ -21,7 +21,11 @@ async function connecter(browser, site, erreurs, nom = "Direction", pin = proces
   page.on("console", (m) => m.type() === "error" && erreurs.push("console " + m.text()));
   await page.goto(B + "/");
   await page.getByRole("link", { name: site }).click();
-  await page.getByRole("button", { name: nom }).click();
+  if (nom === "Direction") {
+    // La direction n'est pas listée sur les sites : elle saisit son nom.
+    await page.getByRole("button", { name: "Compte direction" }).click();
+    await page.getByLabel("Nom du compte direction").fill(nom);
+  } else await page.getByRole("button", { name: nom }).click();
   for (const d of pin) await page.getByRole("button", { name: d, exact: true }).click();
   await page.getByRole("button", { name: "Valider" }).click();
   await page.getByRole("heading", { name: `Bonjour ${nom}` }).waitFor();

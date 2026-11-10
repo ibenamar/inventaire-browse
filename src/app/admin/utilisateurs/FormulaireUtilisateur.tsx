@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { Bouton, Champ, classesChamp, Message } from "@/components/ui";
+import { Bouton, Champ, classesChamp, Message, soumettre } from "@/components/ui";
 import type { Resultat } from "@/lib/resultat";
 
 const ROLES = [
   { v: "employe", l: "Employé" },
+  { v: "labo", l: "Équipe laboratoire" },
   { v: "manager", l: "Manager de site" },
   { v: "direction", l: "Direction" },
 ];
@@ -27,7 +28,7 @@ export function FormulaireUtilisateur({
     if (creation && etat?.ok) ref.current?.reset();
   }, [etat, creation]);
   return (
-    <form ref={ref} action={act} className="grid gap-3">
+    <form ref={ref} onSubmit={soumettre(act)} className="grid gap-3">
       <div className="grid gap-3 sm:grid-cols-3">
         <Champ label="Nom">
           <input name="nom" required defaultValue={initial?.nom} className={classesChamp} />
@@ -41,7 +42,7 @@ export function FormulaireUtilisateur({
             ))}
           </select>
         </Champ>
-        <Champ label={creation ? "Code PIN (4 à 6 chiffres)" : "Nouveau code PIN"} aide={creation ? undefined : "Laisser vide pour ne pas changer"}>
+        <Champ label={creation ? "Code PIN (4 à 6 chiffres, 6 pour un manager)" : "Nouveau code PIN"} aide={creation ? undefined : "Laisser vide pour ne pas changer"}>
           <input name="pin" inputMode="numeric" pattern="\d{4,6}" required={creation} autoComplete="off" className={classesChamp} />
         </Champ>
       </div>

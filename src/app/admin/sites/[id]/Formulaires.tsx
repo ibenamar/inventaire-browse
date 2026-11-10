@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState, useMemo, useState, useTransition } from "react";
-import { Bouton, Carte, Champ, classesChamp, cx, Message } from "@/components/ui";
+import { Bouton, Carte, Champ, classesChamp, cx, Message, soumettre } from "@/components/ui";
 import { finLendemain, validerCreneaux } from "@/domain/creneaux";
 import { estHeure, NOMS_JOURS_COURTS } from "@/domain/temps";
 import { actionEnregistrerCreneaux, actionModifierSite } from "../../actions";
@@ -12,7 +12,7 @@ export function FormulaireSite({ site }: { site: { id: string; statut: string; m
   return (
     <Carte>
       <h2 className="mb-3 text-lg font-semibold">Paramètres</h2>
-      <form action={action} className="grid gap-3 sm:grid-cols-2">
+      <form onSubmit={soumettre(action)} className="grid gap-3 sm:grid-cols-2">
         <Champ label="Statut">
           <select name="statut" defaultValue={site.statut} className={classesChamp}>
             <option value="actif">Actif</option>
@@ -135,7 +135,12 @@ export function EditeurCreneaux({ siteId, initial }: { siteId: string; initial: 
                 lignes.map(({ id, nom, heureDebut, heureFin, jours }) => ({ id, nom, heureDebut, heureFin, jours })),
               );
               setRetour(r.ok ? { ok: true, texte: r.message ?? "Enregistré" } : { ok: false, texte: r.erreur });
-              if (r.ok) router.refresh();
+              if (r.ok) {
+                // Les nouveaux créneaux ont maintenant un identifiant : un second enregistrement les met à jour au lieu de les dupliquer.
+                const enregistres = (r.valeur ?? []) as Omit<Ligne, "cle">[];
+                setLignes(enregistres.map((c) => ({ id: c.id, nom: c.nom, heureDebut: c.heureDebut, heureFin: c.heureFin, jours: c.jours, cle: c.id! })));
+                router.refresh();
+              }
             })
           }
         >

@@ -94,7 +94,12 @@ export function GrilleQuantites({
         await new Promise((ok) => setTimeout(ok, 1500));
         r = await envoyer();
       }
-      setEtats((x) => ({ ...x, [produitId]: r.ok ? "ok" : "erreur" }));
+      setEtats((x) => {
+        const n = { ...x, [produitId]: r.ok ? ("ok" as const) : ("erreur" as const) };
+        // Plus aucune valeur en échec : le message d'erreur disparaît.
+        if (!Object.values(n).includes("erreur")) setErreur(null);
+        return n;
+      });
       if (!r.ok) setErreur(r.erreur);
     }, 500);
   };

@@ -143,7 +143,11 @@ export async function expedierBon(db: Db, bonId: string, shiftId: string, acteur
     exiger(b.siteOrigineId === s.siteId, "Ce bon ne part pas de ce site");
     const lignes = await tx.select().from(lignesBon).where(eq(lignesBon.bonId, bonId));
     const prods = await produitsDuShift(tx as unknown as Db, shiftId, lignes.map((l) => l.produitId));
-    for (const l of lignes) exiger(prods.has(l.produitId), "Un produit du bon n'est pas dans le stock de ce shift");
+    const absents = lignes.filter((l) => !prods.has(l.produitId)).map((l) => l.produitId);
+    if (absents.length) {
+      const noms = (await tx.select({ nom: produits.nom }).from(produits).where(inArray(produits.id, absents))).map((x) => x.nom);
+      throw new ErreurMetier(`${noms.join(", ")} : absent du stock de ce shift (produit ajouté après son ouverture). Retirez la ligne du bon ou expédiez-le au prochain shift.`);
+    }
     await verifierStock(tx as unknown as Db, shiftId, lignes);
     await tx.insert(mouvements).values(
       lignes.map((l) => ({
@@ -188,7 +192,10 @@ export async function receptionnerBon(
     let ecarts = 0;
     for (const l of lignes) {
       const p = prods.get(l.produitId);
-      exiger(p, "Un produit du bon n'est pas suivi dans ce point de vente : prévenir le manager");
+      if (!p) {
+        const [x] = await tx.select({ nom: produits.nom }).from(produits).where(eq(produits.id, l.produitId));
+        throw new ErreurMetier(`${x?.nom ?? "Un produit"} n'est pas suivi dans ce shift (ajouté après son ouverture ou désactivé ici) : réceptionnez le bon au prochain shift et prévenez le manager.`);
+      }
       const q = v.recus[l.produitId] ?? l.quantiteExpediee;
       exiger(estQuantiteValide(q, accepteDecimales(p.unite)), `${p.nom} : quantité reçue invalide`);
       if (q !== l.quantiteExpediee) ecarts++;

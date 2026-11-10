@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ColonnesEmpilees, CourbesStock } from "@/components/Graphiques";
 import { Carte, classesBouton, cx, formatMad, formatSigne, Kpi, Message, Titre } from "@/components/ui";
 import { heureLocale, libelleJournee } from "@/domain/temps";
-import { formatQuantite } from "@/domain/unites";
+import { formatQuantite, libelleQuantite } from "@/domain/unites";
 import { getDb } from "@/lib/db";
 import { listerProduits } from "@/server/services/catalogue";
 import { suiviRemontees } from "@/server/services/remontees";
@@ -162,7 +162,7 @@ export default async function TableauDeBord({
                     {siteIds.length > 1 && <span className="text-stone-500"> · {a.site}</span>}
                   </span>
                   <span className="tabular-nums">
-                    <span className="font-bold text-red-700">{a.stock}</span> / minimum {a.minimum}
+                    <span className="font-bold text-red-700">{libelleQuantite(a.stock, a)}</span> / minimum {libelleQuantite(a.minimum, a)}
                   </span>
                 </li>
               ))}

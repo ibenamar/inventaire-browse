@@ -12,6 +12,7 @@ import {
   articlesARattacher,
   associerArticle,
   ignorerArticle,
+  retablirArticle,
   ignorerCategorie,
   retirerArticle,
   type ArticleARattacher,
@@ -94,8 +95,9 @@ export async function actionModifierSite(id: string, _e: unknown, form: FormData
 export async function actionEnregistrerCreneaux(siteId: string, creneaux: SaisieCreneau[]): Promise<Resultat> {
   return executer(async () => {
     const { acteur } = await exigerDirection();
-    await enregistrerCreneaux(await getDb(), siteId, creneaux, acteur);
+    const enregistres = await enregistrerCreneaux(await getDb(), siteId, creneaux, acteur);
     revalidatePath("/admin/sites");
+    return enregistres;
   }, "Créneaux enregistrés");
 }
 
@@ -247,6 +249,14 @@ export async function actionIgnorerArticle(articleId: string): Promise<Resultat>
     await ignorerArticle(await getDb(), articleId, acteur);
     revalidatePath("/admin/loyverse");
   });
+}
+
+export async function actionRetablirArticle(articleId: string): Promise<Resultat> {
+  return executer(async () => {
+    const { acteur } = await exigerDirection();
+    await retablirArticle(await getDb(), articleId, acteur);
+    revalidatePath("/admin/loyverse");
+  }, "Article rétabli : il est de nouveau à rattacher");
 }
 
 /** Import depuis l'export CSV du Back Office Loyverse (Articles › Exporter), en attendant le jeton API. */

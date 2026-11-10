@@ -29,6 +29,9 @@ export function FicheTechnique({
   const [lignes, setLignes] = useState(initiales.map((l) => ({ ingredientId: l.ingredientId, texte: String(l.quantite).replace(".", ",") })));
   const [retour, setRetour] = useState<{ ok: boolean; texte: string } | null>(null);
   const [enCours, demarrer] = useTransition();
+  // Le coût affiché et « Appliquer » portent sur la fiche enregistrée : on le signale si l'écran a changé.
+  const modifiee =
+    JSON.stringify(lignes.map((l) => [l.ingredientId, lireQuantite(l.texte)])) !== JSON.stringify(initiales.map((l) => [l.ingredientId, l.quantite]));
   const dispo = (courant: string) => ingredients.filter((i) => i.id === courant || !lignes.some((l) => l.ingredientId === i.id));
   const agir = (f: () => Promise<{ ok: boolean; erreur?: string; message?: string }>) =>
     demarrer(async () => {
@@ -94,8 +97,9 @@ export function FicheTechnique({
           Enregistrer la fiche
         </Bouton>
       </div>
+      {modifiee && <p className="text-sm font-semibold text-amber-800">Fiche modifiée : enregistrez-la pour mettre à jour le coût.</p>}
       {cout && (
-        <p className="text-sm">
+        <p className={modifiee ? "text-sm text-stone-400" : "text-sm"}>
           Coût de la recette : <strong>{formatMad(cout.recette)}</strong>
           {cout.parUnite !== cout.recette && (
             <>
@@ -106,7 +110,7 @@ export function FicheTechnique({
           {!cout.complet && <span className="text-amber-800"> — coût d&apos;un ingrédient inconnu : saisissez-le sur sa fiche</span>}
         </p>
       )}
-      {cout?.complet && (
+      {cout?.complet && !modifiee && (
         <div>
           <Bouton type="button" variante="secondaire" disabled={enCours} onClick={() => agir(() => actionAppliquerCoutRecette(produitId))}>
             Appliquer comme coût de revient

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/db";
-import { categories, lignesShift, produits, shifts, sites, ventesShift } from "@/db/schema";
+import { categories, lignesShift, produits, shifts, sites, ventesShift, type Unite } from "@/db/schema";
 import { calculerLigne } from "@/domain/calculs";
 import type { Journee } from "@/domain/temps";
 import { listerCanaux } from "./caisse";
@@ -28,7 +28,17 @@ export interface TableauDeBord {
   canaux: { id: string; nom: string }[];
   ecarts: { produitId: string; produit: string; categorie: string; quantite: number; valeur: number; shifts: number; prixConnu: boolean }[];
   pertes: { produitId: string; produit: string; peremption: number; endommage: number; valeur: number; prixConnu: boolean }[];
-  alertes: { siteId: string; site: string; shiftId: string; journee: Journee; produit: string; stock: number; minimum: number }[];
+  alertes: {
+    siteId: string;
+    site: string;
+    shiftId: string;
+    journee: Journee;
+    produit: string;
+    unite: Unite;
+    partsParGateau: number | null;
+    stock: number;
+    minimum: number;
+  }[];
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -167,14 +177,14 @@ export async function alertesReappro(db: Db, siteIds: string[]): Promise<Tableau
       .limit(1);
     if (!dernier) continue;
     const lignes = await db
-      .select({ produit: produits.nom, stock: lignesShift.stockReelFin, minimum: lignesShift.stockMinimum })
+      .select({ produit: produits.nom, unite: produits.unite, partsParGateau: produits.partsParGateau, stock: lignesShift.stockReelFin, minimum: lignesShift.stockMinimum })
       .from(lignesShift)
       .innerJoin(produits, eq(produits.id, lignesShift.produitId))
       .where(eq(lignesShift.shiftId, dernier.id))
       .orderBy(asc(produits.nom));
     for (const l of lignes) {
       if (l.stock !== null && l.minimum !== null && l.stock < l.minimum) {
-        res.push({ siteId, site: dernier.site, shiftId: dernier.id, journee: dernier.journee, produit: l.produit, stock: l.stock, minimum: l.minimum });
+        res.push({ siteId, site: dernier.site, shiftId: dernier.id, journee: dernier.journee, produit: l.produit, unite: l.unite, partsParGateau: l.partsParGateau, stock: l.stock, minimum: l.minimum });
       }
     }
   }

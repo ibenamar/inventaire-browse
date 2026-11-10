@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, gt } from "drizzle-orm";
 import type { Db } from "@/db";
-import { creneaux, MODES_OUVERTURE, sites, STATUTS_SITE } from "@/db/schema";
+import { creneaux, MODES_OUVERTURE, shifts, sites, STATUTS_SITE } from "@/db/schema";
 import { validerCreneaux, type CreneauDef } from "@/domain/creneaux";
 import type { Acteur } from "../acteur";
 import { tracer } from "../audit";
@@ -73,6 +73,16 @@ export async function enregistrerCreneaux(db: Db, siteId: string, saisie: Saisie
 
   const existants = await db.select().from(creneaux).where(eq(creneaux.siteId, siteId));
   const idsExistants = new Set(existants.map((c) => c.id));
+  // Un créneau retiré qui porte encore des shifts planifiés à venir les rendrait orphelins (ni modifiables
+  // ni retirables) : il faut d'abord les retirer du planning.
+  const gardes = new Set(saisie.map((c) => c.id).filter(Boolean));
+  for (const c of existants.filter((x) => x.actif && !gardes.has(x.id))) {
+    const avenir = await db
+      .select({ id: shifts.id })
+      .from(shifts)
+      .where(and(eq(shifts.creneauId, c.id), eq(shifts.statut, "planifie"), gt(shifts.finPrevue, new Date())));
+    exiger(!avenir.length, `Le créneau « ${c.nom} » a encore ${avenir.length} shift(s) planifié(s) à venir : retirez-les d'abord du planning.`);
+  }
   const conserves = new Set<string>();
   await db.transaction(async (tx) => {
     for (const [i, c] of defs.entries()) {
@@ -89,4 +99,5 @@ export async function enregistrerCreneaux(db: Db, siteId: string, saisie: Saisie
     }
   });
   await tracer(db, acteur.id, "enregistrer_creneaux", "site", siteId, { creneaux: defs });
+  return listerCreneaux(db, siteId);
 }

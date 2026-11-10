@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ComponentProps, ReactNode } from "react";
+import { startTransition, type ComponentProps, type FormEvent, type ReactNode } from "react";
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
@@ -105,3 +105,16 @@ export const formatMad = (n: number | null | undefined) =>
   n === null || n === undefined ? "—" : `${n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MAD`;
 
 export const formatSigne = (n: number | null | undefined) => (n === null || n === undefined ? "—" : n > 0 ? `+${n}` : `${n}`);
+
+/**
+ * Soumission d'un formulaire à une action serveur SANS la remise à zéro automatique de React 19
+ * (avec `<form action>`, les champs sont vidés même quand l'enregistrement est refusé) :
+ * `<form onSubmit={soumettre(action)}>`. La saisie reste en place pour être corrigée.
+ */
+export function soumettre(action: (fd: FormData) => void) {
+  return (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startTransition(() => action(fd));
+  };
+}

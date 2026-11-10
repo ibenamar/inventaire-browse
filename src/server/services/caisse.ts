@@ -240,6 +240,22 @@ export async function ignorerArticle(db: Db, articleId: string, acteur: Acteur) 
   await tracer(db, acteur.id, "ignorer_article_caisse", "article_caisse", articleId);
 }
 
+/** Rétablit un article ignoré par erreur : il redevient à rattacher. */
+export async function retablirArticle(db: Db, articleId: string, acteur: Acteur) {
+  await db.update(articlesCaisse).set({ actif: true }).where(eq(articlesCaisse.id, articleId));
+  await tracer(db, acteur.id, "retablir_article_caisse", "article_caisse", articleId);
+}
+
+/** Articles ignorés (hors inventaire), pour pouvoir revenir sur une erreur. */
+export async function articlesIgnores(db: Db, limite = 300) {
+  return db
+    .select({ id: articlesCaisse.id, nom: articlesCaisse.nomCaisse, categorie: articlesCaisse.categorieCaisse, sku: articlesCaisse.sku })
+    .from(articlesCaisse)
+    .where(eq(articlesCaisse.actif, false))
+    .orderBy(articlesCaisse.nomCaisse)
+    .limit(limite);
+}
+
 /** Ignore d'un coup les articles non rattachés d'une catégorie Loyverse (ex. COFFEES, Lunch). */
 export async function ignorerCategorie(db: Db, categorie: string | null, acteur: Acteur): Promise<number> {
   const cond = and(

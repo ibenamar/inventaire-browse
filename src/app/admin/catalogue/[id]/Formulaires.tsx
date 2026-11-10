@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useActionState, useRef, useState, useTransition } from "react";
 import { PhotoProduit } from "@/components/PhotoProduit";
-import { Bouton, Champ, classesChamp, formatMad, Message } from "@/components/ui";
+import { Bouton, Champ, classesChamp, formatMad, Message, soumettre } from "@/components/ui";
 import { UNITE_PLURIEL, UNITE_SINGULIER, UNITES_INGREDIENT } from "@/domain/unites";
 import type { Unite } from "@/db/schema";
 import type { ProduitVue } from "@/server/services/catalogue";
@@ -13,7 +13,7 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
   const [etat, action, enCours] = useActionState(actionModifierProduit.bind(null, p.id), null);
   const [unite, setUnite] = useState(p.unite);
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-2">
+    <form onSubmit={soumettre(action)} className="grid gap-3 sm:grid-cols-2">
       <Champ label="Nom">
         <input name="nom" defaultValue={p.nom} required className={classesChamp} />
       </Champ>
@@ -83,11 +83,11 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
   );
 }
 
-export function FormulaireCout({ produitId, aujourdhui }: { produitId: string; aujourdhui: string }) {
+export function FormulaireCout({ produitId, aujourdhui, unite }: { produitId: string; aujourdhui: string; unite: Unite }) {
   const [etat, action, enCours] = useActionState(actionAjouterCout.bind(null, produitId), null);
   return (
-    <form action={action} className="flex flex-wrap items-end gap-2">
-      <Champ label="Nouveau coût (MAD)">
+    <form onSubmit={soumettre(action)} className="flex flex-wrap items-end gap-2">
+      <Champ label={`Nouveau coût par ${UNITE_SINGULIER[unite]} (MAD)`}>
         <input name="cout" inputMode="decimal" required className={`${classesChamp} w-32`} />
       </Champ>
       <Champ label="À partir du">
@@ -210,7 +210,7 @@ export function ArticlesCaisse({
       )}
       <details>
         <summary className="cursor-pointer text-sm font-semibold text-marque-700">Ajouter un article à la main (ex. SKU Glovo)</summary>
-        <form action={action} className="mt-2 grid gap-2 sm:grid-cols-[9rem_1fr_7rem_6rem_5rem_auto] sm:items-end">
+        <form onSubmit={soumettre(action)} className="mt-2 grid gap-2 sm:grid-cols-[9rem_1fr_7rem_6rem_5rem_auto] sm:items-end">
           <Champ label="Canal">
             <select name="canalId" className={classesChamp}>
               {canaux.map((c) => (
@@ -259,7 +259,7 @@ export function FormulaireStocksMinimum({
   const libelle = UNITE_PLURIEL[unite as Unite] ?? unite;
   const decimales = unite === "kg" || unite === "litre";
   return (
-    <form action={action} className="grid gap-2">
+    <form onSubmit={soumettre(action)} className="grid gap-2">
       <div className="grid gap-2 sm:grid-cols-2">
         {minimums.map((m) => (
           <label key={m.siteId} className="flex items-center gap-2">

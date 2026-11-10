@@ -166,7 +166,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
               .filter((l) => l.calcul.ecart)
               .map((l) => (
                 <li key={l.produitId}>
-                  <strong>{formatSigne(l.calcul.ecart)}</strong> {l.nom} (théorique {q(l.calcul.theoriqueFin)}, compté {q(l.stockReelFin)}
+                  <strong>{l.calcul.ecart! > 0 ? "+" : ""}{q(l.calcul.ecart)}</strong> {l.nom} (théorique {q(l.calcul.theoriqueFin)}, compté {q(l.stockReelFin)}
                   {l.unite === "part" ? " parts" : ""})
                 </li>
               ))}
@@ -184,7 +184,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
               {montrer && <th className="px-2 py-2 text-right">Théorique</th>}
               {montrer && <th className="px-2 py-2 text-right">Ouverture</th>}
               {montrer && recompte && <th className="px-2 py-2 text-right">Passation</th>}
-              <th className="px-2 py-2 text-right">{labo ? "Entrées / prod." : "Entrées"}</th>
+              <th className="px-2 py-2 text-right">{labo ? "Réceptions / prod." : "Réceptions"}</th>
               <th className="px-2 py-2 text-right">{labo ? "Livré" : "Ventes"}</th>
               <th className="px-2 py-2 text-right">Pertes</th>
             </tr>
@@ -247,11 +247,20 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           <FormulaireCloture
             shiftId={id}
             pret={!sansOuverture.length && !nonComptes.length}
-            confirmation={`Clôturer et signer le shift ?${syn.produitsAvecEcart ? ` ${syn.produitsAvecEcart} produit(s) en écart (${formatMad(syn.valeurEcartsVente)}).` : " Aucun écart."} L'équipe ne pourra plus rien saisir.`}
-            ecartsAExpliquer={ecartsImportants(
-              d.lignes.map((l) => ({ nom: l.nom, ecart: l.calcul.ecart })),
-              syn.valeurEcartsVente,
-            )}
+            // Rien sur les écarts tant que tout n'est pas compté (comptage à l'aveugle).
+            confirmation={
+              montrer
+                ? `Clôturer et signer le shift ?${syn.produitsAvecEcart ? ` ${syn.produitsAvecEcart} produit(s) en écart (${formatMad(syn.valeurEcartsVente)}).` : " Aucun écart."} L'équipe ne pourra plus rien saisir.`
+                : undefined
+            }
+            ecartsAExpliquer={
+              montrer
+                ? ecartsImportants(
+                    d.lignes.map((l) => ({ nom: l.nom, ecart: l.calcul.ecart })),
+                    syn.valeurEcartsVente,
+                  )
+                : []
+            }
           />
         </div>
       )}

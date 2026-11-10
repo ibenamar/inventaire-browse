@@ -6,7 +6,8 @@ Application : https://inventaire.browse.ma — sur téléphone ou tablette, on p
 
 | Rôle | Qui | Ce qu'il fait |
 |---|---|---|
-| **Employé** | toute personne de l'équipe rattachée au site | Saisit pendant le shift : comptages, réceptions, pertes, corrections de ventes |
+| **Employé** | toute personne de l'équipe rattachée au site | Saisit pendant le shift : comptages, réceptions, pertes (et les ventes si Loyverse n'est pas branché) |
+| **Équipe laboratoire** | employé du labo (rôle « Équipe laboratoire ») | Comme l'employé, au laboratoire uniquement : n'est pas proposé dans le planning des points de vente |
 | **Responsable d'inventaire** | un employé désigné **pour un shift donné** dans le planning | Comme l'employé, **plus** : ouvre le shift, vérifie le récapitulatif et **clôture** (sa clôture vaut signature) |
 | **Manager de site** | encadrant d'un ou plusieurs sites | Prépare le planning, peut ouvrir / clôturer à la place du responsable, force une clôture, **corrige** puis **valide** les shifts clôturés, suit les remontées |
 | **Direction** | administration | Tout ce que fait le manager, sur tous les sites, plus le catalogue, les utilisateurs, les sites et créneaux, Loyverse, le journal |
@@ -18,6 +19,8 @@ Le responsable d'inventaire n'est pas un poste fixe : c'est la personne désign�
 - Pour chaque créneau (ex. 7h–15h, 15h–20h, 20h–4h), le manager choisit le **responsable d'inventaire** et, s'il le souhaite, **un coéquipier**.
 - Un shift de nuit appartient au jour où il **commence** : la nuit du vendredi 20h → samedi 4h figure le vendredi.
 - Une semaine peut être copiée sur les suivantes.
+- On ne planifie pas un créneau **déjà terminé** (il compterait aussitôt comme remontée manquante).
+- Un créneau ne peut être supprimé (Sites & créneaux) tant qu'il porte des shifts planifiés à venir : les retirer d'abord du planning.
 
 Contrôles automatiques :
 - 2 personnes au maximum par shift ;
@@ -29,10 +32,10 @@ Contrôles automatiques :
 ## 3. Se connecter
 
 1. La première fois, choisir le **site** : l'appareil s'en souvient.
-2. Toucher son **nom**, puis taper son **code PIN** (4 à 6 chiffres, personnel).
+2. Toucher son **nom**, puis taper son **code PIN** (4 à 6 chiffres, personnel). La **direction** n'apparaît pas dans la liste : « Compte direction », puis son nom et son code.
 
 Contrôles :
-- après **5 codes faux**, le compte est **bloqué 5 minutes** ;
+- après **5 codes faux**, le compte est **bloqué 5 minutes** ; trop d'échecs depuis un même appareil le bloquent une heure ;
 - seules les personnes rattachées au site (et la direction) apparaissent ;
 - la connexion dure **12 heures** ; un compte désactivé perd l'accès immédiatement ;
 - chaque saisie est enregistrée **au nom de la personne connectée** : ne jamais utiliser le PIN d'un collègue ; sur une tablette partagée, toucher **« Quitter »** (en haut) avant de passer la main ;

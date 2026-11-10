@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Bouton, Champ, classesChamp, cx, Message } from "@/components/ui";
+import { Bouton, Champ, classesChamp, cx, Message, soumettre } from "@/components/ui";
 import { UNITE_SINGULIER, UNITES_INGREDIENT } from "@/domain/unites";
 import { actionCreerProduit } from "../../actions";
 
@@ -23,7 +23,7 @@ export function FormulaireNouveauProduit({
     setCategorie(n === "ingredient" ? (categorieIngredients ?? "") : (categories.find((c) => c.id !== categorieIngredients)?.id ?? ""));
   };
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-2">
+    <form onSubmit={soumettre(action)} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="nature" value={nature} />
       <div className="grid grid-cols-2 rounded-xl bg-stone-100 p-1 text-sm font-semibold sm:col-span-2">
         {(

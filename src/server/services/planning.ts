@@ -2,7 +2,7 @@ import { and, asc, eq, gt, gte, inArray, lt, lte, ne } from "drizzle-orm";
 import type { Db } from "@/db";
 import { creneaux, equipesShift, shifts, sites, utilisateurs } from "@/db/schema";
 import { creneauxDuJour, intervalleCreneau } from "@/domain/creneaux";
-import { ajouterJours, enMinutes, estJournee, heureLocale, jourIso, type Journee } from "@/domain/temps";
+import { ajouterJours, enMinutes, estJournee, heureLocale, jourIso, libelleJournee, type Journee } from "@/domain/temps";
 import type { Acteur } from "../acteur";
 import { tracer } from "../audit";
 import { ErreurMetier, exiger } from "../erreurs";
@@ -123,7 +123,7 @@ async function verifierDisponibilite(db: Db, utilisateurId: string, debut: Date,
   if (conflit) {
     const [u] = await db.select({ nom: utilisateurs.nom }).from(utilisateurs).where(eq(utilisateurs.id, utilisateurId));
     throw new ErreurMetier(
-      `${u?.nom ?? "Cet employé"} est déjà planifié sur « ${conflit.creneau} » du ${conflit.journee} (${conflit.site}).`,
+      `${u?.nom ?? "Cet employé"} est déjà planifié sur « ${conflit.creneau} » du ${libelleJournee(conflit.journee)} (${conflit.site}) : les deux shifts se chevauchent.`,
     );
   }
 }
@@ -153,6 +153,8 @@ export async function affecter(db: Db, a: Affectation, acteur: Acteur): Promise<
   const { debut, fin } = existant
     ? { debut: existant.debutPrevu, fin: existant.finPrevue }
     : intervalleCreneau(a.journee, c);
+  // Planifier un créneau déjà terminé le ferait compter aussitôt comme « remontée manquante ».
+  exiger(existant || fin > new Date(), "Ce créneau est déjà terminé : on ne planifie que l'avenir ou le créneau en cours");
   for (const id of [a.responsableId, ...equipiers]) {
     await verifierDisponibilite(db, id, debut, fin, existant?.id ?? null);
   }

@@ -152,7 +152,10 @@ function LigneArticle({
       <Bouton disabled={!produitId || enCours} onClick={() => agir(() => actionAssocierArticle(a.id, produitId, canalId, facteur))}>
         Rattacher
       </Bouton>
-      <Bouton variante="discret" disabled={enCours} title="Article hors inventaire : ne plus le proposer" onClick={() => agir(() => actionIgnorerArticle(a.id))}>
+      <Bouton variante="discret" disabled={enCours} title="Article hors inventaire : ne plus le proposer" onClick={() => {
+          if (window.confirm(`Ignorer « ${a.nom} » ? Ses ventes ne seront plus importées (rétablissable dans « Articles ignorés »).`))
+            agir(() => actionIgnorerArticle(a.id));
+        }}>
         Ignorer
       </Bouton>
       {erreur && (

@@ -44,7 +44,7 @@ export async function alertesExploitation(db: Db, siteIds: string[], maintenant:
     res.push(
       s.statut === "ouvert"
         ? { type: "non_cloture", gravite: "haute", site: nomsSites.get(s.siteId)!, message: `${quand} : toujours ouvert, fin prévue à ${heureLocale(s.finPrevue)}`, lien: `/shift/${s.id}/cloture` }
-        : { type: "manquant", gravite: "haute", site: nomsSites.get(s.siteId)!, message: `${quand} : jamais ouvert (remontée manquante)`, lien: `/admin/remontees` },
+        : { type: "manquant", gravite: "haute", site: nomsSites.get(s.siteId)!, message: `${quand} : jamais ouvert (remontée manquante)`, lien: `/admin/remontees?site=${s.siteId}&date=${s.journee}` },
     );
   }
 
@@ -103,13 +103,16 @@ export async function alertesExploitation(db: Db, siteIds: string[], maintenant:
   // Stock probablement au-delà de sa durée de conservation (à vérifier, puis à déclarer en perte).
   for (const siteId of siteIds) {
     const perimes = await stockPerime(db, siteId, maintenant);
+    const [ouvert] = perimes.length
+      ? await db.select({ id: shifts.id }).from(shifts).where(and(eq(shifts.siteId, siteId), eq(shifts.statut, "ouvert")))
+      : [];
     if (perimes.length)
       res.push({
         type: "peremption",
         gravite: "haute",
         site: nomsSites.get(siteId)!,
         message: `Date limite probablement dépassée : ${perimes.map((p) => `${p.produit} (${libelleQuantite(p.quantite, p)}, conservation ${p.duree} j)`).join(", ")}. Vérifier et déclarer en perte.`,
-        lien: null,
+        lien: ouvert ? `/shift/${ouvert.id}/pertes` : null,
       });
   }
 
@@ -124,7 +127,7 @@ export async function alertesExploitation(db: Db, siteIds: string[], maintenant:
       gravite: "moyenne",
       site: nomsSites.get(b.siteDestinationId)!,
       message: `Bon n° ${b.numero} expédié le ${formatLocal(b.expedieLe!)} et toujours pas réceptionné`,
-      lien: null,
+      lien: "/admin/laboratoire",
     });
 
   return res.sort((a, b) => (a.gravite === b.gravite ? 0 : a.gravite === "haute" ? -1 : 1));

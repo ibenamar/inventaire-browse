@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
+  articlesCaisse,
   bonsLivraison,
   categories,
   coutsProduit,
@@ -131,6 +132,13 @@ export async function modifierProduit(db: Db, id: string, v: SaisieProduit, acte
     .update(produits)
     .set({ ...v, nom: v.nom.trim(), format: v.format?.trim() || null })
     .where(eq(produits.id, id));
+  // Parts par gâteau changées : les articles Loyverse « gâteau entier » (facteur = ancien nombre de parts) suivent.
+  if (avant.partsParGateau && v.partsParGateau && avant.partsParGateau !== v.partsParGateau) {
+    await db
+      .update(articlesCaisse)
+      .set({ facteur: v.partsParGateau })
+      .where(and(eq(articlesCaisse.produitId, id), eq(articlesCaisse.facteur, avant.partsParGateau)));
+  }
   await tracer(db, acteur.id, "modifier", "produit", id, { ...v });
 }
 

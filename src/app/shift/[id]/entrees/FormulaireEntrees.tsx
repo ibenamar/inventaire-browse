@@ -47,6 +47,7 @@ export function FormulaireEntrees({
   const [destination, setDestination] = useState<string>(destinations?.[0]?.id ?? "");
   const [qtes, setQtes] = useState<Record<string, number>>({});
   const [textes, setTextes] = useState<Record<string, string>>({});
+  const [alertes, setAlertes] = useState<Record<string, string | null>>({});
   const [enGateaux, setEnGateaux] = useState<Record<string, boolean>>(() =>
     gateauxParDefaut ? Object.fromEntries(produits.filter((p) => p.unite === "part" && p.partsParGateau).map((p) => [p.produitId, true])) : {},
   );
@@ -62,8 +63,20 @@ export function FormulaireEntrees({
   useEffect(() => {
     if (!lignes.length) return;
     const avertir = (e: BeforeUnloadEvent) => e.preventDefault();
+    // Navigation dans l'application (retour, liens) : confirmation avant de perdre la saisie.
+    const surClic = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement).closest("a");
+      if (a && a.getAttribute("href") && !window.confirm("La saisie en cours n'est pas enregistrée. Quitter quand même ?")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
     window.addEventListener("beforeunload", avertir);
-    return () => window.removeEventListener("beforeunload", avertir);
+    document.addEventListener("click", surClic, true);
+    return () => {
+      window.removeEventListener("beforeunload", avertir);
+      document.removeEventListener("click", surClic, true);
+    };
   }, [lignes.length]);
   const saisisParCategorie = (c: string | null) => produits.filter((p) => (!c || p.categorie === c) && (qtes[p.produitId] ?? 0) > 0).length;
   const total = (p: P) => (qtes[p.produitId] ?? 0) * (enGateaux[p.produitId] && p.partsParGateau ? p.partsParGateau : 1);
@@ -163,7 +176,12 @@ export function FormulaireEntrees({
                     value={textes[p.produitId] || (q ? formatQuantite(q) : "")}
                     placeholder="0"
                     onChange={(e) => {
-                      if (!decimales) return setQtes((x) => ({ ...x, [p.produitId]: Math.min(9999, Number(e.target.value.replace(/\D/g, "") || 0)) }));
+                      if (!decimales) {
+                        // Nombre entier attendu : la virgule n'est pas effacée en silence (« 2,5 » deviendrait 25).
+                        if (/[.,]/.test(e.target.value)) return setAlertes((x) => ({ ...x, [p.produitId]: "Nombre entier attendu" }));
+                        setAlertes((x) => ({ ...x, [p.produitId]: null }));
+                        return setQtes((x) => ({ ...x, [p.produitId]: Math.min(9999, Number(e.target.value.replace(/\D/g, "") || 0)) }));
+                      }
                       const t = e.target.value.replace(/[^\d.,]/g, "");
                       setTextes((x) => ({ ...x, [p.produitId]: t }));
                       const n = lireQuantite(t);
@@ -183,7 +201,12 @@ export function FormulaireEntrees({
                 </div>
                 {p.unite === "part" && p.partsParGateau && q > 0 && (
                   <div className="mt-1 text-center text-xs font-semibold text-stone-700">
-                    = {total(p)} parts{gat ? "" : ` (${Math.round((total(p) / p.partsParGateau) * 100) / 100} gâteau)`}
+                    = {total(p)} parts{gat ? "" : ` (${formatQuantite(Math.round((total(p) / p.partsParGateau) * 100) / 100)} gâteau)`}
+                  </div>
+                )}
+                {alertes[p.produitId] && (
+                  <div className="mt-1 text-center text-xs font-semibold text-red-700" role="alert">
+                    {alertes[p.produitId]}
                   </div>
                 )}
                 {estQuantiteInhabituelle(total(p), p.unite) && (

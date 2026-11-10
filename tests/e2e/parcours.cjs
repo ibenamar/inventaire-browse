@@ -22,7 +22,9 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
 
   await page.goto(B + "/");
   await page.getByRole("link", { name: "Browse 2 Mars" }).click();
-  await page.getByRole("button", { name: "Direction" }).click();
+  // La direction n'est pas listée sur les sites : elle saisit son nom.
+  await page.getByRole("button", { name: "Compte direction" }).click();
+  await page.getByLabel("Nom du compte direction").fill("Direction");
   await shot("01-pin");
   await page.getByRole("button", { name: "0" }).click(); // mauvais code
   for (const d of "000") await page.getByRole("button", { name: d, exact: true }).click();

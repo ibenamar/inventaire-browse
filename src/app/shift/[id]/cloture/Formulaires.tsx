@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { actionCloturer, actionForcerCloture } from "@/app/actions-shift";
-import { Bouton, classesChamp, Message } from "@/components/ui";
+import { Bouton, classesChamp, Message, soumettre } from "@/components/ui";
 
 export function FormulaireCloture({
   shiftId,
@@ -59,7 +59,7 @@ export function FormulaireForcer({ shiftId }: { shiftId: string }) {
       <p className="my-2 text-sm text-stone-600">
         Pour un shift abandonné : les produits non comptés prennent leur stock théorique. La clôture est marquée comme forcée.
       </p>
-      <form action={action} className="grid gap-2">
+      <form onSubmit={soumettre(action)} className="grid gap-2">
         <input name="motif" required minLength={5} placeholder="Motif (obligatoire)" className={classesChamp} />
         {etat && !etat.ok && <Message ton="erreur">{etat.erreur}</Message>}
         <Bouton variante="danger" disabled={enCours} type="submit">

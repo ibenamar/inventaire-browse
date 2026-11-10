@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Carte, formatMad, Titre } from "@/components/ui";
 import { journeeLocale } from "@/domain/temps";
+import { UNITE_SINGULIER } from "@/domain/unites";
 import { getDb } from "@/lib/db";
 import { ErreurMetier } from "@/server/erreurs";
 import { listerArticles, listerCanaux } from "@/server/services/caisse";
@@ -64,6 +65,7 @@ export default async function Produit({ params }: { params: Promise<{ id: string
               <h2 className="mb-1 text-lg font-semibold">Stock minimum par site</h2>
               <p className="mb-3 text-sm text-stone-600">
                 En dessous de ce niveau au comptage de clôture, le produit apparaît dans les alertes de réapprovisionnement. Vide = pas d&apos;alerte.
+                Pris en compte à partir du prochain shift ouvert.
               </p>
               <FormulaireStocksMinimum produitId={p.id} unite={p.unite} minimums={minimums} />
             </Carte>
@@ -87,10 +89,11 @@ export default async function Produit({ params }: { params: Promise<{ id: string
           <Carte>
             <h2 className="mb-1 text-lg font-semibold">Coût de revient</h2>
             <p className="mb-3 text-sm text-stone-600">
-              En vigueur : <strong>{formatMad(cout)}</strong> par {p.unite === "part" ? "part" : "unité"}. Sert à valoriser les pertes et les écarts au
+              En vigueur : <strong>{formatMad(cout)}</strong> par {UNITE_SINGULIER[p.unite]}
+              {p.nature === "ingredient" && p.format ? ` (et non par ${p.format})` : ""}. Pris en compte à partir du prochain shift ouvert. Sert à valoriser les pertes et les écarts au
               coût réel.
             </p>
-            <FormulaireCout produitId={p.id} aujourdhui={aujourdhui} />
+            <FormulaireCout produitId={p.id} aujourdhui={aujourdhui} unite={p.unite} />
             {historique.length > 0 && (
               <ul className="mt-3 text-sm text-stone-600">
                 {historique.map((h) => (

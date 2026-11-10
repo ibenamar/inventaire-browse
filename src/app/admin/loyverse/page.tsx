@@ -1,6 +1,6 @@
 import { Carte, Message, Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
-import { categoriesARattacher, compterArticlesRattaches, listerCanaux, magasinsConnus } from "@/server/services/caisse";
+import { articlesIgnores, categoriesARattacher, compterArticlesRattaches, listerCanaux, magasinsConnus } from "@/server/services/caisse";
 import { listerSites } from "@/server/services/sites";
 import { dernieresSynchros } from "@/server/services/ventes-loyverse";
 import { formatLocal } from "@/domain/temps";
@@ -8,12 +8,14 @@ import { formatMad } from "@/components/ui";
 import Link from "next/link";
 import { listerProduits } from "@/server/services/catalogue";
 import { exigerDirection } from "../acces";
+import { ArticlesIgnores } from "./ArticlesIgnores";
 import { ArticlesNonAssocies, ImportLoyverse } from "./ImportLoyverse";
 import { MagasinsSites } from "./MagasinsSites";
 
 export default async function Loyverse() {
   await exigerDirection();
   const db = await getDb();
+  const ignores = await articlesIgnores(db);
   const configure = Boolean(process.env.LOYVERSE_TOKEN);
   const [categories, canaux, produits, rattaches, magasins, sites] = await Promise.all([
     categoriesARattacher(db),
@@ -73,6 +75,13 @@ export default async function Loyverse() {
             produits={produits.map((p) => ({ id: p.id, nom: p.nom, categorie: p.categorie }))}
             canaux={canaux.map((c) => ({ id: c.id, nom: c.nom }))}
           />
+        </Carte>
+        <Carte>
+          <details>
+            <summary className="cursor-pointer text-lg font-semibold">Articles ignorés ({ignores.length})</summary>
+            <p className="my-2 text-sm text-stone-600">Hors inventaire : leurs ventes ne sont pas importées. Rétablir un article ignoré par erreur.</p>
+            <ArticlesIgnores articles={ignores} />
+          </details>
         </Carte>
         <Carte>
           <h2 className="mb-1 text-lg font-semibold">Derniers imports de ventes</h2>

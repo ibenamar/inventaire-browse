@@ -98,8 +98,15 @@ export default async function Laboratoire({
                     <tr key={x.produitId} className="border-t border-stone-100">
                       <td className="py-1.5">{x.produit}</td>
                       {prev.sites.map((n) => (
-                        <td key={n} className="px-1 text-right tabular-nums" title={x.parSite[n] ? `Besoin ${formatQuantite(x.parSite[n].besoin)}, stock ${formatQuantite(x.parSite[n].stock)}, en route ${formatQuantite(x.parSite[n].enRoute)}` : undefined}>
+                        <td key={n} className="px-1 text-right align-top tabular-nums">
                           {x.parSite[n]?.aLivrer ? enGateaux(x.parSite[n].aLivrer, x) : ""}
+                          {x.parSite[n] && (
+                            // Détail visible aussi sur téléphone (pas d'infobulle au toucher).
+                            <span className="block text-[11px] leading-tight whitespace-nowrap text-stone-500">
+                              besoin {enGateaux(x.parSite[n].besoin, x)} · stock {enGateaux(x.parSite[n].stock, x)}
+                              {x.parSite[n].enRoute ? ` · en route ${enGateaux(x.parSite[n].enRoute, x)}` : ""}
+                            </span>
+                          )}
                         </td>
                       ))}
                       <td className="px-1 text-right tabular-nums">{x.stockLabo ? enGateaux(x.stockLabo, x) : ""}</td>
@@ -155,7 +162,7 @@ export default async function Laboratoire({
         <Carte>
           <h2 className="mb-2 font-semibold">Livraisons par point de vente</h2>
           {r.livraisons.length ? (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="text-xs text-stone-500">
                 <tr>
                   <th className="py-1 text-left">Point de vente</th>
@@ -176,7 +183,7 @@ export default async function Laboratoire({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           ) : (
             <p className="text-sm text-stone-500">Aucun bon expédié sur la période.</p>
           )}
@@ -201,7 +208,7 @@ export default async function Laboratoire({
           <h2 className="mb-1 font-semibold">Écarts de livraison</h2>
           <p className="mb-2 text-sm text-stone-500">Reçu au point de vente différent de l&apos;expédié (produit manquant, abîmé, erreur de saisie).</p>
           {r.ecartsLivraison.length ? (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="text-xs text-stone-500">
                 <tr>
                   <th className="py-1 text-left">Bon</th>
@@ -222,7 +229,7 @@ export default async function Laboratoire({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           ) : (
             <p className="text-sm text-stone-500">Aucun écart de livraison sur la période.</p>
           )}
@@ -237,7 +244,7 @@ export default async function Laboratoire({
             l&apos;ingrédient. Fiche : consommation attendue d&apos;après les fiches techniques (en rouge si la réelle la dépasse).
           </p>
           {r.consommation.length ? (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead className="text-xs text-stone-500">
                 <tr>
                   <th className="py-1 text-left">Ingrédient</th>
@@ -260,7 +267,7 @@ export default async function Laboratoire({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           ) : (
             <p className="text-sm text-stone-500">Pas de consommation calculée sur la période (shifts clôturés nécessaires).</p>
           )}

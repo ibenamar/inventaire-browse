@@ -33,7 +33,7 @@ import {
 } from "@/domain/calculs";
 import { creneauEnCours } from "@/domain/creneaux";
 import { ecartsImportants } from "@/domain/vraisemblance";
-import { journeeLocale, type Journee } from "@/domain/temps";
+import { journeeLocale, libelleJournee, type Journee } from "@/domain/temps";
 import { estEncadrant, type Acteur } from "../acteur";
 import { tracer } from "../audit";
 import { ErreurMetier, exiger } from "../erreurs";
@@ -165,8 +165,11 @@ export async function ouvrirShift(db: Db, shiftId: string, acteur: Acteur, maint
     .from(shifts)
     .where(and(eq(shifts.siteId, s.siteId), eq(shifts.statut, "ouvert")));
   if (dejaOuvert) {
+    const [resp] = dejaOuvert.responsableId
+      ? await db.select({ nom: utilisateurs.nom }).from(utilisateurs).where(eq(utilisateurs.id, dejaOuvert.responsableId))
+      : [];
     throw new ErreurMetier(
-      `Le shift « ${dejaOuvert.nomCreneau} » du ${dejaOuvert.journee} est encore ouvert : il doit être clôturé avant.`,
+      `Le shift « ${dejaOuvert.nomCreneau} » du ${libelleJournee(dejaOuvert.journee)} est encore ouvert : ${resp ? `${resp.nom} (responsable)` : "son responsable"} ou un manager doit le clôturer avant.`,
     );
   }
 

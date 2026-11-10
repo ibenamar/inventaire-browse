@@ -84,6 +84,16 @@ export function CasePlanning({
               {shift ? "Modifier" : "Planifier"}
             </button>
           )}
+          {/* Shift resté sur un créneau supprimé : on peut encore le retirer du planning. */}
+          {!creneauId && shift?.statut === "planifie" && (
+            <button
+              onClick={() => lancer(() => actionRetirer(siteId, shift.id))}
+              disabled={enCours}
+              className="shrink-0 rounded-lg px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-50"
+            >
+              Retirer
+            </button>
+          )}
         </div>
       ) : (
         <div className="mt-2 grid gap-2">
