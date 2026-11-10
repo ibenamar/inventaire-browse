@@ -26,7 +26,11 @@ export async function creerConnexionPostgres(url: string): Promise<{ db: Db; fer
   const { default: postgres } = await import("postgres");
   const { drizzle } = await import("drizzle-orm/postgres-js");
   // prepare: false — requis par le pooler de connexions de Supabase (mode transaction).
-  const client = postgres(url, { prepare: false, max: 1 });
+  // max_pipeline: 1 — une requête à la fois sur la connexion : le pooler gère mal plusieurs requêtes
+  // envoyées d'affilée sans attendre les réponses (une page restait bloquée sans erreur).
+  // connect_timeout : ne pas attendre indéfiniment une connexion qui ne s'établit pas.
+  // (max_pipeline est une option prise en charge par postgres.js mais absente de ses types.)
+  const client = postgres(url, { prepare: false, max: 1, max_pipeline: 1, connect_timeout: 10 } as Parameters<typeof postgres>[1]);
   return {
     db: drizzle(client, { schema }) as unknown as Db,
     // Fermeture immédiate, sans attendre l'accusé de fermeture du serveur : sur Cloudflare Workers,
