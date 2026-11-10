@@ -53,15 +53,15 @@ Sites proposés dans la liste déroulante : **2 Mars, Anfa, Hay Hassani, Palmier
 |---|---|---|---|
 | C1 | **Prix de vente vides** pour les 66 produits | CA et valeur des écarts toujours à 0 | Prix obligatoire pour activer un produit ; ajouter aussi un **coût de revient** |
 | C2 | **Stock minimum vide** partout | L'alerte « À réappro » ne se déclenche jamais | Stock minimum **par site** (les besoins diffèrent d'un point de vente à l'autre) |
-| C3 | Références **P057 à P063 absentes** (saut de P056 à P064) | Produits supprimés ou oubliés ? | À confirmer ; l'app conserve les produits archivés plutôt que de les supprimer |
+| C3 | Références **P057 à P063 absentes** (saut de P056 à P064) | Produits non retenus | Confirmé : hors périmètre, non importés |
 | C4 | « Format » renseigné uniquement pour les boissons | Ambiguïté de comptage (gâteau entier vs part) | Champ **unité de comptage** obligatoire (pièce, part, gâteau, bouteille…) |
-| C5 | Crêpes, pancakes, waffles, fettuccini (20 produits) sont **préparés à la commande** | Les compter en stock fini n'a pas de sens : stock toujours 0, écart non pertinent | Marquer ces produits « **vente seule** » (non inventoriés) ; inventorier leurs ingrédients plus tard (phase 4) |
+| C5 | Crêpes, pancakes, waffles, fettuccini (20 produits) sont **préparés à la commande** | Les compter en stock fini n'a pas de sens | Produits « **vente seule** » : non inventoriés, ventes importées de Loyverse ; suivi de la production des préparations reporté (phase 4) |
 | C6 | Le « shift » est en fait **une journée** (une copie d'onglet par jour) | Pas de notion de shift matin / soir, pas de passation | Shift = entité à part entière (site + date + créneau), plusieurs par jour possibles |
 | C7 | Le stock d'ouverture est **recompté à la main** chaque jour, sans lien avec la clôture de la veille | Les pertes entre deux shifts (nuit, passation) sont invisibles | **Logique inter-shifts** : l'ouverture est pré-remplie avec la clôture du shift précédent ; un recomptage d'ouverture fait apparaître un **écart de passation** |
 | C8 | Historique = onglets dupliqués et renommés | Aucune consolidation, pas de courbe d'évolution, risque d'écraser des formules, pas d'audit | Base de données centrale + interface d'administration |
 | C9 | Valeur de l'écart calculée au **prix de vente** | Mesure le manque à gagner, pas la perte réelle | Afficher les deux : valeur au coût (perte réelle) et au prix de vente (manque à gagner) |
 | C10 | « Pertes / offerts » regroupés | Impossible de distinguer les causes | Pertes avec **motif** obligatoire : péremption ou endommagé |
-| C11 | « Entrées » regroupe production et livraisons | Pas de traçabilité de la provenance (labo, fournisseur, autre site) | Entrées avec **origine** ; « Browse Sweets » semble être le laboratoire de production → transferts labo → sites (à confirmer) |
+| C11 | « Entrées » regroupe production et livraisons | Pas de traçabilité de la provenance | Entrées avec **origine** (production sur place, fournisseur, autre site). Les 5 sites sont des points de vente, sans laboratoire central |
 | C12 | Ventes ressaisies depuis la caisse (Loyverse) | Double saisie, erreurs | **Import automatique depuis l’API Loyverse**, saisie manuelle en secours |
 | C13 | Aucune photo des produits | Erreurs d'identification lors du comptage | Photo obligatoire par produit, affichée en grille dans l'écran de comptage |
 | C14 | Validation de données uniquement « entier ≥ 0 » | Fautes de frappe (ex. 100 au lieu de 10) non détectées | Contrôle de vraisemblance : alerte si écart > seuil ou quantité très supérieure à l'habitude |
@@ -124,15 +124,26 @@ alerte_réappro        = stock_réel_fin < stock_minimum(site, produit)
 - **Ventes Loyverse** : les reçus dont l'horodatage est compris entre l'ouverture et la clôture du shift sont agrégés par produit (correspondance produit ↔ article / SKU Loyverse). Les remboursements sont déduits. La saisie manuelle reste possible si l'API est indisponible.
 - **Pertes** : chaque perte = quantité + motif (péremption / endommagé) + commentaire facultatif + photo facultative.
 
-## 5. Questions restant ouvertes
+## 5. Décisions complémentaires (10/11/2026)
 
-1. **Browse Sweets** : laboratoire central qui livre les 4 boutiques, ou 5ᵉ point de vente ?
-2. **Sites** : lesquels ont 2 shifts, lesquels en ont 3 ? Le shift de nuit finit-il à 3h ou à 4h selon le site ?
-3. **Cakes** : combien de parts par gâteau (même nombre pour tous ?) ; les gâteaux arrivent-ils entiers ou déjà découpés ?
-4. **Produits à la commande** (crêpes, pancakes, waffles, fettuccini) : confirmez-vous qu'ils sont hors inventaire (ventes seules) ?
-5. **P057 à P063** : produits supprimés ou à réintégrer ?
-6. **Prix et coûts** : qui les fournit ? Les prix de vente sont-ils déjà dans Loyverse (on pourra alors les importer) ?
-7. **Loyverse** : un seul compte avec plusieurs magasins, ou un compte par site ? Les articles ont-ils un SKU ? L'accès API (jeton) est-il activé ?
-8. **Réseau** : le Wi-Fi est-il fiable en boutique, notamment la nuit ?
-9. **Photos** : visuels existants (Loyverse, site web, réseaux sociaux) ou à prendre ?
-10. **Planning** : qui le prépare (manager de site ou administration) et à quel horizon (semaine, mois) ?
+| Sujet | Décision | Conséquence pour l'app |
+|---|---|---|
+| **Sites** | 5 points de vente : 2 Mars, Anfa, Hay Hassani, Palmier, **Browse Sweets** | Pas de laboratoire central ; tous les sites ont le même type |
+| **Créneaux** | Browse Sweets : 3 shifts, horaires **différents selon le jour** (semaine / week-end) | Créneaux paramétrés **par site et par jour de la semaine** |
+| **Cakes** | **8 parts**, découpés sur place | `parts_par_gateau = 8` ; un gâteau entier non découpé compte pour 8 parts au comptage ; une entrée de 1 gâteau = 8 parts |
+| **Produits à la commande** | Hors inventaire pour l'instant | `suivi_stock = non` ; ventes seules |
+| **Production des préparations** | Utile pour la comparer aux ventes, **reportée** | Phase 4 : fiches de préparation, production saisie par shift, rapprochement avec les ventes Loyverse |
+| **P057 à P063** | Articles non retenus | Non importés |
+| **Prix de vente** | Déjà dans **Loyverse** | Import des prix depuis Loyverse, Loyverse reste la référence des prix |
+| **SKU** | Présents sur les articles Loyverse | Correspondance automatique produit ↔ article par SKU |
+| **API Loyverse** | Identifiants à demander | L'API publique Loyverse existe (jeton d'accès créé dans le Back Office, rubrique *Intégrations › Jetons d'accès*) ; à obtenir en phase 0 |
+| **Wi-Fi** | Fiable en boutique | Mode hors-ligne complet non prioritaire ; simple reprise automatique en cas de coupure brève |
+| **Photos** | Absentes de Loyverse | Prise de photo **directement depuis le téléphone** dans l'admin du catalogue |
+| **Planning** | Préparé par le **manager** de site et la **direction** | Droits d'édition du planning pour ces deux rôles |
+
+## 6. Questions restant ouvertes (non bloquantes pour démarrer)
+
+1. **Horaires des créneaux** : grille par site et par jour de la semaine (Browse Sweets semaine / week-end, et les 4 autres sites : 2 ou 3 shifts, fin de nuit à 3h ou 4h). Ce sont des paramètres, saisissables après la livraison.
+2. **Coût de revient** : disponible dans Loyverse (champ « coût » de l'article) ou à fournir ? Sans coût, les écarts et pertes sont valorisés au prix de vente seulement.
+3. **Loyverse** : un seul compte pour les 5 magasins ? (détermine la correspondance site ↔ magasin)
+4. **Planning** : horizon souhaité (semaine ou mois) ?

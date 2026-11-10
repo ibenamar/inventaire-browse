@@ -6,8 +6,8 @@ Application d'inventaire inter-shifts pour les points de vente Browse : planning
 
 - [Analyse du fichier Excel existant](docs/ANALYSE.md) — structure, anomalies, règles métier, questions ouvertes
 - [Feuille de route](docs/FEUILLE_DE_ROUTE.md) — périmètre, modèle de données, choix techniques, phases
-- [Catalogue initial](data/catalogue.csv) — 66 produits extraits du fichier de suivi (prix, stocks minimum et photos à compléter)
+- [Catalogue initial](data/catalogue.csv) — 66 produits extraits du fichier de suivi (46 inventoriés, 20 en vente seule ; SKU, prix et photos à compléter)
 
 ## État
 
-Phase 0 — cadrage. Décisions principales validées le 10/11/2026 ; quelques questions restent ouvertes (voir ANALYSE.md §5).
+Phase 0 — cadrage. Décisions validées le 10/11/2026 ; restent des paramètres non bloquants (voir ANALYSE.md §6).

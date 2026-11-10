@@ -18,14 +18,15 @@ Remplacer le classeur Excel dupliqué chaque jour par une application qui :
 |---|---|
 | **Employé** (1 à 2 par shift) | Rejoindre le shift prévu, saisir comptages, entrées et pertes |
 | **Responsable d'inventaire** (1 par shift, désigné dans le planning) | + ouvrir le shift, valider le comptage et **clôturer** le shift (signature) |
-| **Manager de site** | + préparer le planning de son site, réaffecter un responsable absent, corriger / valider les shifts, rapports du site |
-| **Administrateur** | + catalogue (produits, photos, prix, coûts), sites et créneaux, utilisateurs, connexion Loyverse, tous les rapports, exports |
+| **Manager de site** | + préparer le planning de son site (avec la direction), réaffecter un responsable absent, corriger / valider les shifts, rapports du site |
+| **Direction / Administrateur** | + planning de tous les sites, catalogue (produits, photos, prix, coûts), sites et créneaux, utilisateurs, connexion Loyverse, tous les rapports, exports |
 
 ## 3. Périmètre fonctionnel
 
 ### 3.1 Planning prévisionnel
 
-- Créneaux paramétrables par site (2 ou 3 shifts ; heure de fin de nuit 3h ou 4h).
+- Créneaux paramétrables **par site et par jour de la semaine** (2 ou 3 shifts ; horaires différents le week-end, ex. Browse Sweets ; fin de nuit 3h ou 4h).
+- Planning préparé par le **manager** de site et la **direction**.
 - Vue semaine par site : pour chaque créneau, l'équipe (1 à 2 employés) et le **responsable d'inventaire**.
 - Duplication d'une semaine type ; réaffectation en cas d'absence (tracée).
 - Contrôles : shift sans responsable, employé planifié sur deux sites en même temps.
@@ -48,7 +49,7 @@ Remplacer le classeur Excel dupliqué chaque jour par une application qui :
 - Connexion par jeton d'accès API Loyverse (stocké côté serveur).
 - Correspondance **produit ↔ article Loyverse** (par SKU ou identifiant d'article) et **site ↔ magasin Loyverse**.
 - Import des **reçus** de la plage horaire du shift, agrégés par produit, remboursements déduits.
-- Option : import initial des articles et des prix de vente depuis Loyverse.
+- Import des articles, **SKU** et **prix de vente** depuis Loyverse (Loyverse reste la référence des prix ; coût importé s'il est renseigné).
 - Relance manuelle de l'import et journal des synchronisations.
 
 ### 3.4 Interface d'administration (web)
@@ -65,9 +66,10 @@ Remplacer le classeur Excel dupliqué chaque jour par une application qui :
 ## 4. Modèle de données
 
 ```
-Site(id, nom, type[boutique|labo], mode_ouverture[reprise|recomptage],
+Site(id, nom, mode_ouverture[reprise|recomptage],
      loyverse_store_id, actif)
-Creneau(id, site_id, nom, heure_debut, heure_fin, ordre, actif)     -- ex. 07:00–15:00, 20:00–04:00
+Creneau(id, site_id, jours_semaine[], nom, heure_debut, heure_fin, ordre, actif)
+                                                -- ex. lun–ven 07:00–15:00 ; sam–dim horaires propres
 Categorie(id, nom, ordre)
 Produit(id, ref, nom, categorie_id, unite[piece|part|bouteille], format,
         parts_par_gateau, prix_vente, cout, photo_url, suivi_stock[bool],
@@ -98,7 +100,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 | Loyverse | Fonction serveur appelant l'API Loyverse (reçus, articles, magasins) | Le jeton API ne quitte jamais le serveur |
 | UI | Tailwind CSS, grandes zones tactiles | Saisie rapide au doigt |
 | Graphiques | Recharts | Évolution du stock, pertes, écarts |
-| Hors-ligne | File d'attente locale (IndexedDB) + synchronisation | Wi-Fi boutique non garanti, notamment la nuit |
+| Coupures réseau | Reprise automatique des envois en cas de coupure brève | Wi-Fi fiable en boutique : pas de mode hors-ligne complet au MVP |
 | Dates / fuseau | Heure du Maroc (`Africa/Casablanca`) ; journée d'exploitation calculée au serveur | Shift de nuit à cheval sur deux dates |
 | Tests | Vitest (calculs, rattachement des shifts de nuit) + Playwright (parcours) | Fiabilité des écarts |
 | Hébergement | Vercel + Supabase | Coût faible, déploiement continu depuis GitHub |
@@ -109,18 +111,20 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [x] Analyse du fichier Excel existant ([ANALYSE.md](ANALYSE.md))
 - [x] Extraction du catalogue ([`data/catalogue.csv`](../data/catalogue.csv))
 - [x] Décisions : créneaux, cakes à la part, stock minimum par site, planning + responsable, motifs de perte, Loyverse, téléphone / tablette, 1–2 employés
-- [ ] Réponses aux questions restantes ([ANALYSE.md §5](ANALYSE.md))
-- [ ] Liste des sites avec leurs créneaux (2 ou 3 shifts, fin de nuit 3h ou 4h)
-- [ ] Compléter le catalogue : prix, coût, unité, parts par gâteau, type (inventorié / vente seule), stock minimum par site
-- [ ] Collecter une photo par produit (carrée, ≥ 600×600 px) — vérifier si Loyverse en contient déjà
-- [ ] Obtenir un jeton API Loyverse et la liste des magasins / articles (SKU)
+- [x] Décisions complémentaires : Browse Sweets point de vente, cakes 8 parts, produits à la commande hors inventaire, P057–P063 non retenus, prix et SKU dans Loyverse, Wi-Fi fiable, planning par manager et direction ([ANALYSE.md §5](ANALYSE.md))
+- [x] Catalogue enrichi : unité, parts par gâteau, produit inventorié ou non ([`data/catalogue.csv`](../data/catalogue.csv))
+- [ ] Grille des créneaux par site et par jour de la semaine
+- [ ] Obtenir le jeton API Loyverse (prix, SKU, coûts éventuels, magasins)
+- [ ] Stock minimum par site
+- [ ] Photos : à prendre (carrées, ≥ 600×600 px) — possibles directement depuis l'admin
 - [ ] Maquettes des 4 écrans clés : planning, grille de comptage, clôture, tableau de bord
 
 **Livrable** : catalogue complet, créneaux par site, accès Loyverse, maquettes validées.
 
 ### Phase 1 — MVP saisie inter-shifts et planning
 - [ ] Initialisation du projet, CI, déploiement de recette
-- [ ] Schéma de base de données, import du catalogue CSV et des photos
+- [ ] Schéma de base de données, import du catalogue CSV
+- [ ] Import des articles, SKU et prix de vente depuis Loyverse (si le jeton est disponible ; sinon saisie des prix dans le catalogue)
 - [ ] Sites, créneaux, utilisateurs, PIN, rôles
 - [ ] **Planning** : vue semaine, équipe et responsable d'inventaire par shift, duplication de semaine
 - [ ] Ouverture du shift planifié, reprise automatique de la clôture précédente (y compris nuit → matin)
@@ -135,9 +139,9 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 **Critère de sortie** : un shift complet saisi en moins de 10 minutes sur téléphone ; résultats identiques au fichier Excel sur la semaine pilote.
 
 ### Phase 2 — Loyverse et administration
-- [ ] Connexion Loyverse, correspondance articles / magasins
+- [ ] Correspondance site ↔ magasin Loyverse
 - [ ] Import automatique des ventes à la clôture, saisie manuelle en secours, journal des synchronisations
-- [ ] Gestion du catalogue (CRUD, photos, prix, coûts, archivage, stock minimum par site)
+- [ ] Gestion du catalogue (CRUD, **photo prise depuis le téléphone**, coûts, archivage, stock minimum par site)
 - [ ] Tableau de bord consolidé et par site
 - [ ] Courbes d'évolution du stock par produit / site
 - [ ] Rapports d'écarts (produit, shift, responsable, passation) et de pertes (par motif)
@@ -148,13 +152,14 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [ ] Déploiement sur **tous les sites**, arrêt du fichier Excel
 
 ### Phase 3 — Flux et fiabilisation
-- [ ] Transferts labo → boutiques et entre boutiques (envoi / réception rapprochés)
+- [ ] Transferts entre boutiques (envoi / réception rapprochés)
 - [ ] Bon de réapprovisionnement généré à partir des alertes
-- [ ] Mode hors-ligne complet avec synchronisation
+- [ ] Mode hors-ligne complet (optionnel, le Wi-Fi étant fiable)
 - [ ] Contrôles de vraisemblance (quantité inhabituelle, écart > seuil)
 - [ ] Notifications (shift non clôturé, responsable non désigné, écart important, rupture)
 
 ### Phase 4 — Évolutions
+- [ ] **Suivi de la production des préparations** (crêpes, pancakes, waffles, fettuccini…) et rapprochement avec les ventes Loyverse
 - [ ] Inventaire des ingrédients pour les produits préparés à la commande
 - [ ] Suivi des DLC pour anticiper la péremption
 - [ ] Prévision de production par site, jour de semaine et créneau (ventes Loyverse + pertes)
@@ -176,10 +181,10 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 
 | Risque | Parade |
 |---|---|
-| Catalogue incomplet (prix, coûts, photos) au démarrage | Phase 0 bloquante ; produits sans prix non activables ; import depuis Loyverse si possible |
+| Photos à produire pour ~46 produits | Prise de photo intégrée à l'admin ; photo générique de catégorie en attendant |
 | Articles Loyverse sans SKU ou nommés différemment | Écran de correspondance manuelle, produits non associés signalés |
 | Ventes passées après l'heure de clôture (décalage caisse) | Import sur l'heure réelle de clôture ; ventes tardives rattachées au shift suivant et signalées |
 | Shift de nuit à cheval sur deux dates | Notion de journée d'exploitation, tests dédiés |
 | Responsable absent | Réaffectation par le manager, tracée |
 | Adoption par les équipes | Écran tactile très simple, pilote sur un site, formation de 15 min |
-| Réseau instable en boutique | PWA + file d'attente hors-ligne |
+| Coupure réseau ponctuelle | Reprise automatique des envois |
