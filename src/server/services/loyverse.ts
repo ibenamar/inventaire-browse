@@ -261,6 +261,9 @@ export async function importerArticles(
     if (!ligne.produitId && ligne.actif && enVente) rapport.nonAssocies.push(a.nom);
   }
 
+  // Une même ligne ne doit apparaître qu'une fois par écriture groupée (sinon PostgreSQL refuse
+  // « ON CONFLICT DO UPDATE command cannot affect row a second time ») : on garde la dernière.
+  const prixUniques = [...new Map(prix.map((p) => [`${p.articleId}|${p.magasin}`, p])).values()];
   const lots = <T,>(t: T[], n = 250) => Array.from({ length: Math.ceil(t.length / n) }, (_, i) => t.slice(i * n, (i + 1) * n));
   const excl = (col: string) => sql.raw(`excluded."${col}"`);
   await db.transaction(async (tx) => {
@@ -285,7 +288,7 @@ export async function importerArticles(
           },
         });
     }
-    for (const lot of lots(prix)) {
+    for (const lot of lots(prixUniques)) {
       await tx
         .insert(prixArticlesMagasins)
         .values(lot)

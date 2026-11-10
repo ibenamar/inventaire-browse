@@ -183,8 +183,8 @@ export async function actionImporterLoyverse(): Promise<Resultat<RapportImport>>
     const { acteur } = await exigerDirection();
     const jeton = process.env.LOYVERSE_TOKEN;
     exiger(jeton, "Jeton Loyverse non configuré (variable LOYVERSE_TOKEN)");
-    const articles = await lireArticlesLoyverse(jeton);
-    const r = await importerArticles(await getDb(), articles, acteur, CORRESPONDANCES_LOYVERSE);
+    const articles = await avecDetail(() => lireArticlesLoyverse(jeton));
+    const r = await avecDetail(async () => importerArticles(await getDb(), articles, acteur, CORRESPONDANCES_LOYVERSE));
     revalidatePath("/admin/catalogue");
     return r;
   });
@@ -250,8 +250,8 @@ export async function actionImporterCsvLoyverse(form: FormData): Promise<Resulta
     const f = form.get("fichier");
     exiger(f instanceof Blob && f.size > 0, "Choisir le fichier exporté depuis Loyverse");
     exiger(f.size < 5_000_000, "Fichier trop volumineux");
-    const articles = lireExportCsv(await f.text());
-    const r = await importerArticles(await getDb(), articles, acteur, CORRESPONDANCES_LOYVERSE);
+    const articles = await avecDetail(async () => lireExportCsv(await f.text()));
+    const r = await avecDetail(async () => importerArticles(await getDb(), articles, acteur, CORRESPONDANCES_LOYVERSE));
     revalidatePath("/admin/loyverse");
     revalidatePath("/admin/catalogue", "layout");
     return r;
@@ -290,4 +290,18 @@ export async function actionChercherArticles(recherche: string): Promise<Resulta
     exiger(r.length >= 2, "Saisir au moins 2 caractères");
     return articlesARattacher(await getDb(), { recherche: r }, 50);
   });
+}
+
+/** Pour les écrans de la direction : message technique réel plutôt que le message générique. */
+async function avecDetail<T>(f: () => Promise<T>): Promise<T> {
+  try {
+    return await f();
+  } catch (e) {
+    if (e instanceof ErreurMetier) throw e;
+    if (e && typeof e === "object" && "digest" in e && String((e as { digest: unknown }).digest).startsWith("NEXT_")) throw e;
+    console.error("Import Loyverse", e);
+    const m = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    const cause = e instanceof Error && e.cause ? ` (cause : ${String((e.cause as Error).message ?? e.cause)})` : "";
+    throw new ErreurMetier(`Erreur technique pendant l'import : ${m}${cause}`.slice(0, 600));
+  }
 }
