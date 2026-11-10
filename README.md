@@ -5,7 +5,7 @@ Application d'inventaire inter-shifts pour les points de vente Browse : planning
 ## Documentation
 
 - [Analyse du fichier Excel existant](docs/ANALYSE.md) — structure, anomalies, règles métier, décisions
-- [Guide d'utilisation](docs/GUIDE_UTILISATEUR.md) — rôles, étapes de saisie et contrôles, pour les équipes
+- [Guide d'utilisation](docs/GUIDE_UTILISATEUR.md) — rôles, étapes de saisie et contrôles, pour les équipes ; consultable dans l'application sur https://inventaire.browse.ma/aide (lien « Aide »)
 - [Feuille de route](docs/FEUILLE_DE_ROUTE.md) — périmètre, modèle de données, choix techniques, phases
 - [Catalogue initial](data/catalogue.csv) — 66 produits (46 inventoriés, 20 en vente seule)
 - [Correspondances Loyverse](data/correspondances_loyverse.csv) — SKU Loyverse → produit, canal et facteur, à valider ; après modification : `npm run correspondances`
