@@ -15,7 +15,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "cf:build": "opennextjs-cloudflare build",
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "e2e": "node tests/e2e/parcours.cjs"
+    "e2e": "node tests/e2e/parcours.cjs",
+    "correspondances": "tsx scripts/correspondances.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",

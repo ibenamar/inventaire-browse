@@ -1,0 +1,121 @@
+ref_produit,produit,sku_loyverse,article_loyverse,categorie_loyverse,canal,facteur,prix_coffee_shop,prix_browse_sweet,fiabilite,remarque
+P001,Mango Can,10342,Mango Can,Can Cakes,Sur place,1,38.00,38.00,sûr,
+P001,Mango Can,10379,Mango Can,Glovo,Glovo,1,49.00,49.00,sûr,
+P002,Pistachio Kunafeh Can,10375,Pistache Kunafa Can,Can Cakes,Sur place,1,44.00,44.00,sûr,« Pistache Kunafa Can » en caisse
+P002,Pistachio Kunafeh Can,10405,Pistachio Kunafeh can,Glovo,Glovo,1,59.00,59.00,sûr,
+P003,Tiramisu Can,10376,Tiramisu Can,Can Cakes,Sur place,1,38.00,38.00,sûr,
+P003,Tiramisu Can,10384,Tiramisu Can,Glovo,Glovo,1,49.00,49.00,sûr,
+P004,Vanilla Red Fruits Can,10372,Strawberry Can,Can Cakes,Sur place,1,38.00,38.00,à confirmer,Vanilla Red Fruits Can = Strawberry Can ?
+P004,Vanilla Red Fruits Can,10377,Strawberry can,Glovo,Glovo,1,49.00,49.00,à confirmer,Vanilla Red Fruits Can = Strawberry can (Glovo) ?
+P005,Crispy Rice Can,10373,Crispy Rice Can,Can Cakes,Sur place,1,38.00,38.00,sûr,
+P005,Crispy Rice Can,10380,Crispy Rice Can,Glovo,Glovo,1,49.00,49.00,sûr,
+P006,Blueberry Can,10383,Blueberry Can,Glovo,Glovo,1,49.00,49.00,sûr,pas d’article sur place en caisse
+P007,Lotus Can,10414,Lotus Can,Can Cakes,Sur place,1,30.00,38.00,sûr,prix différent selon le magasin (30 / 38)
+P007,Lotus Can,10381,Lotus Can,Glovo,Glovo,1,49.00,49.00,sûr,
+P008,Oreo Can,10382,Oreo Can,Glovo,Glovo,1,49.00,49.00,sûr,pas d’article sur place en caisse
+P009,Matilda Cake,10284,Matilda Cake,CAKES,Sur place,1,45.00,45.00,sûr,
+P009,Matilda Cake,10319,Matilda Cake Entier,CAKES,Sur place,8,405.00,405.00,probable,"gâteau entier : 405 MAD = 9 × 45, vérifier le nombre de parts"
+P009,Matilda Cake,10407,Matilda Cake,Glovo,Glovo,1,59.00,59.00,sûr,
+P010,San Sebastian Cheesecake,10424,SAN SEBASTIAN,CAKES,Sur place,1,45.00,45.00,sûr,« SAN SEBASTIAN » en caisse
+P010,San Sebastian Cheesecake,10305,San sebastian entier,CAKES,Sur place,8,240.00,240.00,à confirmer,gâteau entier à 240 MAD : nombre de parts ?
+P010,San Sebastian Cheesecake,10217,CHEESECAKE SAN SEBASTIAN,Glovo,Glovo,1,52.00,52.00,sûr,
+P011,Lotus Cheesecake,10061,LOTUS CHEESECAKE,CAKES,Sur place,1,45.00,45.00,sûr,
+P011,Lotus Cheesecake,10243,Lotus Cheesecake,Glovo,Glovo,1,59.00,59.00,sûr,
+P012,Cipriani Cake,10415,Cipriani,CAKES,Sur place,1,45.00,45.00,sûr,« Cipriani » en caisse
+P012,Cipriani Cake,10396,Cipriani Cake,Glovo,Glovo,1,59.00,59.00,sûr,
+P013,Red Velvet Cake,10400,Red velvet Cake,CAKES,Sur place,1,45.00,45.00,sûr,
+P013,Red Velvet Cake,10397,Red velvet cake,Glovo,Glovo,1,59.00,59.00,sûr,
+P014,Tiramisu Cake,10285,TIRAMISU CAKE,CAKES,Sur place,1,40.00,40.00,sûr,
+P014,Tiramisu Cake,10387,Tiramisu Cake,Glovo,Glovo,1,52.00,52.00,sûr,
+P015,Carrot Cake,10059,CARROT CAKE,CAKES,Sur place,1,45.00,40.00,sûr,prix différent selon le magasin (45 / 40)
+P015,Carrot Cake,10302,Carrot Cake,Glovo,Glovo,1,52.00,52.00,sûr,
+P016,Lemon Cake,10307,Lemon Cake,CAKES,Sur place,1,40.00,40.00,sûr,
+P016,Lemon Cake,10406,Lemon cake,Glovo,Glovo,1,52.00,52.00,sûr,
+P017,Oreo Cheesecake,10062,OREO CHEESECAKE,CAKES,Sur place,1,45.00,45.00,sûr,
+P017,Oreo Cheesecake,10340,Oreo cheesecake,Glovo,Glovo,1,59.00,59.00,sûr,
+P018,Honey Cake,10282,Honey Cake,CAKES,Sur place,1,45.00,45.00,sûr,
+P018,Honey Cake,10283,Honey Cake,Glovo,Glovo,1,59.00,59.00,sûr,
+P019,Cinnamon Roll - L'original,10358,Classic Roll,Cinnamon Rolls,Sur place,1,28.00,28.00,probable,« Classic Roll » en caisse
+P019,Cinnamon Roll - L'original,10411,Cinnamon Roll - Original,Glovo,Glovo,1,30.00,30.00,sûr,
+P020,Caramel Beurre Salé Roll,10360,Caramel Pécan Roll,Cinnamon Rolls,Sur place,1,32.00,32.00,à confirmer,Caramel Beurre Salé Roll = Caramel Pécan Roll ?
+P020,Caramel Beurre Salé Roll,10412,Caramel Beurre Salé Roll,Glovo,Glovo,1,35.00,35.00,sûr,
+P022,Pistachio Roll,10184,Pistachio Roll,Cinnamon Rolls,Sur place,1,35.00,35.00,sûr,
+P022,Pistachio Roll,10413,Pistachio Roll,Glovo,Glovo,1,35.00,35.00,sûr,
+P023,Citron Roll,10408,Citron Roll,Glovo,Glovo,1,35.00,35.00,sûr,pas d’article sur place en caisse
+P024,Fruits rouges Roll,10410,Fruits rouges Roll,Glovo,Glovo,1,35.00,35.00,sûr,pas d’article sur place en caisse
+P025,Lotus Roll,10359,Lotus Roll,Cinnamon Rolls,Sur place,1,32.00,32.00,sûr,
+P026,Nutella Roll,10461,Nutella Roll,Cinnamon Rolls,Sur place,1,32.00,32.00,sûr,
+P026,Nutella Roll,10301,Nutella Roll,Glovo,Glovo,1,35.00,35.00,sûr,
+P027,Oreo Roll,10362,Cookie & Cream Roll,Cinnamon Rolls,Sur place,1,30.00,30.00,probable,« Cookie & Cream Roll » en caisse
+P027,Oreo Roll,10409,Oreo Roll,Glovo,Glovo,1,35.00,35.00,sûr,
+P028,Regular Cookie,10166,Regular Cooky,Cookies & Brownies,Sur place,1,30.00,30.00,probable,« Regular Cooky » en caisse
+P028,Regular Cookie,10364,Cookie regular box of 4,Cookies & Brownies,Sur place,4,60.00,60.00,probable,boîte de 4
+P028,Regular Cookie,10242,Regular cookie,Glovo,Glovo,1,30.00,26.00,sûr,prix différent selon le magasin (30 / 26)
+P029,Classic Brownie,10053,Brownie,Cookies & Brownies,Sur place,1,24.00,24.00,probable,« Brownie » en caisse
+P029,Classic Brownie,10368,Brownie box of 4,Cookies & Brownies,Sur place,4,72.00,72.00,probable,boîte de 4
+P029,Classic Brownie,10369,Brownie box of 6,Cookies & Brownies,Sur place,6,120.00,120.00,probable,boîte de 6
+P029,Classic Brownie,10316,Brownie,Glovo,Glovo,1,25.00,31.00,probable,prix différent selon le magasin (25 / 31)
+P029,Classic Brownie,10250,Brownie Chocolat,Glovo,Glovo,1,25.00,25.00,à confirmer,« Brownie Chocolat » Glovo : même produit ?
+P030,Brookie,10174,Brookie,Cookies & Brownies,Sur place,1,30.00,30.00,sûr,
+P030,Brookie,10303,Brookie,Glovo,Glovo,1,39.00,39.00,sûr,
+P031,Bueno Cookie,10169,Cooky Regular Bueno,Cookies & Brownies,Sur place,1,35.00,35.00,à confirmer,Bueno Cookie = Cooky Regular Bueno ou Cooky Chocolat bueno (10167) ?
+P031,Bueno Cookie,10310,Cookie bueno,Glovo,Glovo,1,45.00,45.00,probable,« Cookie bueno » Glovo
+P032,Pistache Kunafa Cookie,10385,Cookie pistache kunafa,Cookies & Brownies,Sur place,1,35.00,35.00,à confirmer,deux articles en caisse : Cookie pistache kunafa (35) et Cookie Pistache Kounafa (45)
+P033,Oreo Peanut Butter Brookie,10287,Brookie Peanut Butter,Cookies & Brownies,Sur place,1,35.00,35.00,probable,« Brookie Peanut Butter » en caisse
+P033,Oreo Peanut Butter Brookie,10425,Brookie peanut butter,Glovo,Glovo,1,42.00,42.00,probable,
+P034,Lotus Cookie,10168,Cooky Regular Speculos,Cookies & Brownies,Sur place,1,35.00,35.00,à confirmer,Lotus Cookie = Cooky Regular Speculos ?
+P034,Lotus Cookie,10390,Lotus Cookie,Glovo,Glovo,1,45.00,45.00,sûr,
+P035,Crêpe Pistachio Kunafa,10422,Pistachio Crêpe,Sweet,Sur place,1,65.00,65.00,probable,« Pistachio Crêpe »
+P036,Crêpe Nutella Banane,10208,Crêpe Nutella Banane,Home Sweets,Sur place,1,45.00,45.00,sûr,
+P036,Crêpe Nutella Banane,10343,Nutella Banane,Crépe,Sur place,1,40.00,40.00,probable,catégorie Crépe
+P036,Crêpe Nutella Banane,10423,Nutella Banana Crêpe,Sweet,Sur place,1,60.00,60.00,probable,« Nutella Banana Crêpe »
+P037,Crêpe Kinder Bueno,10345,Kinder Bueno,Crépe,Sur place,1,45.00,45.00,probable,catégorie Crépe
+P037,Crêpe Kinder Bueno,10389,Crepe kinder Bueno,Glovo,Glovo,1,59.00,59.00,sûr,
+P038,Crêpe Lotus,10209,Crêpe Lotus,Home Sweets,Sur place,1,45.00,45.00,sûr,
+P038,Crêpe Lotus,10344,Lotus,Crépe,Sur place,1,40.00,40.00,probable,catégorie Crépe
+P038,Crêpe Lotus,10403,Crêpe lotus,Glovo,Glovo,1,59.00,59.00,sûr,
+P039,Crêpe Oreo Cream,10347,Oreo Cream,Crépe,Sur place,1,45.00,45.00,probable,catégorie Crépe
+P040,Mini Pancakes Kinder Bueno,10352,Kinder bueno,Mini Pancakes,Sur place,1,45.00,45.00,probable,petit format
+P040,Mini Pancakes Kinder Bueno,10291,Kinder Bueno Mini Pancakes,Mini Pancakes,Sur place,1,55.00,55.00,probable,grand format
+P040,Mini Pancakes Kinder Bueno,10386,Mini Pancakes Kinder Bueno,Glovo,Glovo,1,65.00,65.00,sûr,
+P041,Mini Pancakes Nutella,10350,Nutella,Mini Pancakes,Sur place,1,45.00,45.00,probable,petit format
+P041,Mini Pancakes Nutella,10289,Nutella Mini Pancakes,Mini Pancakes,Sur place,1,55.00,55.00,probable,grand format
+P042,Mini Pancakes Brownie,10357,Brownie,Mini Pancakes,Sur place,1,45.00,45.00,probable,petit format
+P042,Mini Pancakes Brownie,10416,Brownie Mini Pancakes,Mini Pancakes,Sur place,1,55.00,55.00,probable,grand format
+P043,Mini Pancakes Pistachio Kunafa,10354,Pistache Kunafa,Mini Pancakes,Sur place,1,55.00,55.00,probable,petit format
+P043,Mini Pancakes Pistachio Kunafa,10366,Pistachio Mini Pancakes,Mini Pancakes,Sur place,1,65.00,65.00,probable,grand format
+P044,Mini Pancakes Oreo,10353,Oreo,Mini Pancakes,Sur place,1,45.00,45.00,probable,petit format
+P044,Mini Pancakes Oreo,10365,Oreo Mini Pancakes,Mini Pancakes,Sur place,1,55.00,55.00,probable,grand format
+P045,Mini Pancakes Lotus,10351,Lotus,Mini Pancakes,Sur place,1,45.00,45.00,probable,petit format
+P045,Mini Pancakes Lotus,10290,Lotus Biscoff Mini Pancakes,Mini Pancakes,Sur place,1,55.00,55.00,probable,grand format
+P046,Mini Pancakes Salted Caramel,10355,Salted Caramel,Mini Pancakes,Sur place,1,45.00,45.00,probable,petit format
+P046,Mini Pancakes Salted Caramel,10288,Salted Caramel Mini Pancakes,Mini Pancakes,Sur place,1,55.00,55.00,probable,grand format
+P046,Mini Pancakes Salted Caramel,10398,Mini pancakes Salted caramel,Glovo,Glovo,1,65.00,65.00,sûr,
+P048,Waffles Bueno,10402,Waffles bueno,Glovo,Glovo,1,59.00,59.00,sûr,
+P050,Waffles Oreo,10395,Gauffre Oreo,Glovo,Glovo,1,59.00,59.00,probable,« Gauffre Oreo »
+P052,Fettuccini Choco Banane,10399,Fettucini chocolat banane,Glovo,Glovo,1,59.00,59.00,sûr,
+P054,Fettuccini Lotus,10393,Fettuccini Lotus,Glovo,Glovo,1,59.00,59.00,sûr,
+P055,Flan Vanille,10420,Flan vanille,Glovo,Glovo,1,52.00,52.00,sûr,pas d’article sur place en caisse
+P056,Flan Pistache,10304,Flan pistache,CAKES,Sur place,1,45.00,45.00,sûr,
+P056,Flan Pistache,10311,Flan pistache entier,CAKES,Sur place,7,315.00,315.00,à confirmer,flan entier à 315 MAD = 7 × 45 : nombre de parts ?
+P056,Flan Pistache,10404,Flan Pistache,Glovo,Glovo,1,59.00,59.00,sûr,
+P064,MAYA Passion Ananas Mangue,10432,CANETTE PASSION ANANAS MANGUE,Maya,Sur place,1,27.00,27.00,sûr,
+P064,MAYA Passion Ananas Mangue,10443,MAYA PASSION ANANAS MANGUE - 330 ml,Glovo,Glovo,1,36.00,36.00,sûr,
+P065,MAYA Ananas,10427,CANETTE ANANAS 330ML,Maya,Sur place,1,27.00,27.00,sûr,
+P065,MAYA Ananas,10444,MAYA ANANAS - 330 ml,Glovo,Glovo,1,36.00,36.00,sûr,
+P066,KULT Kefir Passion Hops,10438,KULT KEFIR PASSION HOPS 330ML,KEFIR,Sur place,1,42.00,42.00,sûr,
+P066,KULT Kefir Passion Hops,10450,KULT Kefir Passion Hops — 330ml,Glovo,Glovo,1,56.00,56.00,sûr,
+P067,YAYA Kombucha Fruit de Passion,10440,YAYA KOMBUCHA FRUIT DE PASSION 330ML,KOMBUCHA,Sur place,1,42.00,42.00,sûr,
+P067,YAYA Kombucha Fruit de Passion,10452,YAYA Kombucha Fruit de Passion — 330ml,Glovo,Glovo,1,56.00,56.00,sûr,
+P068,MAYA Eau de Coco,10428,CANETTE EAU DE COCO 330ML,Maya,Sur place,1,27.00,27.00,sûr,
+P068,MAYA Eau de Coco,10445,MAYA Eau de Coco — 330ml,Glovo,Glovo,1,36.00,36.00,sûr,
+P069,MAYA Eau de Coco Matcha,10429,CANETTE EAU DE COCO MATCHA 330ML,Maya,Sur place,1,27.00,27.00,sûr,
+P069,MAYA Eau de Coco Matcha,10446,MAYA Eau de Coco Matcha — 330ml,Glovo,Glovo,1,36.00,36.00,sûr,
+P070,MAYA Goyave,10430,CANETTE GOYAVE 330ML,Maya,Sur place,1,27.00,27.00,sûr,
+P070,MAYA Goyave,10447,MAYA Goyave — 330ml,Glovo,Glovo,1,36.00,36.00,sûr,
+P071,MAYA Litchi,10431,CANETTE LITCHI 330ML,Maya,Sur place,1,27.00,27.00,sûr,
+P071,MAYA Litchi,10448,MAYA Litchi — 330ml,Glovo,Glovo,1,36.00,36.00,sûr,
+P072,YAYA Kombucha Yuzu,10442,YAYA KOMBUCHA YUZU 330ML,KOMBUCHA,Sur place,1,42.00,42.00,sûr,
+P072,YAYA Kombucha Yuzu,10454,YAYA Kombucha Yuzu — 330ml,Glovo,Glovo,1,56.00,56.00,sûr,
+P073,YAYA Kombucha Gingembre,10441,YAYA KOMBUCHA GINGEMBRE 330ML,KOMBUCHA,Sur place,1,42.00,42.00,sûr,
+P073,YAYA Kombucha Gingembre,10453,YAYA Kombucha Gingembre — 330ml,Glovo,Glovo,1,56.00,56.00,sûr,

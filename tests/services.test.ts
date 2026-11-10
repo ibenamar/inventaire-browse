@@ -18,7 +18,9 @@ import {
   forcerCloture,
   ouvrirShift,
   saisirQuantite,
+  saisirVentes,
 } from "@/server/services/shifts";
+import { canalSurPlace } from "@/server/services/caisse";
 import { enregistrerCreneaux, listerCreneaux, modifierSite } from "@/server/services/sites";
 import { authentifier, creerUtilisateur } from "@/server/services/utilisateurs";
 import { heureLocale } from "@/domain/temps";
@@ -205,8 +207,9 @@ describe("enchaînement des shifts", () => {
     await saisirQuantite(db, matin, mango.id, "ouvertureComptee", 12, amine, at("2026-11-13T07:10:00Z"));
     await ajouterEntrees(db, matin, [{ produitId: mango.id, quantite: 6, saisie: "parts" }, { produitId: cake.id, quantite: 2, saisie: "gateaux" }], "labo", null, sara);
     await ajouterPerte(db, matin, { produitId: mango.id, quantite: 1, saisie: "parts", motif: "endommage", commentaire: "Pot fissuré" }, sara);
-    await saisirQuantite(db, matin, mango.id, "ventes", 9, amine, at("2026-11-13T14:00:00Z"));
-    await saisirQuantite(db, matin, crepe.id, "ventes", 5, amine, at("2026-11-13T14:00:00Z"));
+    const surPlace = await canalSurPlace(db);
+    await saisirVentes(db, matin, mango.id, surPlace.id, 9, amine, at("2026-11-13T14:00:00Z"));
+    await saisirVentes(db, matin, crepe.id, surPlace.id, 5, amine, at("2026-11-13T14:00:00Z"));
 
     await compterTout(matin, "stockReelFin", (l) => l.theo ?? 0, amine);
     await saisirQuantite(db, matin, mango.id, "stockReelFin", 7, amine, at("2026-11-13T14:55:00Z"));
@@ -223,7 +226,7 @@ describe("enchaînement des shifts", () => {
     expect(lc.stockReelFin).toBe(26);
     expect(d.synthese.produitsAvecEcart).toBe(1);
     expect(d.synthese.articlesVendus).toBe(14);
-    await expect(saisirQuantite(db, matin, mango.id, "ventes", 1, amine, at("2026-11-13T16:00:00Z"))).rejects.toThrow(/clôturé/);
+    await expect(saisirVentes(db, matin, mango.id, surPlace.id, 1, amine, at("2026-11-13T16:00:00Z"))).rejects.toThrow(/clôturé/);
   });
 
   it("le shift suivant reprend la clôture du précédent (mode reprise)", async () => {
@@ -290,31 +293,62 @@ describe("enchaînement des shifts", () => {
 });
 
 describe("Loyverse", () => {
-  it("importe SKU et prix par correspondance de nom puis de SKU", async () => {
-    const pages = [
+  it("lit articles, catégories et prix par magasin page par page avec le jeton", async () => {
+    const pagesArticles = [
       {
         items: [
-          { id: "i1", item_name: "Mango Can", variants: [{ variant_id: "v1", sku: "10001", default_price: 35 }] },
-          { id: "i2", item_name: "Matilda cake", variants: [{ variant_id: "v2", sku: "10002", default_price: 38 }] },
+          {
+            id: "i1",
+            item_name: "Mango Can",
+            category_id: "c1",
+            variants: [
+              {
+                variant_id: "v1",
+                sku: "10342",
+                default_price: 38,
+                stores: [
+                  { store_id: "s1", pricing_type: "FIXED", price: 38, available_for_sale: true },
+                  { store_id: "s2", pricing_type: "FIXED", price: 40, available_for_sale: false },
+                ],
+              },
+            ],
+          },
         ],
         cursor: "p2",
       },
-      { items: [{ id: "i3", item_name: "Article inconnu", variants: [{ variant_id: "v3", sku: "99", default_price: 5 }] }], cursor: null },
+      {
+        items: [
+          {
+            id: "i2",
+            item_name: "Mango Can",
+            category_id: "c2",
+            variants: [{ variant_id: "v2", sku: "10379", default_price: 49, stores: [{ store_id: "s1", pricing_type: "VARIABLE", price: null }] }],
+          },
+        ],
+        cursor: null,
+      },
     ];
     let n = 0;
     const faux = (async (url: string, init: RequestInit) => {
-      expect(String(url)).toContain("/items");
       expect((init.headers as Record<string, string>).Authorization).toBe("Bearer jeton");
-      return new Response(JSON.stringify(pages[n++]), { status: 200 });
+      const u = String(url);
+      const corps = u.includes("/items")
+        ? pagesArticles[n++]
+        : u.includes("/categories")
+          ? { categories: [{ id: "c1", name: "Can Cakes" }, { id: "c2", name: "Glovo" }] }
+          : { stores: [{ id: "s1", name: "BROWSE COFFEE SHOP" }, { id: "s2", name: "Browse Sweet" }] };
+      return new Response(JSON.stringify(corps), { status: 200 });
     }) as unknown as typeof fetch;
     const articles = await lireArticlesLoyverse("jeton", faux);
-    expect(articles).toHaveLength(3);
-    const r = await importerArticles(db, articles, direction);
-    expect(r.associes.map((a) => a.produit).sort()).toEqual(["Mango Can", "Matilda Cake"]);
-    expect(r.articlesLoyverseNonUtilises).toEqual(["Article inconnu"]);
-    const mango = await produitParRef("P001");
-    expect(mango.sku).toBe("10001");
-    expect(mango.prixVente).toBe(35);
+    expect(articles.map((a) => [a.nom, a.sku, a.categorie, a.prix])).toEqual([
+      ["Mango Can", "10342", "Can Cakes", 38],
+      ["Mango Can", "10379", "Glovo", 49],
+    ]);
+    expect(articles[0].prixMagasins).toEqual([
+      { magasin: "BROWSE COFFEE SHOP", prix: 38, disponible: true },
+      { magasin: "Browse Sweet", prix: 40, disponible: false },
+    ]);
+    expect(articles[1].prixMagasins[0].prix).toBeNull();
   });
 
   it("signale un jeton refusé", async () => {

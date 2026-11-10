@@ -165,9 +165,18 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 
 **Critère de sortie** : un shift complet saisi en moins de 10 minutes sur téléphone ; résultats identiques au fichier Excel sur la semaine pilote.
 
+### Préalable à la phase 2 — Ventes multi-canaux (fait)
+- [x] Un produit, plusieurs articles de caisse (sur place, Glovo), canal reconnu par la catégorie Loyverse
+- [x] Prix par magasin Loyverse, magasin relié à chaque site
+- [x] Facteur par article (gâteau entier, boîtes)
+- [x] Ventes du shift saisies par canal, CA au prix réel, stock tous canaux confondus
+- [x] Import de l'export CSV Loyverse (en attendant le jeton API) et table de correspondances validable
+- [x] Écran de rattachement : articles à rattacher, ignorer un article ou une catégorie
+- [ ] Valider les correspondances « à confirmer » et le catalogue ([ANALYSE.md §9.2](ANALYSE.md))
+
 ### Phase 2 — Loyverse et administration
 - [ ] Correspondance site ↔ magasin Loyverse
-- [ ] Import automatique des ventes à la clôture, saisie manuelle en secours, journal des synchronisations
+- [ ] Import automatique des ventes à la clôture (reçus Loyverse → article de caisse → produit × facteur, par canal), saisie manuelle en secours, journal des synchronisations
 - [ ] Gestion du catalogue : création de produits, stock minimum par site (modification, photo et coût de revient livrés en phase 1)
 - [ ] Tableau de bord consolidé et par site
 - [ ] Courbes d'évolution du stock par produit / site

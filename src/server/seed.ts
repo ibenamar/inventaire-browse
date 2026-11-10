@@ -1,12 +1,15 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db";
-import { categories, creneaux, produits, sites, utilisateurs } from "@/db/schema";
+import { articlesCaisse, canauxVente, categories, creneaux, produits, sites, utilisateurs } from "@/db/schema";
+import { lireCsv } from "@/lib/csv";
 import { creerUtilisateur } from "./services/utilisateurs";
+
+export { lireCsv };
 
 /** Sites au lancement (décisions du 10/11/2026). */
 export const SITES_INITIAUX = [
-  { nom: "Browse 2 Mars", type: "point_de_vente", statut: "actif", ordre: 1 },
-  { nom: "Browse Sweets 2 Mars", type: "point_de_vente", statut: "actif", ordre: 2 },
+  { nom: "Browse 2 Mars", type: "point_de_vente", statut: "actif", ordre: 1, loyverseMagasin: "BROWSE COFFEE SHOP" },
+  { nom: "Browse Sweets 2 Mars", type: "point_de_vente", statut: "actif", ordre: 2, loyverseMagasin: "Browse Sweet" },
   { nom: "Anfa", type: "point_de_vente", statut: "en_ouverture", ordre: 3 },
   { nom: "Hay Hassani", type: "point_de_vente", statut: "en_ouverture", ordre: 4 },
   { nom: "Palmier", type: "point_de_vente", statut: "en_ouverture", ordre: 5 },
@@ -19,37 +22,6 @@ export const CRENEAUX_EXEMPLE = [
   { nom: "Après-midi", heureDebut: "15:00", heureFin: "20:00" },
   { nom: "Nuit", heureDebut: "20:00", heureFin: "04:00" },
 ];
-
-export function lireCsv(texte: string): Record<string, string>[] {
-  const lignes: string[][] = [];
-  let champ = "";
-  let ligne: string[] = [];
-  let guillemets = false;
-  for (let i = 0; i < texte.length; i++) {
-    const c = texte[i];
-    if (guillemets) {
-      if (c === '"' && texte[i + 1] === '"') {
-        champ += '"';
-        i++;
-      } else if (c === '"') guillemets = false;
-      else champ += c;
-    } else if (c === '"') guillemets = true;
-    else if (c === ",") {
-      ligne.push(champ);
-      champ = "";
-    } else if (c === "\n" || c === "\r") {
-      if (c === "\r" && texte[i + 1] === "\n") i++;
-      ligne.push(champ);
-      if (ligne.some((x) => x !== "")) lignes.push(ligne);
-      ligne = [];
-      champ = "";
-    } else champ += c;
-  }
-  ligne.push(champ);
-  if (ligne.some((x) => x !== "")) lignes.push(ligne);
-  const [entete, ...corps] = lignes;
-  return corps.map((l) => Object.fromEntries(entete.map((k, i) => [k.trim(), (l[i] ?? "").trim()])));
-}
 
 const UNITES_CSV: Record<string, "piece" | "part" | "bouteille"> = { pièce: "piece", piece: "piece", part: "part", bouteille: "bouteille" };
 
@@ -83,11 +55,26 @@ export async function initialiser(
         format: r.format || null,
         partsParGateau: r.parts_par_gateau ? Number(r.parts_par_gateau) : null,
         suiviStock: r.suivi_stock !== "non",
-        sku: r.sku_loyverse || null,
         prixVente: r.prix_vente_mad ? Number(r.prix_vente_mad) : null,
         ordre: i + 1,
       })
       .onConflictDoNothing({ target: produits.ref });
+  }
+
+  // Canaux de vente (créés aussi par la migration 0002) et SKU éventuellement fournis dans le CSV.
+  await db
+    .insert(canauxVente)
+    .values([
+      { code: "sur_place", nom: "Sur place", motsCles: [], ordre: 1 },
+      { code: "glovo", nom: "Glovo", motsCles: ["glovo"], ordre: 2 },
+    ])
+    .onConflictDoNothing({ target: canauxVente.code });
+  const [surPlace] = await db.select().from(canauxVente).where(eq(canauxVente.code, "sur_place"));
+  const dejaLies = new Set((await db.select().from(articlesCaisse)).map((a) => a.sku));
+  const parRef = new Map((await db.select().from(produits)).map((p) => [p.ref, p]));
+  for (const r of rows.filter((x) => x.sku_loyverse && !dejaLies.has(x.sku_loyverse))) {
+    const p = parRef.get(r.ref);
+    if (p) await db.insert(articlesCaisse).values({ produitId: p.id, canalId: surPlace.id, nomCaisse: p.nom, sku: r.sku_loyverse, prixVente: p.prixVente });
   }
 
   const direction = await db.select().from(utilisateurs).where(eq(utilisateurs.role, "direction"));

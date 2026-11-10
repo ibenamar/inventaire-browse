@@ -7,6 +7,7 @@ Application d'inventaire inter-shifts pour les points de vente Browse : planning
 - [Analyse du fichier Excel existant](docs/ANALYSE.md) — structure, anomalies, règles métier, décisions
 - [Feuille de route](docs/FEUILLE_DE_ROUTE.md) — périmètre, modèle de données, choix techniques, phases
 - [Catalogue initial](data/catalogue.csv) — 66 produits (46 inventoriés, 20 en vente seule)
+- [Correspondances Loyverse](data/correspondances_loyverse.csv) — SKU Loyverse → produit, canal et facteur, à valider ; après modification : `npm run correspondances`
 
 ## État
 
@@ -23,7 +24,7 @@ Application d'inventaire inter-shifts pour les points de vente Browse : planning
 | Catalogue | Direction | Photo prise au téléphone, prix, unité, parts par gâteau, coût de revient historisé |
 | Utilisateurs | Direction | Rôles, sites, codes PIN |
 | Sites & créneaux | Direction | Statut, mode d'ouverture, créneaux par jour avec fin le lendemain et contrôle des chevauchements |
-| Loyverse | Direction | Import des articles, SKU et prix |
+| Loyverse | Direction | Import des articles (API ou export CSV) : un produit, plusieurs articles de caisse (sur place, Glovo, gâteau entier…), prix par magasin ; articles à rattacher ou à ignorer |
 
 ## Démarrer en local
 

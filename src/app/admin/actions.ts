@@ -7,10 +7,12 @@ import { journeeLocale } from "@/domain/temps";
 import { getDb } from "@/lib/db";
 import { executer, type Resultat } from "@/lib/resultat";
 import { ErreurMetier, exiger } from "@/server/erreurs";
+import { ajouterArticle, associerArticle, ignorerArticle, ignorerCategorie, retirerArticle } from "@/server/services/caisse";
 import { ajouterCout, enregistrerPhoto, modifierProduit } from "@/server/services/catalogue";
-import { importerArticles, lireArticlesLoyverse, type RapportImport } from "@/server/services/loyverse";
+import { CORRESPONDANCES_LOYVERSE } from "@/server/correspondances-loyverse";
+import { importerArticles, lireArticlesLoyverse, lireExportCsv, type RapportImport } from "@/server/services/loyverse";
 import { affecter, dupliquerPeriode, retirerAffectation } from "@/server/services/planning";
-import { enregistrerCreneaux, modifierSite, type SaisieCreneau } from "@/server/services/sites";
+import { enregistrerCreneaux, modifierMagasinSite, modifierSite, type SaisieCreneau } from "@/server/services/sites";
 import { aAccesAuSite, creerUtilisateur, modifierUtilisateur } from "@/server/services/utilisateurs";
 import { ajouterJours } from "@/domain/temps";
 import { exigerDirection, exigerEncadrant } from "./acces";
@@ -137,7 +139,6 @@ export async function actionModifierProduit(id: string, _e: unknown, form: FormD
         partsParGateau: unite === "part" ? nombreOuNull(form.get("partsParGateau")) : null,
         prixVente: nombreOuNull(form.get("prixVente")),
         suiviStock: form.get("suiviStock") === "on",
-        sku: String(form.get("sku") ?? "") || null,
         actif: form.get("actif") === "on",
       },
       acteur,
@@ -175,8 +176,93 @@ export async function actionImporterLoyverse(): Promise<Resultat<RapportImport>>
     const jeton = process.env.LOYVERSE_TOKEN;
     exiger(jeton, "Jeton Loyverse non configuré (variable LOYVERSE_TOKEN)");
     const articles = await lireArticlesLoyverse(jeton);
-    const r = await importerArticles(await getDb(), articles, acteur);
+    const r = await importerArticles(await getDb(), articles, acteur, CORRESPONDANCES_LOYVERSE);
     revalidatePath("/admin/catalogue");
     return r;
+  });
+}
+
+// --- Articles de caisse (direction) -----------------------------------------
+
+export async function actionAjouterArticle(produitId: string, _e: unknown, form: FormData): Promise<Resultat> {
+  return executer(async () => {
+    const { acteur } = await exigerDirection();
+    await ajouterArticle(
+      await getDb(),
+      {
+        produitId,
+        canalId: String(form.get("canalId") ?? ""),
+        nomCaisse: String(form.get("nomCaisse") ?? ""),
+        sku: String(form.get("sku") ?? "") || null,
+        prixVente: nombreOuNull(form.get("prixVente")),
+        facteur: Number(form.get("facteur") || 1),
+      },
+      acteur,
+    );
+    revalidatePath(`/admin/catalogue/${produitId}`);
+  }, "Article ajouté");
+}
+
+export async function actionAssocierArticle(
+  articleId: string,
+  produitId: string | null,
+  canalId: string,
+  facteur: number,
+): Promise<Resultat> {
+  return executer(async () => {
+    const { acteur } = await exigerDirection();
+    exiger(canalId, "Choisir le canal");
+    await associerArticle(await getDb(), articleId, { produitId, canalId, facteur }, acteur);
+    revalidatePath("/admin/loyverse");
+    revalidatePath("/admin/catalogue", "layout");
+  });
+}
+
+export async function actionRetirerArticle(articleId: string): Promise<Resultat> {
+  return executer(async () => {
+    const { acteur } = await exigerDirection();
+    await retirerArticle(await getDb(), articleId, acteur);
+    revalidatePath("/admin/catalogue", "layout");
+    revalidatePath("/admin/loyverse");
+  });
+}
+
+export async function actionIgnorerArticle(articleId: string): Promise<Resultat> {
+  return executer(async () => {
+    const { acteur } = await exigerDirection();
+    await ignorerArticle(await getDb(), articleId, acteur);
+    revalidatePath("/admin/loyverse");
+  });
+}
+
+/** Import depuis l'export CSV du Back Office Loyverse (Articles › Exporter), en attendant le jeton API. */
+export async function actionImporterCsvLoyverse(form: FormData): Promise<Resultat<RapportImport>> {
+  return executer(async () => {
+    const { acteur } = await exigerDirection();
+    const f = form.get("fichier");
+    exiger(f instanceof Blob && f.size > 0, "Choisir le fichier exporté depuis Loyverse");
+    exiger(f.size < 5_000_000, "Fichier trop volumineux");
+    const articles = lireExportCsv(await f.text());
+    const r = await importerArticles(await getDb(), articles, acteur, CORRESPONDANCES_LOYVERSE);
+    revalidatePath("/admin/loyverse");
+    revalidatePath("/admin/catalogue", "layout");
+    return r;
+  });
+}
+
+export async function actionMagasinSite(siteId: string, magasin: string): Promise<Resultat> {
+  return executer(async () => {
+    const { acteur } = await exigerDirection();
+    await modifierMagasinSite(await getDb(), siteId, magasin.trim() || null, acteur);
+    revalidatePath("/admin/sites");
+    revalidatePath("/admin/loyverse");
+  });
+}
+
+export async function actionIgnorerCategorie(categorie: string | null): Promise<Resultat> {
+  return executer(async () => {
+    const { acteur } = await exigerDirection();
+    await ignorerCategorie(await getDb(), categorie, acteur);
+    revalidatePath("/admin/loyverse");
   });
 }

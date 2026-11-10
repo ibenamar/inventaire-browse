@@ -3,8 +3,10 @@ import type { Db } from "@/db";
 import {
   categories,
   coutsProduit,
+  canauxVente,
   equipesShift,
   lignesShift,
+  ventesShift,
   mouvements,
   ORIGINES_ENTREE,
   MOTIFS_PERTE,
@@ -31,6 +33,7 @@ import { tracer } from "../audit";
 import { ErreurMetier, exiger } from "../erreurs";
 import { listerCreneaux, type Creneau } from "./sites";
 import { aAccesAuSite } from "./utilisateurs";
+import { listerCanaux, prixReferences, prixSurCanal } from "./caisse";
 
 export type Shift = typeof shifts.$inferSelect;
 
@@ -173,6 +176,7 @@ export async function ouvrirShift(db: Db, shiftId: string, acteur: Acteur, maint
     .from(coutsProduit)
     .where(lte(coutsProduit.dateEffet, s.journee))
     .orderBy(asc(coutsProduit.dateEffet), asc(coutsProduit.saisiLe));
+  const refs = await prixReferences(db, s.siteId);
   const coutParProduit = new Map<string, number>();
   for (const c of couts) coutParProduit.set(c.produitId, c.coutUnitaire);
 
@@ -184,7 +188,7 @@ export async function ouvrirShift(db: Db, shiftId: string, acteur: Acteur, maint
         produitId: p.id,
         suiviStock: p.suiviStock,
         ouvertureTheorique: p.suiviStock ? (clotures.get(p.id) ?? null) : null,
-        prixVente: p.prixVente,
+        prixVente: refs.get(p.id) ?? p.prixVente,
         cout: coutParProduit.get(p.id) ?? null,
         stockMinimum: minimums.get(p.id)?.stockMinimum ?? null,
       }));
@@ -241,6 +245,10 @@ export interface LigneDetail {
   prixVente: number | null;
   cout: number | null;
   stockMinimum: number | null;
+  /** CA réel (prix de chaque canal) ; null si aucune vente détaillée par canal. */
+  montantVentes: number | null;
+  /** Quantités vendues par canal (identifiant du canal → quantité). */
+  ventesParCanal: Record<string, number>;
   calcul: LigneCalculee;
 }
 
@@ -293,7 +301,16 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
     .where(eq(lignesShift.shiftId, shiftId))
     .orderBy(asc(categories.ordre), asc(produits.ordre), asc(produits.ref));
   const ag = await agregatsMouvements(db, [shiftId]);
+  const ventesCanaux = await db.select().from(ventesShift).where(eq(ventesShift.shiftId, shiftId));
+  const parProduit = new Map<string, { montant: number | null; parCanal: Record<string, number> }>();
+  for (const v of ventesCanaux) {
+    const x = parProduit.get(v.produitId) ?? { montant: null, parCanal: {} };
+    x.parCanal[v.canalId] = v.quantite;
+    if (v.prixUnitaire !== null) x.montant = Math.round(((x.montant ?? 0) + v.quantite * v.prixUnitaire) * 100) / 100;
+    parProduit.set(v.produitId, x);
+  }
   return rows.map(({ l, ...p }) => {
+    const vc = parProduit.get(l.produitId);
     const a = ag.get(`${shiftId}:${l.produitId}`) ?? { entrees: 0, pertes: 0, peremption: 0, endommage: 0 };
     const entree = {
       ouvertureTheorique: l.ouvertureTheorique,
@@ -305,6 +322,7 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
       prixVente: l.prixVente,
       cout: l.cout,
       stockMinimum: l.stockMinimum,
+      montantVentes: vc?.montant ?? null,
     };
     return {
       produitId: l.produitId,
@@ -313,6 +331,7 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
       ...entree,
       pertesPeremption: a.peremption,
       pertesEndommage: a.endommage,
+      ventesParCanal: vc?.parCanal ?? {},
       calcul: calculerLigne(entree),
     };
   });
@@ -336,6 +355,8 @@ export interface DetailShift {
     horodatage: Date;
   }[];
   synthese: Synthese;
+  /** Ventes et CA par canal (sur place, Glovo…). */
+  ventesParCanal: { canalId: string; canal: string; quantite: number; montant: number }[];
   avancement: {
     aCompterOuverture: number;
     compteesOuverture: number;
@@ -382,6 +403,19 @@ export async function detailShift(db: Db, shiftId: string): Promise<DetailShift>
     .innerJoin(utilisateurs, eq(utilisateurs.id, mouvements.utilisateurId))
     .where(eq(mouvements.shiftId, shiftId))
     .orderBy(desc(mouvements.horodatage));
+  const canaux = await listerCanaux(db);
+  const ventes = await db.select().from(ventesShift).where(eq(ventesShift.shiftId, shiftId));
+  const ventesParCanal = canaux
+    .map((c) => {
+      const duCanal = ventes.filter((v) => v.canalId === c.id);
+      return {
+        canalId: c.id,
+        canal: c.nom,
+        quantite: duCanal.reduce((t, v) => t + v.quantite, 0),
+        montant: Math.round(duCanal.reduce((t, v) => t + v.quantite * (v.prixUnitaire ?? 0), 0) * 100) / 100,
+      };
+    })
+    .filter((c) => c.quantite > 0);
   const mode = row.modeOuverture;
   const aCompterOuv = lignes.filter((l) => ouvertureACompter(mode, l));
   const suivis = lignes.filter((l) => l.suiviStock);
@@ -391,6 +425,7 @@ export async function detailShift(db: Db, shiftId: string): Promise<DetailShift>
     lignes,
     mouvements: mvts,
     synthese: synthetiser(lignes),
+    ventesParCanal,
     avancement: {
       aCompterOuverture: aCompterOuv.length,
       compteesOuverture: aCompterOuv.filter((l) => l.ouvertureComptee !== null).length,
@@ -404,7 +439,7 @@ export async function detailShift(db: Db, shiftId: string): Promise<DetailShift>
 // Saisies pendant le shift
 // ---------------------------------------------------------------------------
 
-export type ChampQuantite = "ouvertureComptee" | "stockReelFin" | "ventes";
+export type ChampQuantite = "ouvertureComptee" | "stockReelFin";
 
 export async function saisirQuantite(
   db: Db,
@@ -415,7 +450,7 @@ export async function saisirQuantite(
   acteur: Acteur,
   maintenant: Date,
 ) {
-  exiger(["ouvertureComptee", "stockReelFin", "ventes"].includes(champ), "Champ invalide");
+  exiger(["ouvertureComptee", "stockReelFin"].includes(champ), "Champ invalide");
   exiger(valeur === null || estQuantiteValide(valeur), "Quantité invalide (nombre entier positif)");
   const s = await lireShift(db, shiftId);
   exigerOuvert(s);
@@ -425,11 +460,59 @@ export async function saisirQuantite(
     .from(lignesShift)
     .where(and(eq(lignesShift.shiftId, shiftId), eq(lignesShift.produitId, produitId)));
   exiger(l, "Produit absent de ce shift");
-  if (champ !== "ventes") exiger(l.suiviStock, "Ce produit n'est pas suivi en stock (vente seule)");
+  exiger(l.suiviStock, "Ce produit n'est pas suivi en stock (vente seule)");
   await db
     .update(lignesShift)
-    .set({ [champ]: champ === "ventes" ? (valeur ?? 0) : valeur, modifieLe: maintenant, modifiePar: acteur.id })
+    .set({ [champ]: valeur, modifieLe: maintenant, modifiePar: acteur.id })
     .where(and(eq(lignesShift.shiftId, shiftId), eq(lignesShift.produitId, produitId)));
+}
+
+/**
+ * Ventes d'un produit sur un canal (sur place, Glovo…), valorisées au prix de ce canal.
+ * Le total tous canaux est reporté sur la ligne : c'est lui qui fait sortir le stock.
+ */
+export async function saisirVentes(
+  db: Db,
+  shiftId: string,
+  produitId: string,
+  canalId: string,
+  quantite: number | null,
+  acteur: Acteur,
+  maintenant: Date,
+) {
+  const q = quantite ?? 0;
+  exiger(estQuantiteValide(q), "Quantité invalide (nombre entier positif)");
+  const s = await lireShift(db, shiftId);
+  exigerOuvert(s);
+  await exigerAcces(db, s, acteur);
+  const [l] = await db
+    .select()
+    .from(lignesShift)
+    .where(and(eq(lignesShift.shiftId, shiftId), eq(lignesShift.produitId, produitId)));
+  exiger(l, "Produit absent de ce shift");
+  const [canal] = await db.select().from(canauxVente).where(eq(canauxVente.id, canalId));
+  exiger(canal, "Canal de vente inconnu");
+  const prix = await prixSurCanal(db, produitId, canalId, s.siteId);
+  await db.transaction(async (tx) => {
+    const cle = and(eq(ventesShift.shiftId, shiftId), eq(ventesShift.produitId, produitId), eq(ventesShift.canalId, canalId));
+    if (q === 0) await tx.delete(ventesShift).where(cle);
+    else
+      await tx
+        .insert(ventesShift)
+        .values({ shiftId, produitId, canalId, quantite: q, prixUnitaire: prix })
+        .onConflictDoUpdate({
+          target: [ventesShift.shiftId, ventesShift.produitId, ventesShift.canalId],
+          set: { quantite: q, prixUnitaire: prix },
+        });
+    const [t] = await tx
+      .select({ total: sql<number>`cast(coalesce(sum(${ventesShift.quantite}), 0) as int)` })
+      .from(ventesShift)
+      .where(and(eq(ventesShift.shiftId, shiftId), eq(ventesShift.produitId, produitId)));
+    await tx
+      .update(lignesShift)
+      .set({ ventes: Number(t.total), modifieLe: maintenant, modifiePar: acteur.id })
+      .where(and(eq(lignesShift.shiftId, shiftId), eq(lignesShift.produitId, produitId)));
+  });
 }
 
 export interface SaisieEntree {

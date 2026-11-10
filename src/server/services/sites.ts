@@ -33,6 +33,12 @@ export async function modifierSite(
   await tracer(db, acteur.id, "modifier", "site", id, v);
 }
 
+/** Magasin Loyverse d'un site : détermine les prix appliqués (ils peuvent différer d'un magasin à l'autre). */
+export async function modifierMagasinSite(db: Db, id: string, magasin: string | null, acteur: Acteur) {
+  await db.update(sites).set({ loyverseMagasin: magasin }).where(eq(sites.id, id));
+  await tracer(db, acteur.id, "magasin_loyverse", "site", id, { magasin });
+}
+
 export async function listerCreneaux(db: Db, siteId: string): Promise<Creneau[]> {
   return db
     .select()

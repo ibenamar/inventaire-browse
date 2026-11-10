@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { actionSaisirQuantite } from "@/app/actions-shift";
+import { actionSaisirQuantite, actionSaisirVentes } from "@/app/actions-shift";
 import type { ChampQuantite } from "@/server/services/shifts";
 import { PhotoProduit } from "./PhotoProduit";
 import { cx } from "./ui";
@@ -27,12 +27,15 @@ type Etat = "ok" | "en_cours" | "erreur";
 export function GrilleQuantites({
   shiftId,
   champ,
+  canalId,
   produits,
   nullable = true,
   libelleProgression = "comptés",
 }: {
   shiftId: string;
-  champ: ChampQuantite;
+  /** « ventes » : ventes du canal `canalId` (sur place, Glovo…). */
+  champ: ChampQuantite | "ventes";
+  canalId?: string;
   produits: ProduitGrille[];
   nullable?: boolean;
   libelleProgression?: string;
@@ -65,7 +68,10 @@ export function GrilleQuantites({
     clearTimeout(minuteurs.current[produitId]);
     minuteurs.current[produitId] = setTimeout(async () => {
       const envoyer = () =>
-        actionSaisirQuantite(shiftId, produitId, champ, v).catch(() => ({
+        (champ === "ventes"
+          ? actionSaisirVentes(shiftId, produitId, canalId!, v)
+          : actionSaisirQuantite(shiftId, produitId, champ, v)
+        ).catch(() => ({
           ok: false as const,
           erreur: "Connexion perdue : la valeur n'a pas été enregistrée. Ressaisissez-la.",
           reseau: true,

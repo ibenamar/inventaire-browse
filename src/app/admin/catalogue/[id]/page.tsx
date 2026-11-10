@@ -4,9 +4,10 @@ import { Carte, formatMad, Titre } from "@/components/ui";
 import { journeeLocale } from "@/domain/temps";
 import { getDb } from "@/lib/db";
 import { ErreurMetier } from "@/server/erreurs";
+import { listerArticles, listerCanaux } from "@/server/services/caisse";
 import { coutEnVigueur, historiqueCouts, lireProduit } from "@/server/services/catalogue";
 import { exigerDirection } from "../../acces";
-import { FormulaireCout, FormulaireProduit, PrisePhoto } from "./Formulaires";
+import { ArticlesCaisse, FormulaireCout, FormulaireProduit, PrisePhoto } from "./Formulaires";
 
 export default async function Produit({ params }: { params: Promise<{ id: string }> }) {
   await exigerDirection();
@@ -19,6 +20,7 @@ export default async function Produit({ params }: { params: Promise<{ id: string
   const aujourdhui = journeeLocale(new Date());
   const cout = await coutEnVigueur(db, id, aujourdhui);
   const historique = await historiqueCouts(db, id);
+  const [articles, canaux] = await Promise.all([listerArticles(db, { produitId: id }), listerCanaux(db)]);
   return (
     <>
       <Link href="/admin/catalogue" className="text-sm font-semibold text-marque-700">
@@ -32,6 +34,27 @@ export default async function Produit({ params }: { params: Promise<{ id: string
         <div className="grid gap-4">
           <Carte>
             <FormulaireProduit produit={p} />
+          </Carte>
+          <Carte>
+            <h2 className="mb-1 text-lg font-semibold">Articles de caisse (Loyverse)</h2>
+            <p className="mb-3 text-sm text-stone-600">
+              Un article par canal de vente (et par lot : gâteau entier, boîte), chacun avec son SKU et son prix par magasin. Toutes ces ventes font sortir le stock de ce produit ; « × 8 » = 8 unités par article vendu.
+            </p>
+            <ArticlesCaisse
+              produitId={p.id}
+              nomProduit={p.nom}
+              articles={articles.map((a) => ({
+                id: a.id,
+                canal: a.canal,
+                nom: a.nomCaisse,
+                sku: a.sku,
+                facteur: a.facteur,
+                prix: a.prixMagasins.length
+                  ? [...new Set(a.prixMagasins.map((p) => formatMad(p.prix)))].join(" / ")
+                  : formatMad(a.prixVente),
+              }))}
+              canaux={canaux.map((c) => ({ id: c.id, nom: c.nom }))}
+            />
           </Carte>
           <Carte>
             <h2 className="mb-1 text-lg font-semibold">Coût de revient</h2>

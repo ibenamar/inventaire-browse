@@ -1,0 +1,16 @@
+﻿Handle,SKU,Name,Category,Option 1 name,Option 1 value,Option 2 name,Option 2 value,Option 3 name,Option 3 value,Default price,Cost,Track stock,Available for sale [BROWSE COFFEE SHOP],Price [BROWSE COFFEE SHOP],Available for sale [Browse Sweet],Price [Browse Sweet]
+affogato,10006,AFFOGATO,COFFEES,,,,,,,28.00,0.00,N,Y,32.00,Y,32.00
+banofie,10191,Banofie,CAKES,,,,,,,35.00,0.00,Y,N,35.00,N,35.00
+brownie-moelleux-chocolat,10053,Brownie,Cookies & Brownies,,,,,,,24.00,0.00,Y,Y,24.00,Y,24.00
+brownie-box-of-4,10368,Brownie box of 4,Cookies & Brownies,,,,,,,72.00,0.00,N,N,72.00,N,72.00
+cake-carrot,10059,CARROT CAKE,CAKES,,,,,,,40.00,0.00,Y,Y,45.00,Y,40.00
+carrot-cake-1,10302,Carrot Cake,Glovo,,,,,,,52.00,0.00,N,Y,52.00,Y,52.00
+lotus-can,10381,Lotus Can,Glovo,,,,,,,49.00,0.00,N,Y,49.00,Y,49.00
+lotus-can-1,10414,Lotus Can,Can Cakes,,,,,,,30.00,0.00,N,N,30.00,Y,38.00
+mango-cake,10418,Mango cake,CAKES,,,,,,,variable,45.00,Y,Y,variable,Y,variable
+mango-can,10342,Mango Can,Can Cakes,,,,,,,38.00,0.00,Y,Y,38.00,Y,38.00
+mango-can-1,10379,Mango Can,Glovo,,,,,,,49.00,0.00,N,Y,49.00,Y,49.00
+midnight-cake,10284,Matilda Cake,CAKES,,,,,,,45.00,0.00,Y,Y,45.00,Y,45.00
+matilda-cake-1,10407,Matilda Cake,Glovo,,,,,,,59.00,0.00,N,Y,59.00,Y,59.00
+matilda-cake-entier,10319,Matilda Cake Entier,CAKES,,,,,,,405.00,0.00,Y,Y,405.00,Y,405.00
+strawberry-can,10372,Strawberry Can,Can Cakes,,,,,,,38.00,0.00,Y,Y,38.00,Y,38.00

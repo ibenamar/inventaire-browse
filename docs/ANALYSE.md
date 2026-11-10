@@ -192,3 +192,33 @@ POINT DE VENTE : réception pendant le shift ouvert ◀────────�
 ## 8. Questions restant ouvertes
 
 Aucune question bloquante. À fournir au fil du projet : jeton API Loyverse, horaires des créneaux (saisis dans l'app), coûts de revient, stocks minimum, photos.
+
+## 9. Ventes multi-canaux : analyse de l'export Loyverse (10/11/2026)
+
+Constat remonté : un même article est vendu sur place et via Glovo sous deux SKU différents, avec un prix différent. L'export des articles Loyverse (462 articles, 2 magasins) le confirme et apporte trois autres constats.
+
+| # | Constat | Exemple | Décision |
+|---|---|---|---|
+| L1 | Chaque article vendu sur Glovo est **dupliqué** en caisse, avec le **même nom**, un autre SKU et un prix plus élevé ; le canal est donné par la **catégorie « Glovo »** (149 articles) | Mango Can : 10342 « Can Cakes » 38 MAD / 10379 « Glovo » 49 MAD | Un **produit** (stock) a plusieurs **articles de caisse**, un par canal. Canal reconnu par la catégorie, puis par le nom. Les ventes de tous les canaux font sortir le même stock ; le CA utilise le prix réel |
+| L2 | Les **prix diffèrent selon le magasin** | Carrot Cake 45 MAD au Coffee Shop, 40 chez Browse Sweet ; Lotus Can 30 / 38 | Prix enregistré **par magasin** ; chaque site est relié à son magasin Loyverse (BROWSE COFFEE SHOP → Browse 2 Mars, Browse Sweet → Browse Sweets 2 Mars, **à confirmer**) |
+| L3 | Certains articles vendent **plusieurs unités** | Matilda Cake Entier (405 MAD), Brownie box of 4, box of 6 | **Facteur** par article : 1 vente = n unités de stock (gâteau entier × 8, boîte × 4) |
+| L4 | Les noms du catalogue (fichier Excel) suivent la carte Glovo, pas les noms sur place | « Pistachio Kunafeh Can » = « Pistache Kunafa Can » ; « Cipriani Cake » = « Cipriani » | Table de correspondances validable : [`data/correspondances_loyverse.csv`](../data/correspondances_loyverse.csv) (120 lignes : 78 sûres, 33 probables, 9 à confirmer) |
+| L5 | 34 articles ne sont plus en vente dans aucun magasin ; des articles à prix « variable » | Banofie, Muffins ; Mango cake | Articles hors vente non proposés au rattachement ; prix variable = prix inconnu |
+| L6 | Environ 300 articles hors inventaire (cafés, lunch, brunch, suppléments…) | COFFEES, Latte, Lunch | Bouton « Ignorer la catégorie » dans l'écran Loyverse |
+
+Résultat d'un import à blanc de l'export : **111 articles rattachés automatiquement** (61 sur place, 50 Glovo). Les autres sont à rattacher ou à ignorer dans l'écran Loyverse.
+
+### 9.1 Ranger Glovo par catégorie : est-ce optimal ?
+
+C'est **la bonne organisation compte tenu de Loyverse**, avec deux réserves.
+
+- **Pourquoi elle est adaptée** : Loyverse ne permet pas un prix différent par mode de vente (sur place / livraison) pour un même article. Les alternatives sont moins bonnes : des *variantes* « Sur place / Glovo » sur chaque article obligeraient l'équipe à choisir la variante à chaque vente au comptoir (un geste de plus, des erreurs) ; un *magasin* Loyverse « Glovo » séparerait les stocks et les rapports de caisse du point de vente réel.
+- **Réserve 1 — catalogue en double** : chaque nouveauté ou changement de nom doit être fait deux fois. Conseil : garder **exactement le même nom** des deux côtés (aujourd'hui « Classic Roll » sur place contre « Cinnamon Roll - Original » sur Glovo) et adopter une **plage de SKU** dédiée à Glovo pour les repérer d'un coup d'œil.
+- **Réserve 2 — rapports par famille** : dans Loyverse, la catégorie « Glovo » mélange cakes, cafés et lunch. L'application, elle, rattache chaque article Glovo à son produit et à sa famille : les rapports par produit et par canal y sont complets.
+
+### 9.2 Points à confirmer
+
+1. Correspondance des magasins : BROWSE COFFEE SHOP = Browse 2 Mars, Browse Sweet = Browse Sweets 2 Mars ?
+2. Les 9 lignes « à confirmer » du fichier de correspondances (ex. Vanilla Red Fruits Can = Strawberry Can ? nombre de parts du San Sebastian entier à 240 MAD et du Flan pistache entier à 315 MAD ; Matilda entier à 405 MAD = 9 × 45 alors qu'un gâteau fait 8 parts).
+3. Produits du catalogue sans article sur place en caisse (19) : Blueberry Can, Oreo Can, Citron Roll, Flan Vanille, waffles, fettuccini… vendus seulement sur Glovo, ou à retirer du catalogue ?
+4. Produits en vente en caisse mais absents du catalogue d'inventaire, à ajouter ? Caramel Can, Babka, Tiramisu Roll, Banana Bread (et entier), Matcha / Ubé / Strawberry cookie cheesecakes, Sunset Cake, Mango cake, Cookie Red Velvet / Lemon / Matcha / Tiramisu / Triple chocolat, KULT Kefir Gingembre Citron et Yuzu Mandarin, croissant, pain au chocolat.

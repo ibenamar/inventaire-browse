@@ -53,6 +53,16 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
         <Kpi label="Écarts de passation" valeur={syn.produitsAvecEcartPassation} ton={syn.produitsAvecEcartPassation ? "rouge" : undefined} />
       </div>
 
+      {d.ventesParCanal.length > 0 && (
+        <div className="flex flex-wrap gap-2 text-sm">
+          {d.ventesParCanal.map((c) => (
+            <span key={c.canalId} className="rounded-xl bg-white px-3 py-2 ring-1 ring-stone-200">
+              <strong>{c.canal}</strong> : {c.quantite} vendu{c.quantite > 1 ? "s" : ""} · {formatMad(c.montant)}
+            </span>
+          ))}
+        </div>
+      )}
+
       {ouvert && (sansOuverture.length > 0 || nonComptes.length > 0) && (
         <Message ton="alerte">
           {sansOuverture.length > 0 && (

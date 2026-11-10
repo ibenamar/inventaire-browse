@@ -69,9 +69,15 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
   await page.getByText(/déclaré\(s\) en perte/).waitFor();
 
   await page.goto(shiftUrl + "/ventes");
-  await page.getByLabel("Quantité Mango Can").fill("9");
+  // 9 Mango Can vendus : 6 sur place + 3 via Glovo (SKU et prix différents, même stock).
+  await page.getByLabel("Quantité Mango Can").fill("6");
   await page.getByLabel("Quantité Crêpe Lotus").fill("4");
   await page.getByText("Tout est enregistré").waitFor({ timeout: 60000 });
+  await page.getByRole("tab", { name: /Glovo/ }).click();
+  await page.waitForURL(/canal=glovo/);
+  await page.getByLabel("Quantité Mango Can").fill("3");
+  await page.getByText("Tout est enregistré").waitFor({ timeout: 60000 });
+  await shot("06b-ventes-glovo");
 
   await page.goto(shiftUrl + "/comptage");
   const c = page.getByLabel(/^Quantité /);

@@ -1,6 +1,8 @@
 /**
  * Règles de calcul d'une ligne de shift (un produit dans un shift).
- * Reprend les formules du fichier Excel et ajoute la logique inter-shifts :
+ * Reprend les formules du fichier Excel et ajoute la logique inter-shifts.
+ * Les pertes et les écarts sont valorisés au prix de référence (sur place) et au coût ;
+ * le CA utilise le prix réel de chaque canal de vente quand il est fourni.
  *   ouverture        = ouverture recomptée, sinon clôture du shift précédent
  *   écart passation  = ouverture recomptée − clôture du shift précédent
  *   théorique fin    = ouverture + entrées − ventes − pertes
@@ -16,6 +18,8 @@ export interface LigneEntree {
   prixVente: number | null;
   cout: number | null;
   stockMinimum?: number | null;
+  /** Chiffre d'affaires réel quand les ventes sont valorisées au prix de chaque canal (sur place, Glovo…). */
+  montantVentes?: number | null;
 }
 
 export interface LigneCalculee {
@@ -51,7 +55,7 @@ export function calculerLigne(l: LigneEntree): LigneCalculee {
     valeurEcartCout: fois(ecart, l.cout),
     valeurPertesVente: fois(l.pertes, l.prixVente),
     valeurPertesCout: fois(l.pertes, l.cout),
-    ca: fois(l.ventes, l.prixVente),
+    ca: l.montantVentes ?? fois(l.ventes, l.prixVente),
     aReapprovisionner:
       l.stockReelFin !== null &&
       l.stockMinimum !== null &&

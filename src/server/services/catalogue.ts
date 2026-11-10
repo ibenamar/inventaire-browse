@@ -18,7 +18,6 @@ export interface ProduitVue {
   partsParGateau: number | null;
   prixVente: number | null;
   suiviStock: boolean;
-  sku: string | null;
   photoId: string | null;
   actif: boolean;
   ordre: number;
@@ -38,7 +37,6 @@ export async function listerProduits(db: Db, opts: { actifsSeulement?: boolean }
       partsParGateau: produits.partsParGateau,
       prixVente: produits.prixVente,
       suiviStock: produits.suiviStock,
-      sku: produits.sku,
       photoId: produits.photoId,
       actif: produits.actif,
       ordre: produits.ordre,
@@ -64,7 +62,6 @@ export interface SaisieProduit {
   partsParGateau: number | null;
   prixVente: number | null;
   suiviStock: boolean;
-  sku: string | null;
   actif: boolean;
 }
 
@@ -79,7 +76,7 @@ export async function modifierProduit(db: Db, id: string, v: SaisieProduit, acte
   exiger(v.unite !== "part" || v.partsParGateau, "Indiquer le nombre de parts par gâteau");
   await db
     .update(produits)
-    .set({ ...v, nom: v.nom.trim(), sku: v.sku?.trim() || null, format: v.format?.trim() || null })
+    .set({ ...v, nom: v.nom.trim(), format: v.format?.trim() || null })
     .where(eq(produits.id, id));
   await tracer(db, acteur.id, "modifier", "produit", id, { ...v });
 }

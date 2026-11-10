@@ -14,6 +14,7 @@ import {
   forcerCloture,
   ouvrirShift,
   saisirQuantite,
+  saisirVentes,
   supprimerMouvement,
   type ChampQuantite,
   type SaisieEntree,
@@ -46,6 +47,16 @@ export async function actionSaisirQuantite(
 ): Promise<Resultat> {
   const { acteur } = await exigerSession();
   return executer(async () => saisirQuantite(await getDb(), shiftId, produitId, champ, valeur, acteur, new Date()));
+}
+
+export async function actionSaisirVentes(
+  shiftId: string,
+  produitId: string,
+  canalId: string,
+  quantite: number | null,
+): Promise<Resultat> {
+  const { acteur } = await exigerSession();
+  return executer(async () => saisirVentes(await getDb(), shiftId, produitId, canalId, quantite, acteur, new Date()));
 }
 
 export async function actionAjouterEntrees(

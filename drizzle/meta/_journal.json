@@ -15,6 +15,13 @@
       "when": 1794324724059,
       "tag": "0001_securite_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794329088282,
+      "tag": "0002_canaux_vente",
+      "breakpoints": true
     }
   ]
 }

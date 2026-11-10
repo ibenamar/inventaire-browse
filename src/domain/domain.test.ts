@@ -72,6 +72,13 @@ describe("calculs d'une ligne de shift", () => {
     expect(s.valeurPertesVente).toBe(35);
   });
 
+  it("calcule le CA au prix de chaque canal quand il est fourni", () => {
+    // 9 Mango Can : 6 sur place à 35, 3 via Glovo à 42.
+    const c = calculerLigne({ ...base, ouvertureComptee: 12, ventes: 9, stockReelFin: 3, prixVente: 35, montantVentes: 6 * 35 + 3 * 42 });
+    expect(c.ca).toBe(336);
+    expect(c.ecart).toBe(0);
+  });
+
   it("convertit les gâteaux entiers en parts", () => {
     expect(enParts(2, "gateaux", 8)).toBe(16);
     expect(enParts(5, "parts", 8)).toBe(5);

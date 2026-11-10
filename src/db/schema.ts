@@ -43,6 +43,8 @@ export const sites = pgTable("sites", {
   statut: text("statut", { enum: STATUTS_SITE }).notNull().default("actif"),
   modeOuverture: text("mode_ouverture", { enum: MODES_OUVERTURE }).notNull().default("reprise"),
   loyverseStoreId: text("loyverse_store_id"),
+  /** Nom du magasin Loyverse (ex. « BROWSE COFFEE SHOP ») : les prix peuvent différer d'un magasin à l'autre. */
+  loyverseMagasin: text("loyverse_magasin"),
   ordre: integer("ordre").notNull().default(0),
 });
 
@@ -71,16 +73,67 @@ export const produits = pgTable(
     unite: text("unite", { enum: UNITES }).notNull().default("piece"),
     format: text("format"),
     partsParGateau: integer("parts_par_gateau"),
+    /** Prix de référence (canal « sur place ») : sert à valoriser les pertes et les écarts. */
     prixVente: numeric("prix_vente", { precision: 10, scale: 2, mode: "number" }),
     suiviStock: boolean("suivi_stock").notNull().default(true),
-    sku: text("sku"),
-    loyverseItemId: text("loyverse_item_id"),
-    loyverseVariantId: text("loyverse_variant_id"),
     photoId: uuid("photo_id").references(() => photos.id, { onDelete: "set null" }),
     actif: boolean("actif").notNull().default(true),
     ordre: integer("ordre").notNull().default(0),
   },
-  (t) => [index("produits_sku_idx").on(t.sku)],
+  (t) => [index("produits_categorie_idx").on(t.categorieId)],
+);
+
+/** Canaux de vente (sur place, Glovo…) : un même produit a un article de caisse et un prix par canal. */
+export const canauxVente = pgTable("canaux_vente", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(),
+  nom: text("nom").notNull(),
+  /** Mots repérés dans la catégorie (ou à défaut le nom) d'un article Loyverse pour reconnaître le canal (ex. « glovo »). */
+  motsCles: text("mots_cles").array().notNull().default(sql`'{}'::text[]`),
+  ordre: integer("ordre").notNull().default(0),
+  actif: boolean("actif").notNull().default(true),
+});
+
+/**
+ * Article de caisse (Loyverse) : une variante vendue, rattachée au produit physique qu'elle
+ * fait sortir du stock et au canal de vente. Plusieurs articles (SKU, prix) par produit.
+ */
+export const articlesCaisse = pgTable(
+  "articles_caisse",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    produitId: uuid("produit_id").references(() => produits.id, { onDelete: "set null" }),
+    canalId: uuid("canal_id")
+      .notNull()
+      .references(() => canauxVente.id),
+    nomCaisse: text("nom_caisse").notNull(),
+    categorieCaisse: text("categorie_caisse"),
+    sku: text("sku"),
+    loyverseItemId: text("loyverse_item_id"),
+    loyverseVariantId: text("loyverse_variant_id").unique(),
+    /** Prix par défaut ; le prix propre à chaque magasin est dans prix_articles_magasins. */
+    prixVente: numeric("prix_vente", { precision: 10, scale: 2, mode: "number" }),
+    /** Unités de stock sorties par article vendu (ex. « Matilda Cake Entier » = 8 parts, « box of 4 » = 4). */
+    facteur: integer("facteur").notNull().default(1),
+    source: text("source", { enum: ["loyverse", "manuel"] }).notNull().default("manuel"),
+    actif: boolean("actif").notNull().default(true),
+    majLe: horodatage("maj_le").notNull().defaultNow(),
+  },
+  (t) => [index("articles_caisse_sku_idx").on(t.sku), index("articles_caisse_produit_idx").on(t.produitId)],
+);
+
+/** Prix et disponibilité d'un article de caisse dans chaque magasin Loyverse. */
+export const prixArticlesMagasins = pgTable(
+  "prix_articles_magasins",
+  {
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articlesCaisse.id, { onDelete: "cascade" }),
+    magasin: text("magasin").notNull(),
+    prix: numeric("prix", { precision: 10, scale: 2, mode: "number" }),
+    disponible: boolean("disponible").notNull().default(true),
+  },
+  (t) => [primaryKey({ columns: [t.articleId, t.magasin] })],
 );
 
 /** Coût de revient historisé (saisi dans l'application). */
@@ -214,6 +267,25 @@ export const lignesShift = pgTable(
     modifiePar: uuid("modifie_par"),
   },
   (t) => [primaryKey({ columns: [t.shiftId, t.produitId] })],
+);
+
+/** Ventes d'un shift par produit et par canal, au prix du canal (le total est reporté sur la ligne). */
+export const ventesShift = pgTable(
+  "ventes_shift",
+  {
+    shiftId: uuid("shift_id")
+      .notNull()
+      .references(() => shifts.id, { onDelete: "cascade" }),
+    produitId: uuid("produit_id")
+      .notNull()
+      .references(() => produits.id),
+    canalId: uuid("canal_id")
+      .notNull()
+      .references(() => canauxVente.id),
+    quantite: integer("quantite").notNull(),
+    prixUnitaire: numeric("prix_unitaire", { precision: 10, scale: 2, mode: "number" }),
+  },
+  (t) => [primaryKey({ columns: [t.shiftId, t.produitId, t.canalId] })],
 );
 
 export const mouvements = pgTable(
