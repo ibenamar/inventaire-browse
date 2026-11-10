@@ -68,38 +68,40 @@ tests/        Tests d'intégration des services (PGlite) et parcours navigateur
 
 Toutes les heures sont calculées dans le fuseau `Africa/Casablanca` à partir de la base de fuseaux du système : un changement d'heure légale au Maroc est pris en compte sans modifier le code.
 
-## Mise en production (option A : 0 €/mois)
+## Mise en production : https://inventaire.browse.ma
 
-1. **Supabase** (offre gratuite, région Europe) : créer un projet et récupérer la chaîne de connexion du *pooler* en mode transaction (port 6543).
-2. **Base** : appliquer les migrations, puis créer les données initiales.
+Hébergement option A (0 €/mois) : Cloudflare Workers pour l'application, Supabase gratuit pour la base. Le domaine `inventaire.browse.ma` est déclaré dans `wrangler.jsonc` : la zone `browse.ma` étant déjà sur Cloudflare, l'enregistrement DNS et le certificat HTTPS sont créés automatiquement au premier déploiement. Aucun enregistrement `inventaire` ne doit exister au préalable dans la zone.
 
-   ```bash
-   DATABASE_URL='postgres://…:6543/postgres' npm run db:migrate
-   ```
+Chaque modification fusionnée sur `main` est testée puis déployée par le workflow « Déploiement » (`.github/workflows/deploiement.yml`), qui applique aussi les migrations de la base.
 
-   ```bash
-   DATABASE_URL='postgres://…:6543/postgres' DIRECTION_PIN=<6 chiffres> npm run db:seed
-   ```
+### Mise en place (une seule fois)
 
-3. **Cloudflare Workers** (offre gratuite) : définir les secrets, puis déployer.
+1. **Supabase** : créer un projet (offre gratuite, région Europe, ex. Francfort). Dans *Connect*, relever deux chaînes de connexion :
+   - *Transaction pooler* (port 6543) → `DATABASE_URL` (utilisée par l'application) ;
+   - *Session pooler* (port 5432) → `DATABASE_URL_DIRECTE` (migrations et sauvegardes ; la connexion directe de l'offre gratuite n'est pas joignable depuis GitHub).
+2. **Cloudflare** : *My Profile › API Tokens › Create Token*, modèle **Edit Cloudflare Workers**, limité au compte et à la zone `browse.ma`. Relever aussi l'*Account ID* (page d'accueil du compte).
+3. **GitHub** : *Settings › Secrets and variables › Actions*, ajouter :
 
-   ```bash
-   npx wrangler secret put DATABASE_URL
-   ```
+   | Secret | Valeur |
+   |---|---|
+   | `CLOUDFLARE_API_TOKEN` | jeton créé à l'étape 2 |
+   | `CLOUDFLARE_ACCOUNT_ID` | identifiant du compte Cloudflare |
+   | `DATABASE_URL` | chaîne *Transaction pooler* (port 6543) |
+   | `DATABASE_URL_DIRECTE` | chaîne *Session pooler* (port 5432) |
+   | `SESSION_SECRET` | 32 caractères aléatoires minimum (`openssl rand -base64 48`) |
+   | `DIRECTION_PIN` | code PIN à 6 chiffres du compte Direction |
+   | `LOYVERSE_TOKEN` | jeton Loyverse (peut être ajouté plus tard) |
 
-   ```bash
-   npx wrangler secret put SESSION_SECRET
-   ```
+4. **Déployer** : fusionner sur `main`, ou lancer le workflow « Déploiement » à la main (*Actions › Déploiement › Run workflow*). Au premier déploiement, le certificat de `inventaire.browse.ma` peut mettre quelques minutes à être émis.
+5. **Sauvegarde quotidienne** : créer un bucket Cloudflare R2 et ajouter `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` et `R2_BUCKET`. Le workflow « Sauvegarde quotidienne » exporte alors la base chaque nuit.
+6. **Premiers réglages** sur https://inventaire.browse.ma avec le compte Direction : créneaux réels de chaque site, utilisateurs et PIN, import Loyverse, photos des produits.
 
-   ```bash
-   npx wrangler secret put LOYVERSE_TOKEN
-   ```
+### Déploiement manuel (dépannage)
 
-   ```bash
-   npm run cf:deploy
-   ```
+```bash
+npx wrangler login
+```
 
-4. **Sauvegarde quotidienne** : créer un bucket Cloudflare R2 et renseigner dans GitHub (Settings › Secrets › Actions) `DATABASE_URL` (connexion port 5432), `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` et `R2_BUCKET`. Le workflow « Sauvegarde quotidienne » exporte alors la base chaque nuit.
-5. **Premiers réglages** dans l'application (compte Direction) : créneaux réels de chaque site, utilisateurs et PIN, import Loyverse, photos des produits.
-
-`SESSION_SECRET` : au moins 32 caractères aléatoires (`openssl rand -base64 48`).
+```bash
+npm run cf:deploy
+```

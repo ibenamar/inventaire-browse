@@ -1,5 +1,5 @@
 # Sauvegarde quotidienne de la base (Supabase gratuit n'en fait pas) vers Cloudflare R2.
-# Secrets GitHub requis : DATABASE_URL (connexion directe ou session pooler, port 5432),
+# Secrets GitHub requis : DATABASE_URL_DIRECTE (connexion directe ou pooler en mode session, port 5432),
 # R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
 name: Sauvegarde quotidienne
 
@@ -12,13 +12,13 @@ jobs:
   sauvegarder:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECTE }}
     steps:
       - name: Vérifier la configuration
         id: config
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "Secret DATABASE_URL absent : sauvegarde ignorée."
+            echo "Secret DATABASE_URL_DIRECTE absent : sauvegarde ignorée."
             echo "actif=false" >> "$GITHUB_OUTPUT"
           else
             echo "actif=true" >> "$GITHUB_OUTPUT"

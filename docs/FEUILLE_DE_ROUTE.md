@@ -115,7 +115,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 |---|---|---|
 | Front saisie + admin | **Next.js 16 (React 19) + TypeScript**, PWA installable, mobile-first | Une seule base de code pour téléphone, tablette et admin |
 | Base de données | **PostgreSQL** (Supabase gratuit en production, PGlite embarqué en développement et en test) via **Drizzle ORM** | Historique relationnel ; SQL standard, donc portable vers une autre offre |
-| Hébergement | **Cloudflare Workers** (adaptateur OpenNext), offre gratuite à usage commercial | Remplace Vercel, dont l'offre gratuite interdit l'usage commercial |
+| Hébergement | **Cloudflare Workers** (adaptateur OpenNext) sur **inventaire.browse.ma**, offre gratuite à usage commercial | Remplace Vercel, dont l'offre gratuite interdit l'usage commercial |
 | Photos | Stockées en base (≈ 100 Ko par produit après compression côté téléphone) | Aucun service de stockage supplémentaire à gérer |
 | Authentification | PIN individuel haché (PBKDF2), session signée, droits vérifiés dans chaque action serveur | Rapide pour les équipes, chaque saisie est attribuée |
 | Loyverse | Appels serveur à l'API Loyverse (articles, prix ; reçus en phase 2) | Le jeton API ne quitte jamais le serveur |
@@ -145,7 +145,8 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 
 ### Phase 1 — MVP saisie inter-shifts et planning
 - [x] Initialisation du projet, CI (types, tests, build), configuration Cloudflare
-- [ ] Déploiement de recette (comptes Supabase et Cloudflare à créer)
+- [x] Domaine `inventaire.browse.ma` et déploiement automatique depuis GitHub configurés
+- [ ] Premier déploiement (projet Supabase, jeton Cloudflare et secrets GitHub à créer)
 - [x] Schéma de base de données, import du catalogue CSV
 - [x] Import des articles, SKU et prix de vente depuis Loyverse (développé et testé sur réponses simulées ; à valider avec le jeton réel)
 - [x] Sites, utilisateurs, PIN, rôles

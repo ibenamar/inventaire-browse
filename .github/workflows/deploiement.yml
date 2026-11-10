@@ -1,0 +1,94 @@
+# Déploiement de production sur https://inventaire.browse.ma (Cloudflare Workers + Supabase).
+#
+# Secrets GitHub (Settings › Secrets and variables › Actions) :
+#   CLOUDFLARE_API_TOKEN   jeton Cloudflare, modèle « Edit Cloudflare Workers », limité au compte et à la zone browse.ma
+#   CLOUDFLARE_ACCOUNT_ID  identifiant du compte Cloudflare
+#   DATABASE_URL           Supabase, pooler en mode transaction (port 6543) — utilisé par l'application
+#   DATABASE_URL_DIRECTE   Supabase, connexion directe ou pooler en mode session (port 5432) — migrations et sauvegardes
+#   SESSION_SECRET         32 caractères aléatoires minimum
+#   DIRECTION_PIN          code PIN (6 chiffres) du compte Direction créé au premier déploiement
+#   LOYVERSE_TOKEN         jeton d'accès Loyverse (facultatif tant qu'il n'est pas obtenu)
+name: Déploiement
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploiement-production
+  cancel-in-progress: false
+
+jobs:
+  deployer:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://inventaire.browse.ma
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Vérifier la configuration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL_DIRECTE: ${{ secrets.DATABASE_URL_DIRECTE }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          DIRECTION_PIN: ${{ secrets.DIRECTION_PIN }}
+        run: |
+          manquants=""
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID DATABASE_URL DATABASE_URL_DIRECTE SESSION_SECRET DIRECTION_PIN; do
+            [ -n "${!v}" ] || manquants="$manquants $v"
+          done
+          if [ -n "$manquants" ]; then
+            echo "::error::Secrets GitHub manquants :$manquants (voir README, section Mise en production)"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Migrations de la base
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECTE }}
+
+      - name: Données initiales (sans effet si déjà présentes)
+        run: npm run db:seed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECTE }}
+          DIRECTION_PIN: ${{ secrets.DIRECTION_PIN }}
+
+      - name: Construire
+        run: npx opennextjs-cloudflare build
+
+      - name: Envoyer les secrets de l'application
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          LOYVERSE_TOKEN: ${{ secrets.LOYVERSE_TOKEN }}
+        run: |
+          # Les valeurs vides sont ignorées (ex. LOYVERSE_TOKEN pas encore disponible).
+          jq -n 'env | {DATABASE_URL, SESSION_SECRET, LOYVERSE_TOKEN} | with_entries(select(.value != null and .value != ""))' \
+            > secrets.json
+          npx wrangler secret bulk secrets.json
+          rm secrets.json
+
+      - name: Déployer sur inventaire.browse.ma
+        run: npx opennextjs-cloudflare deploy
+
+      - name: Vérifier que le site répond
+        run: |
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://inventaire.browse.ma/login || true)
+            echo "Tentative $i : HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "::warning::Le site ne répond pas encore (propagation DNS / certificat possible au premier déploiement)."

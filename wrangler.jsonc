@@ -5,6 +5,12 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  // Domaine de production (zone browse.ma déjà sur Cloudflare) : Cloudflare crée
+  // l'enregistrement DNS et le certificat au premier déploiement.
+  "routes": [{ "pattern": "inventaire.browse.ma", "custom_domain": true }],
+  // Pas d'adresse publique secondaire en *.workers.dev : seul inventaire.browse.ma répond.
+  "workers_dev": false,
+  "preview_urls": false,
   "observability": { "enabled": true }
-  // Secrets à définir (wrangler secret put …) : DATABASE_URL, SESSION_SECRET, LOYVERSE_TOKEN
+  // Secrets (envoyés par le workflow de déploiement) : DATABASE_URL, SESSION_SECRET, LOYVERSE_TOKEN
 }
