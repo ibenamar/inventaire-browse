@@ -5,9 +5,9 @@ import { journeeLocale } from "@/domain/temps";
 import { getDb } from "@/lib/db";
 import { ErreurMetier } from "@/server/erreurs";
 import { listerArticles, listerCanaux } from "@/server/services/caisse";
-import { coutEnVigueur, historiqueCouts, lireProduit } from "@/server/services/catalogue";
+import { coutEnVigueur, historiqueCouts, lireProduit, stocksMinimum } from "@/server/services/catalogue";
 import { exigerDirection } from "../../acces";
-import { ArticlesCaisse, FormulaireCout, FormulaireProduit, PrisePhoto } from "./Formulaires";
+import { ArticlesCaisse, FormulaireCout, FormulaireProduit, FormulaireStocksMinimum, PrisePhoto } from "./Formulaires";
 
 export default async function Produit({ params }: { params: Promise<{ id: string }> }) {
   await exigerDirection();
@@ -20,7 +20,7 @@ export default async function Produit({ params }: { params: Promise<{ id: string
   const aujourdhui = journeeLocale(new Date());
   const cout = await coutEnVigueur(db, id, aujourdhui);
   const historique = await historiqueCouts(db, id);
-  const [articles, canaux] = await Promise.all([listerArticles(db, { produitId: id }), listerCanaux(db)]);
+  const [articles, canaux, minimums] = await Promise.all([listerArticles(db, { produitId: id }), listerCanaux(db), stocksMinimum(db, id)]);
   return (
     <>
       <Link href="/admin/catalogue" className="text-sm font-semibold text-marque-700">
@@ -56,6 +56,15 @@ export default async function Produit({ params }: { params: Promise<{ id: string
               canaux={canaux.map((c) => ({ id: c.id, nom: c.nom }))}
             />
           </Carte>
+          {p.suiviStock && (
+            <Carte>
+              <h2 className="mb-1 text-lg font-semibold">Stock minimum par site</h2>
+              <p className="mb-3 text-sm text-stone-600">
+                En dessous de ce niveau au comptage de clôture, le produit apparaît dans les alertes de réapprovisionnement. Vide = pas d&apos;alerte.
+              </p>
+              <FormulaireStocksMinimum produitId={p.id} unite={p.unite} minimums={minimums} />
+            </Carte>
+          )}
           <Carte>
             <h2 className="mb-1 text-lg font-semibold">Coût de revient</h2>
             <p className="mb-3 text-sm text-stone-600">

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, lte } from "drizzle-orm";
 import type { Db } from "@/db";
-import { categories, coutsProduit, photos, produits, UNITES } from "@/db/schema";
+import { categories, coutsProduit, photos, produits, produitsSites, sites, UNITES } from "@/db/schema";
 import type { Journee } from "@/domain/temps";
 import type { Acteur } from "../acteur";
 import { tracer } from "../audit";
@@ -123,4 +123,73 @@ export async function enregistrerPhoto(db: Db, produitId: string, donnees: Uint8
 export async function lirePhoto(db: Db, id: string) {
   const [p] = await db.select().from(photos).where(eq(photos.id, id));
   return p ?? null;
+}
+
+export async function listerCategories(db: Db) {
+  return db.select().from(categories).orderBy(asc(categories.ordre));
+}
+
+export interface SaisieNouveauProduit {
+  nom: string;
+  categorieId: string | null;
+  nouvelleCategorie: string | null;
+  unite: (typeof UNITES)[number];
+  partsParGateau: number | null;
+  format: string | null;
+  suiviStock: boolean;
+}
+
+/** Crée un produit (référence suivante automatique, ex. P074), dans une catégorie existante ou nouvelle. */
+export async function creerProduit(db: Db, v: SaisieNouveauProduit, acteur: Acteur): Promise<string> {
+  const nom = v.nom.trim();
+  exiger(nom, "Le nom est obligatoire");
+  exiger(UNITES.includes(v.unite), "Unité invalide");
+  exiger(v.unite !== "part" || (v.partsParGateau && Number.isInteger(v.partsParGateau) && v.partsParGateau > 0), "Indiquer le nombre de parts par gâteau");
+  const tous = await db.select({ ref: produits.ref, nom: produits.nom, ordre: produits.ordre }).from(produits);
+  exiger(!tous.some((p) => p.nom.trim().toLowerCase() === nom.toLowerCase()), `Un produit « ${nom} » existe déjà`);
+  let categorieId = v.categorieId;
+  if (!categorieId) {
+    const nomCat = v.nouvelleCategorie?.trim();
+    exiger(nomCat, "Choisir ou créer une catégorie");
+    const cats = await db.select().from(categories);
+    const existante = cats.find((c) => c.nom.toLowerCase() === nomCat.toLowerCase());
+    categorieId = existante
+      ? existante.id
+      : (await db.insert(categories).values({ nom: nomCat, ordre: Math.max(0, ...cats.map((c) => c.ordre)) + 1 }).returning({ id: categories.id }))[0].id;
+  }
+  const numero = Math.max(0, ...tous.map((p) => Number(/^P(\d+)$/.exec(p.ref)?.[1] ?? 0))) + 1;
+  const [p] = await db
+    .insert(produits)
+    .values({
+      ref: `P${String(numero).padStart(3, "0")}`,
+      nom,
+      categorieId,
+      unite: v.unite,
+      partsParGateau: v.unite === "part" ? v.partsParGateau : null,
+      format: v.format?.trim() || null,
+      suiviStock: v.suiviStock,
+      ordre: Math.max(0, ...tous.map((x) => x.ordre)) + 1,
+    })
+    .returning({ id: produits.id });
+  await tracer(db, acteur.id, "creer", "produit", p.id, { ...v });
+  return p.id;
+}
+
+/** Stock minimum d'un produit sur chaque point de vente (null = pas d'alerte). */
+export async function stocksMinimum(db: Db, produitId: string) {
+  const ss = (await db.select().from(sites).orderBy(asc(sites.ordre))).filter((s) => s.type === "point_de_vente");
+  const vals = await db.select().from(produitsSites).where(eq(produitsSites.produitId, produitId));
+  return ss.map((s) => ({ siteId: s.id, site: s.nom, statut: s.statut, stockMinimum: vals.find((v) => v.siteId === s.id)?.stockMinimum ?? null }));
+}
+
+/** Définit le stock minimum par site ; il déclenche l'alerte de réapprovisionnement à la clôture. */
+export async function definirStocksMinimum(db: Db, produitId: string, valeurs: { siteId: string; stockMinimum: number | null }[], acteur: Acteur) {
+  for (const v of valeurs) {
+    exiger(v.stockMinimum === null || (Number.isInteger(v.stockMinimum) && v.stockMinimum >= 0), "Stock minimum invalide (nombre entier positif)");
+    await db
+      .insert(produitsSites)
+      .values({ produitId, siteId: v.siteId, stockMinimum: v.stockMinimum })
+      .onConflictDoUpdate({ target: [produitsSites.produitId, produitsSites.siteId], set: { stockMinimum: v.stockMinimum } });
+  }
+  await tracer(db, acteur.id, "stocks_minimum", "produit", produitId, { valeurs });
 }

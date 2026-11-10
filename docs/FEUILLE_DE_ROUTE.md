@@ -177,7 +177,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 ### Phase 2 — Loyverse et administration
 - [x] Correspondance site ↔ magasin Loyverse
 - [x] Import automatique des ventes (reçus Loyverse → article de caisse → produit × facteur, par canal, montant encaissé réel) : à l'affichage des ventes et du récapitulatif, et à la clôture ; réimport après clôture par un manager ; saisie manuelle en secours ; journal des imports
-- [ ] Gestion du catalogue : création de produits, stock minimum par site (modification, photo et coût de revient livrés en phase 1)
+- [x] Gestion du catalogue : création de produits (référence automatique, nouvelle catégorie), stock minimum par site (modification, photo et coût de revient livrés en phase 1)
 - [ ] Tableau de bord consolidé et par site
 - [ ] Courbes d'évolution du stock par produit / site
 - [ ] Rapports d'écarts (produit, shift, responsable, passation) et de pertes (par motif)

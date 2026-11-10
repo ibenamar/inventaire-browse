@@ -5,7 +5,7 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { PhotoProduit } from "@/components/PhotoProduit";
 import { Bouton, Champ, classesChamp, formatMad, Message } from "@/components/ui";
 import type { ProduitVue } from "@/server/services/catalogue";
-import { actionAjouterArticle, actionAjouterCout, actionModifierProduit, actionPhoto, actionRetirerArticle } from "../../actions";
+import { actionAjouterArticle, actionAjouterCout, actionModifierProduit, actionPhoto, actionRetirerArticle, actionStocksMinimum } from "../../actions";
 
 export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
   const [etat, action, enCours] = useActionState(actionModifierProduit.bind(null, p.id), null);
@@ -214,5 +214,44 @@ export function ArticlesCaisse({
         </form>
       </details>
     </div>
+  );
+}
+
+export function FormulaireStocksMinimum({
+  produitId,
+  unite,
+  minimums,
+}: {
+  produitId: string;
+  unite: string;
+  minimums: { siteId: string; site: string; statut: string; stockMinimum: number | null }[];
+}) {
+  const [etat, action, enCours] = useActionState(actionStocksMinimum.bind(null, produitId), null);
+  const libelle = unite === "part" ? "parts" : unite === "bouteille" ? "bouteilles" : "pièces";
+  return (
+    <form action={action} className="grid gap-2">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {minimums.map((m) => (
+          <label key={m.siteId} className="flex items-center gap-2">
+            <span className="w-44 shrink-0 text-sm font-semibold">
+              {m.site}
+              {m.statut !== "actif" && <span className="block text-xs font-normal text-stone-500">en ouverture</span>}
+            </span>
+            <input
+              name={`min_${m.siteId}`}
+              inputMode="numeric"
+              defaultValue={m.stockMinimum ?? ""}
+              placeholder="—"
+              className={`${classesChamp} w-24 text-center`}
+            />
+            <span className="text-xs text-stone-500">{libelle}</span>
+          </label>
+        ))}
+      </div>
+      {etat && <Message ton={etat.ok ? "succes" : "erreur"}>{etat.ok ? etat.message : etat.erreur}</Message>}
+      <Bouton type="submit" variante="secondaire" disabled={enCours} className="justify-self-start">
+        Enregistrer
+      </Bouton>
+    </form>
   );
 }

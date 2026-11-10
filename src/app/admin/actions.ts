@@ -16,7 +16,8 @@ import {
   retirerArticle,
   type ArticleARattacher,
 } from "@/server/services/caisse";
-import { ajouterCout, enregistrerPhoto, modifierProduit } from "@/server/services/catalogue";
+import { ajouterCout, creerProduit, definirStocksMinimum, enregistrerPhoto, modifierProduit } from "@/server/services/catalogue";
+import { redirect } from "next/navigation";
 import { CORRESPONDANCES_LOYVERSE } from "@/server/correspondances-loyverse";
 import { importerArticles, lireArticlesLoyverse, lireExportCsv, type RapportImport, type VarianteAplatie } from "@/server/services/loyverse";
 import type { Acteur } from "@/server/acteur";
@@ -326,4 +327,41 @@ async function avecDetail<T>(f: () => Promise<T>): Promise<T> {
     const cause = e instanceof Error && e.cause ? ` (cause : ${String((e.cause as Error).message ?? e.cause)})` : "";
     throw new ErreurMetier(`Erreur technique pendant l'import : ${m}${cause}`.slice(0, 600));
   }
+}
+
+// --- Création de produit et stocks minimum (direction) -----------------------
+
+export async function actionCreerProduit(_e: unknown, form: FormData): Promise<Resultat> {
+  let id = "";
+  const r = await executer(async () => {
+    const { acteur } = await exigerDirection();
+    const unite = String(form.get("unite")) as (typeof UNITES)[number];
+    id = await creerProduit(
+      await getDb(),
+      {
+        nom: String(form.get("nom") ?? ""),
+        categorieId: String(form.get("categorieId") ?? "") || null,
+        nouvelleCategorie: String(form.get("nouvelleCategorie") ?? "") || null,
+        unite,
+        partsParGateau: unite === "part" ? nombreOuNull(form.get("partsParGateau")) : null,
+        format: String(form.get("format") ?? "") || null,
+        suiviStock: form.get("suiviStock") === "on",
+      },
+      acteur,
+    );
+    revalidatePath("/admin/catalogue");
+  });
+  if (r.ok) redirect(`/admin/catalogue/${id}`);
+  return r;
+}
+
+export async function actionStocksMinimum(produitId: string, _e: unknown, form: FormData): Promise<Resultat> {
+  return executer(async () => {
+    const { acteur } = await exigerDirection();
+    const valeurs = [...form.entries()]
+      .filter(([k]) => k.startsWith("min_"))
+      .map(([k, v]) => ({ siteId: k.slice(4), stockMinimum: nombreOuNull(v) }));
+    await definirStocksMinimum(await getDb(), produitId, valeurs, acteur);
+    revalidatePath(`/admin/catalogue/${produitId}`);
+  }, "Stocks minimum enregistrés");
 }

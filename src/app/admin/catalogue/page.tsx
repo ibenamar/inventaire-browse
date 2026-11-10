@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PhotoProduit } from "@/components/PhotoProduit";
-import { cx, formatMad, Kpi, Pastille, Titre } from "@/components/ui";
+import { cx, formatMad, Kpi, LienBouton, Pastille, Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
 import { listerProduits, type ProduitVue } from "@/server/services/catalogue";
 import { exigerDirection } from "../acces";
@@ -15,7 +15,12 @@ export default async function Catalogue() {
   const actifs = produits.filter((p) => p.actif);
   return (
     <>
-      <Titre sousTitre="Photos, prix (repris de Loyverse), unité de comptage, coût de revient.">Catalogue</Titre>
+      <Titre
+        sousTitre="Photos, prix (repris de Loyverse), unité de comptage, coût de revient, stocks minimum."
+        actions={<LienBouton href="/admin/catalogue/nouveau">+ Nouveau produit</LienBouton>}
+      >
+        Catalogue
+      </Titre>
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Kpi label="Produits actifs" valeur={actifs.length} />
         <Kpi label="Suivis en stock" valeur={actifs.filter((p) => p.suiviStock).length} />
