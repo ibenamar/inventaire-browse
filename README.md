@@ -54,6 +54,8 @@ npm run typecheck
 npm test
 ```
 
+Nombre de requêtes SQL par page (mesure de performance) : lancer le serveur avec `PERF_REQUETES=1 npm run dev`, chaque requête est écrite dans la console.
+
 Parcours complet dans un navigateur (application démarrée sur une base neuve) :
 
 ```bash

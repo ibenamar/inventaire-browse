@@ -17,7 +17,11 @@ export async function creerDbPglite(dossier?: string): Promise<Db> {
   const { drizzle } = await import("drizzle-orm/pglite");
   const { migrate } = await import("drizzle-orm/pglite/migrator");
   const client = dossier ? new PGlite(dossier) : new PGlite();
-  const db = drizzle(client, { schema });
+  const db = drizzle(client, {
+    schema,
+    // Mesure de performance en développement : une ligne par requête SQL (PERF_REQUETES=1).
+    logger: process.env.PERF_REQUETES ? { logQuery: (q: string) => console.log(`[sql] ${q.slice(0, 120).replace(/\s+/g, " ")}`) } : undefined,
+  });
   await migrate(db, { migrationsFolder: DOSSIER_MIGRATIONS });
   return db as unknown as Db;
 }

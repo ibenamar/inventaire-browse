@@ -53,6 +53,8 @@ async function toutCompter(page, valeur) {
 
   await labo.getByRole("link", { name: /Comptage d'ouverture/ }).click();
   await labo.waitForURL(/ouverture/);
+  // L'adresse change dès le clic (écran de chargement) : attendre la grille avant de compter les champs.
+  await labo.getByText(/\d+ \/ \d+ comptés/).waitFor();
   const n = await toutCompter(labo, "0");
   await labo.getByLabel("Quantité Farine T55").fill("10,5");
   await labo.getByText("Terminé ✓").waitFor({ timeout: 60000 });

@@ -69,15 +69,16 @@ export async function idDirectionParNom(db: Db, nom: string): Promise<string | n
   return u?.id ?? null;
 }
 
+/** Accès d'une personne à un site (la direction a accès à tous) — une seule requête. */
 export async function aAccesAuSite(db: Db, utilisateurId: string, siteId: string): Promise<boolean> {
-  const [u] = await db.select().from(utilisateurs).where(eq(utilisateurs.id, utilisateurId));
-  if (!u || !u.actif) return false;
-  if (u.role === "direction") return true;
-  const [l] = await db
-    .select()
-    .from(utilisateursSites)
-    .where(and(eq(utilisateursSites.utilisateurId, utilisateurId), eq(utilisateursSites.siteId, siteId)));
-  return Boolean(l);
+  if (!/^[0-9a-f-]{36}$/i.test(utilisateurId) || !/^[0-9a-f-]{36}$/i.test(siteId)) return false;
+  const [r] = await db
+    .select({ role: utilisateurs.role, actif: utilisateurs.actif, lien: utilisateursSites.siteId })
+    .from(utilisateurs)
+    .leftJoin(utilisateursSites, and(eq(utilisateursSites.utilisateurId, utilisateurs.id), eq(utilisateursSites.siteId, siteId)))
+    .where(eq(utilisateurs.id, utilisateurId));
+  if (!r || !r.actif) return false;
+  return r.role === "direction" || Boolean(r.lien);
 }
 
 export interface SaisieUtilisateur {

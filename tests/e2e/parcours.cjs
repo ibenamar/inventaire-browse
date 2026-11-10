@@ -43,6 +43,8 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
 
   await page.getByRole("link", { name: /Comptage d'ouverture/ }).click();
   await page.waitForURL(/ouverture/);
+  // L'adresse change dès le clic (écran de chargement) : attendre la grille avant de compter les champs.
+  await page.getByText(/\d+ \/ \d+ comptés/).waitFor();
   const ins = page.getByLabel(/^Quantité /);
   const n = await ins.count();
   console.log("produits à compter à l'ouverture:", n);

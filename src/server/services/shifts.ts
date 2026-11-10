@@ -288,6 +288,8 @@ export interface LigneDetail {
   montantVentes: number | null;
   /** Quantités vendues par canal (identifiant du canal → quantité). */
   ventesParCanal: Record<string, number>;
+  /** Montants encaissés par canal. */
+  montantsParCanal: Record<string, number>;
   calcul: LigneCalculee;
 }
 
@@ -327,6 +329,16 @@ export async function agregatsMouvements(db: Db, shiftIds: string[]): Promise<Ma
 }
 
 export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDetail[]> {
+  return (await lignesCalculeesPlusieurs(db, [shiftId])).get(shiftId) ?? [];
+}
+
+/**
+ * Lignes calculées de plusieurs shifts en un nombre fixe de requêtes (et non 5 à 6 par shift) :
+ * les rapports sur une période (labo, prévision, alertes, exports) restent rapides avec l'historique.
+ */
+export async function lignesCalculeesPlusieurs(db: Db, shiftIds: string[]): Promise<Map<string, LigneDetail[]>> {
+  const res = new Map<string, LigneDetail[]>();
+  if (!shiftIds.length) return res;
   const rows = await db
     .select({
       l: lignesShift,
@@ -342,72 +354,92 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
     .from(lignesShift)
     .innerJoin(produits, eq(produits.id, lignesShift.produitId))
     .innerJoin(categories, eq(categories.id, produits.categorieId))
-    .where(eq(lignesShift.shiftId, shiftId))
+    .where(inArray(lignesShift.shiftId, shiftIds))
     .orderBy(asc(categories.ordre), asc(produits.ordre), asc(produits.ref));
-  const ag = await agregatsMouvements(db, [shiftId]);
-  const ventesCanaux = await db.select().from(ventesShift).where(eq(ventesShift.shiftId, shiftId));
-  const parProduit = new Map<string, { montant: number | null; parCanal: Record<string, number> }>();
+  const ag = await agregatsMouvements(db, shiftIds);
+  const ventesCanaux = await db.select().from(ventesShift).where(inArray(ventesShift.shiftId, shiftIds));
+  const parProduit = new Map<string, { montant: number | null; parCanal: Record<string, number>; montantParCanal: Record<string, number> }>();
   for (const v of ventesCanaux) {
-    const x = parProduit.get(v.produitId) ?? { montant: null, parCanal: {} };
+    const cle = `${v.shiftId}:${v.produitId}`;
+    const x = parProduit.get(cle) ?? { montant: null, parCanal: {}, montantParCanal: {} };
     x.parCanal[v.canalId] = v.quantite;
     const m = montantVente(v);
+    x.montantParCanal[v.canalId] = m ?? 0;
     if (m !== null) x.montant = Math.round(((x.montant ?? 0) + m) * 100) / 100;
-    parProduit.set(v.produitId, x);
+    parProduit.set(cle, x);
   }
-  const theorique = await consommationTheorique(db, shiftId, rows, ag);
-  return rows.map(({ l, ...p }) => {
-    const vc = parProduit.get(l.produitId);
-    const a = ag.get(`${shiftId}:${l.produitId}`) ?? agregatsVides();
-    const entree = {
-      ouvertureTheorique: l.ouvertureTheorique,
-      ouvertureComptee: l.ouvertureComptee,
-      entrees: a.entrees,
-      ventes: l.ventes,
-      pertes: a.pertes,
-      sorties: a.sorties,
-      ingredient: p.nature === "ingredient",
-      consommationTheorique: p.nature === "ingredient" && theorique ? (theorique.get(l.produitId) ?? 0) : null,
-      stockReelFin: l.stockReelFin,
-      prixVente: l.prixVente,
-      cout: l.cout,
-      stockMinimum: l.stockMinimum,
-      montantVentes: vc?.montant ?? null,
-    };
-    return {
-      produitId: l.produitId,
-      ...p,
-      suiviStock: l.suiviStock,
-      ...entree,
-      production: a.production,
-      pertesPeremption: a.peremption,
-      pertesEndommage: a.endommage,
-      ventesParCanal: vc?.parCanal ?? {},
-      calcul: calculerLigne(entree),
-    };
-  });
+  // Fiches techniques et type de site : lus une fois, seulement s'il y a des ingrédients.
+  const avecIngredients = rows.some((r) => r.nature === "ingredient");
+  const rec = avecIngredients ? await db.select().from(recettes) : [];
+  const typeSite = new Map<string, string>();
+  if (rec.length)
+    for (const x of await db
+      .select({ id: shifts.id, type: sites.type })
+      .from(shifts)
+      .innerJoin(sites, eq(sites.id, shifts.siteId))
+      .where(inArray(shifts.id, shiftIds)))
+      typeSite.set(x.id, x.type);
+  const parShift = new Map<string, typeof rows>();
+  for (const r of rows) parShift.set(r.l.shiftId, [...(parShift.get(r.l.shiftId) ?? []), r]);
+  for (const shiftId of shiftIds) {
+    const lignes = parShift.get(shiftId) ?? [];
+    const theorique = rec.length ? consommationTheorique(shiftId, typeSite.get(shiftId), lignes, ag, rec) : null;
+    res.set(
+      shiftId,
+      lignes.map(({ l, ...p }) => {
+        const vc = parProduit.get(`${shiftId}:${l.produitId}`);
+        const a = ag.get(`${shiftId}:${l.produitId}`) ?? agregatsVides();
+        const entree = {
+          ouvertureTheorique: l.ouvertureTheorique,
+          ouvertureComptee: l.ouvertureComptee,
+          entrees: a.entrees,
+          ventes: l.ventes,
+          pertes: a.pertes,
+          sorties: a.sorties,
+          ingredient: p.nature === "ingredient",
+          consommationTheorique: p.nature === "ingredient" && theorique ? (theorique.get(l.produitId) ?? 0) : null,
+          stockReelFin: l.stockReelFin,
+          prixVente: l.prixVente,
+          cout: l.cout,
+          stockMinimum: l.stockMinimum,
+          montantVentes: vc?.montant ?? null,
+        };
+        return {
+          produitId: l.produitId,
+          ...p,
+          suiviStock: l.suiviStock,
+          ...entree,
+          production: a.production,
+          pertesPeremption: a.peremption,
+          pertesEndommage: a.endommage,
+          ventesParCanal: vc?.parCanal ?? {},
+          montantsParCanal: vc?.montantParCanal ?? {},
+          calcul: calculerLigne(entree),
+        };
+      }),
+    );
+  }
+  return res;
 }
 
 /**
  * Consommation théorique d'ingrédients du shift, d'après les fiches techniques : au laboratoire,
  * la production × recette ; en point de vente, les ventes des préparations à la commande × recette.
- * Null si le shift ne compte aucun ingrédient ou si aucune fiche technique n'existe.
+ * Null si le shift ne compte aucun ingrédient.
  */
-async function consommationTheorique(
-  db: Db,
+function consommationTheorique(
   shiftId: string,
+  typeSite: string | undefined,
   rows: { l: { produitId: string; ventes: number; suiviStock: boolean }; nature: string; partsParGateau: number | null }[],
   ag: Map<string, Agregats>,
-): Promise<Map<string, number> | null> {
+  rec: (typeof recettes.$inferSelect)[],
+): Map<string, number> | null {
   if (!rows.some((r) => r.nature === "ingredient")) return null;
-  const rec = await db.select().from(recettes);
-  if (!rec.length) return null;
-  const [sh] = await db.select({ type: sites.type }).from(shifts).innerJoin(sites, eq(sites.id, shifts.siteId)).where(eq(shifts.id, shiftId));
   const res = new Map<string, number>();
   for (const r of rows) {
     if (r.nature !== "produit") continue;
     // Quantité « faite » pendant le shift, en unités de recette (gâteaux entiers pour les cakes).
-    const faite =
-      sh?.type === "laboratoire" ? (ag.get(`${shiftId}:${r.l.produitId}`)?.production ?? 0) : r.l.suiviStock ? 0 : r.l.ventes;
+    const faite = typeSite === "laboratoire" ? (ag.get(`${shiftId}:${r.l.produitId}`)?.production ?? 0) : r.l.suiviStock ? 0 : r.l.ventes;
     if (!faite) continue;
     const unites = r.partsParGateau ? faite / r.partsParGateau : faite;
     for (const x of rec.filter((y) => y.produitId === r.l.produitId)) {
@@ -491,17 +523,14 @@ export async function detailShift(db: Db, shiftId: string): Promise<DetailShift>
     .where(eq(mouvements.shiftId, shiftId))
     .orderBy(desc(mouvements.horodatage));
   const canaux = await listerCanaux(db);
-  const ventes = await db.select().from(ventesShift).where(eq(ventesShift.shiftId, shiftId));
+  // Ventes par canal : à partir des lignes déjà calculées (pas de seconde lecture des ventes).
   const ventesParCanal = canaux
-    .map((c) => {
-      const duCanal = ventes.filter((v) => v.canalId === c.id);
-      return {
-        canalId: c.id,
-        canal: c.nom,
-        quantite: duCanal.reduce((t, v) => t + v.quantite, 0),
-        montant: Math.round(duCanal.reduce((t, v) => t + (montantVente(v) ?? 0), 0) * 100) / 100,
-      };
-    })
+    .map((c) => ({
+      canalId: c.id,
+      canal: c.nom,
+      quantite: lignes.reduce((t, l) => t + (l.ventesParCanal[c.id] ?? 0), 0),
+      montant: Math.round(lignes.reduce((t, l) => t + (l.montantsParCanal[c.id] ?? 0), 0) * 100) / 100,
+    }))
     .filter((c) => c.quantite > 0);
   const mode = row.modeOuverture;
   const aCompterOuv = lignes.filter((l) => ouvertureACompter(mode, l));

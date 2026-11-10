@@ -5,7 +5,7 @@ import { produits, shifts, sites, utilisateurs, ventesShift } from "@/db/schema"
 import { versCsv, type Cellule } from "@/lib/export-csv";
 import { heureLocale, type Journee } from "@/domain/temps";
 import { listerCanaux } from "./caisse";
-import { lignesCalculees } from "./shifts";
+import { lignesCalculeesPlusieurs } from "./shifts";
 import { tableauDeBord } from "./tableau-de-bord";
 
 const STATUTS = { planifie: "Planifié", ouvert: "Ouvert", cloture: "Clôturé", valide: "Validé" };
@@ -58,8 +58,9 @@ export async function exportDetailShifts(db: Db, filtre: { siteIds: string[]; du
     )
     .orderBy(shifts.debutPrevu);
   const lignes: Cellule[][] = [];
+  const toutes = await lignesCalculeesPlusieurs(db, sh.map((x) => x.s.id));
   for (const { s, site, responsable } of sh) {
-    const ls = await lignesCalculees(db, s.id);
+    const ls = toutes.get(s.id) ?? [];
     for (const l of ls) {
       if (!l.suiviStock && !l.ventes) continue;
       lignes.push([

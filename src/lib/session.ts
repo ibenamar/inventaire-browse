@@ -1,10 +1,10 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { cache } from "react";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { sites, utilisateurs, type Role } from "@/db/schema";
+import { sites, utilisateurs, utilisateursSites, type Role } from "@/db/schema";
 import type { Acteur } from "@/server/acteur";
-import { aAccesAuSite } from "@/server/services/utilisateurs";
 import { getDb } from "./db";
 
 // En production, préfixe __Host- : cookie lié au domaine exact, impossible à poser depuis un sous-domaine de browse.ma.
@@ -73,27 +73,35 @@ export interface Session {
   pinFaible?: boolean;
 }
 
-/** Session courante, relue en base (un compte désactivé perd l'accès immédiatement). */
-export async function lireSession(): Promise<Session | null> {
+/**
+ * Session courante, relue en base (un compte désactivé perd l'accès immédiatement).
+ * Une seule requête (personne, rattachement au site, état du site), mémorisée le temps de la requête :
+ * la mise en page et la page la demandent toutes deux.
+ */
+export const lireSession = cache(async (): Promise<Session | null> => {
   const jeton = (await cookies()).get(COOKIE_SESSION)?.value;
   if (!jeton) return null;
   try {
     const { payload } = await jwtVerify(jeton, cle());
     if (!payload.sub || typeof payload.site !== "string") return null;
     const db = await getDb();
-    const [u] = await db.select().from(utilisateurs).where(eq(utilisateurs.id, payload.sub));
-    if (!u || !u.actif) return null;
+    const [r] = await db
+      .select({ u: utilisateurs, statutSite: sites.statut, rattache: utilisateursSites.siteId })
+      .from(utilisateurs)
+      .leftJoin(sites, eq(sites.id, payload.site))
+      .leftJoin(utilisateursSites, and(eq(utilisateursSites.utilisateurId, utilisateurs.id), eq(utilisateursSites.siteId, payload.site)))
+      .where(eq(utilisateurs.id, payload.sub));
+    if (!r || !r.u.actif) return null;
     // Jeton révoqué (déconnexion, changement de PIN, de rôle ou de sites).
-    if ((payload.v ?? 0) !== u.versionSession) return null;
-    // Rattachement au site toujours valable, site toujours ouvert.
-    if (!(await aAccesAuSite(db, u.id, payload.site))) return null;
-    const [site] = await db.select({ statut: sites.statut }).from(sites).where(eq(sites.id, payload.site));
-    if (site?.statut !== "actif") return null;
-    return { acteur: { id: u.id, nom: u.nom, role: u.role }, siteId: payload.site, pinFaible: payload.pf === true };
+    if ((payload.v ?? 0) !== r.u.versionSession) return null;
+    // Rattachement au site toujours valable (la direction a accès à tous), site toujours ouvert.
+    if (r.u.role !== "direction" && !r.rattache) return null;
+    if (r.statutSite !== "actif") return null;
+    return { acteur: { id: r.u.id, nom: r.u.nom, role: r.u.role }, siteId: payload.site, pinFaible: payload.pf === true };
   } catch {
     return null;
   }
-}
+});
 
 export async function exigerSession(roles?: Role[]): Promise<Session> {
   const s = await lireSession();

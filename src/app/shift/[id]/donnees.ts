@@ -21,7 +21,8 @@ export const chargerShift = cache(async (id: string) => {
     if (e instanceof ErreurMetier) notFound();
     throw e;
   }
-  if (!(await aAccesAuSite(db, session.acteur.id, d.shift.siteId))) redirect("/");
+  // Le site de la session est déjà vérifié par la session elle-même ; un autre site l'est ici.
+  if (d.shift.siteId !== session.siteId && !(await aAccesAuSite(db, session.acteur.id, d.shift.siteId))) redirect("/");
   const estResponsable = d.shift.responsableId === session.acteur.id || estEncadrant(session.acteur);
   const x = await derniereSynchro(db, id);
   const synchro: DerniereSynchro | null = x

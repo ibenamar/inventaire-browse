@@ -3,7 +3,7 @@ import type { Db } from "@/db";
 import { bonsLivraison, lignesBon, lignesShift, mouvements, produits, shifts, sites, type Unite } from "@/db/schema";
 import { arrondiQ } from "@/domain/calculs";
 import { ajouterJours, type Journee } from "@/domain/temps";
-import { lignesCalculees } from "./shifts";
+import { lignesCalculeesPlusieurs } from "./shifts";
 
 /**
  * Prévision de production du laboratoire pour une journée : pour chaque point de vente, la moyenne
@@ -56,8 +56,8 @@ export async function previsionProduction(db: Db, journee: Journee, siteIds?: st
       .where(and(eq(shifts.siteId, s.id), inArray(shifts.journee, jours), inArray(shifts.statut, ["cloture", "valide"])));
     const joursAvecDonnees = new Set(sh.map((x) => x.journee)).size;
     const sorties = new Map<string, number>();
-    for (const x of sh)
-      for (const l of await lignesCalculees(db, x.id)) sorties.set(l.produitId, (sorties.get(l.produitId) ?? 0) + l.ventes + l.pertes);
+    for (const ls of (await lignesCalculeesPlusieurs(db, sh.map((x) => x.id))).values())
+      for (const l of ls) sorties.set(l.produitId, (sorties.get(l.produitId) ?? 0) + l.ventes + l.pertes);
     const dernier = await dernierClos(db, s.id);
     const stock = new Map<string, { q: number | null; min: number | null }>();
     if (dernier)
@@ -124,28 +124,30 @@ export async function stockPerime(db: Db, siteId: string, maintenant: Date) {
     .innerJoin(produits, eq(produits.id, lignesShift.produitId))
     .where(eq(lignesShift.shiftId, dernier.id));
   const res: { produit: string; unite: Unite; partsParGateau: number | null; quantite: number; duree: number }[] = [];
-  for (const l of lignes) {
-    if (!l.duree || !l.stock || l.stock <= 0) continue;
-    const depuis = new Date(maintenant.getTime() - l.duree * 24 * 3600_000);
+  const concernes = lignes.filter((l) => l.duree && l.stock && l.stock > 0);
+  if (!concernes.length || !premier) return res;
+  // Entrées récentes des produits concernés, en une requête (sur la plus longue durée de conservation).
+  const plusLongue = Math.max(...concernes.map((l) => l.duree!));
+  const entrees = await db
+    .select({ produitId: mouvements.produitId, q: mouvements.quantite, h: mouvements.horodatage })
+    .from(mouvements)
+    .innerJoin(shifts, eq(shifts.id, mouvements.shiftId))
+    .where(
+      and(
+        eq(shifts.siteId, siteId),
+        inArray(mouvements.produitId, concernes.map((l) => l.produitId)),
+        eq(mouvements.type, "entree"),
+        gte(mouvements.horodatage, new Date(maintenant.getTime() - plusLongue * 24 * 3600_000)),
+        lte(mouvements.horodatage, maintenant),
+      ),
+    );
+  for (const l of concernes) {
+    const depuis = new Date(maintenant.getTime() - l.duree! * 24 * 3600_000);
     // Sans historique couvrant toute la durée, l'âge du stock est inconnu : pas d'alerte.
-    if (!premier || premier.debut > depuis) continue;
-    const recents = (
-      await db
-        .select({ q: mouvements.quantite })
-        .from(mouvements)
-        .innerJoin(shifts, eq(shifts.id, mouvements.shiftId))
-        .where(
-          and(
-            eq(shifts.siteId, siteId),
-            eq(mouvements.produitId, l.produitId),
-            eq(mouvements.type, "entree"),
-            gte(mouvements.horodatage, depuis),
-            lte(mouvements.horodatage, maintenant),
-          ),
-        )
-    ).reduce((t, x) => t + x.q, 0);
-    const vieux = arrondiQ(l.stock - recents);
-    if (vieux > 0) res.push({ produit: l.produit, unite: l.unite, partsParGateau: l.partsParGateau, quantite: vieux, duree: l.duree });
+    if (premier.debut > depuis) continue;
+    const recents = entrees.filter((e) => e.produitId === l.produitId && e.h >= depuis).reduce((t, x) => t + x.q, 0);
+    const vieux = arrondiQ(l.stock! - recents);
+    if (vieux > 0) res.push({ produit: l.produit, unite: l.unite, partsParGateau: l.partsParGateau, quantite: vieux, duree: l.duree! });
   }
   return res;
 }

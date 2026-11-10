@@ -1,14 +1,14 @@
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/db";
-import { bonsLivraison, shifts, sites } from "@/db/schema";
+import { bonsLivraison, creneaux, shifts, sites } from "@/db/schema";
 import { creneauxDuJour, intervalleCreneau } from "@/domain/creneaux";
 import { TOLERANCE_CLOTURE_MIN } from "@/domain/remontees";
 import { ajouterJours, formatLocal, heureLocale, journeeLocale, libelleJournee } from "@/domain/temps";
 import { ecartsImportants } from "@/domain/vraisemblance";
 import { libelleQuantite } from "@/domain/unites";
 import { stockPerime } from "./prevision";
-import { lignesCalculees } from "./shifts";
-import { listerCreneaux } from "./sites";
+import { lignesCalculeesPlusieurs } from "./shifts";
+
 
 /**
  * Alertes d'exploitation pour les encadrants : ce qui demande une action maintenant.
@@ -49,12 +49,25 @@ export async function alertesExploitation(db: Db, siteIds: string[], maintenant:
   }
 
   // Créneaux d'aujourd'hui et de demain sans shift planifié (pas de responsable désigné).
+  // Deux requêtes pour tous les sites : créneaux actifs, shifts d'aujourd'hui et de demain.
+  const demain = ajouterJours(aujourdhui, 1);
+  const tousCreneaux = await db
+    .select()
+    .from(creneaux)
+    .where(and(inArray(creneaux.siteId, siteIds), eq(creneaux.actif, true)))
+    .orderBy(asc(creneaux.ordre));
+  const planifies = new Set(
+    (
+      await db
+        .select({ siteId: shifts.siteId, journee: shifts.journee, c: shifts.creneauId })
+        .from(shifts)
+        .where(and(inArray(shifts.siteId, siteIds), inArray(shifts.journee, [aujourdhui, demain])))
+    ).map((x) => `${x.siteId}|${x.journee}|${x.c}`),
+  );
   for (const siteId of siteIds) {
-    const cr = await listerCreneaux(db, siteId);
-    for (const journee of [aujourdhui, ajouterJours(aujourdhui, 1)]) {
-      const existants = new Set(
-        (await db.select({ c: shifts.creneauId }).from(shifts).where(and(eq(shifts.siteId, siteId), eq(shifts.journee, journee)))).map((x) => x.c),
-      );
+    const cr = tousCreneaux.filter((c) => c.siteId === siteId);
+    for (const journee of [aujourdhui, demain]) {
+      const existants = { has: (id: string) => planifies.has(`${siteId}|${journee}|${id}`) };
       for (const c of creneauxDuJour(cr, journee)) {
         const { fin } = intervalleCreneau(journee, c);
         if (fin <= maintenant || existants.has(c.id)) continue;
@@ -69,16 +82,19 @@ export async function alertesExploitation(db: Db, siteIds: string[], maintenant:
     }
   }
 
-  // Dernier shift clôturé de chaque site : écarts importants et ruptures.
-  for (const siteId of siteIds) {
-    const [dernier] = await db
-      .select()
-      .from(shifts)
-      .where(and(eq(shifts.siteId, siteId), inArray(shifts.statut, ["cloture", "valide"])))
-      .orderBy(desc(shifts.debutPrevu))
-      .limit(1);
-    if (!dernier || maintenant.getTime() - (dernier.clotureLe ?? dernier.finPrevue).getTime() > 48 * 3600_000) continue;
-    const lignes = await lignesCalculees(db, dernier.id);
+  // Dernier shift clôturé de chaque site (sur 48 h) : écarts importants et ruptures, calculés ensemble.
+  const recents = await db
+    .select()
+    .from(shifts)
+    .where(and(inArray(shifts.siteId, siteIds), inArray(shifts.statut, ["cloture", "valide"]), gte(shifts.finPrevue, new Date(maintenant.getTime() - 72 * 3600_000))))
+    .orderBy(desc(shifts.debutPrevu));
+  const derniers = siteIds
+    .map((id) => recents.find((x) => x.siteId === id))
+    .filter((d): d is (typeof recents)[number] => Boolean(d && maintenant.getTime() - (d.clotureLe ?? d.finPrevue).getTime() <= 48 * 3600_000));
+  const lignesDerniers = await lignesCalculeesPlusieurs(db, derniers.map((d) => d.id));
+  for (const dernier of derniers) {
+    const siteId = dernier.siteId;
+    const lignes = lignesDerniers.get(dernier.id) ?? [];
     const valeur = lignes.reduce((t, l) => t + (l.calcul.valeurEcartVente ?? 0), 0);
     const importants = ecartsImportants(lignes.map((l) => ({ nom: l.nom, ecart: l.calcul.ecart })), valeur);
     if (importants.length)

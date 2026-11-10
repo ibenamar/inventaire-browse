@@ -11,6 +11,10 @@
   // Pas d'adresse publique secondaire en *.workers.dev : seul inventaire.browse.ma répond.
   "workers_dev": false,
   "preview_urls": false,
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Le Worker s'exécute à côté de la base Supabase (Francfort, AWS eu-central-1) plutôt qu'au plus près
+  // de l'utilisateur : une page enchaîne une dizaine de requêtes SQL, chacune ne fait plus qu'un aller-retour
+  // de quelques millisecondes au lieu de plusieurs dizaines.
+  "placement": { "mode": "targeted", "region": "aws:eu-central-1" }
   // Secrets (envoyés par le workflow de déploiement) : DATABASE_URL, SESSION_SECRET, LOYVERSE_TOKEN
 }

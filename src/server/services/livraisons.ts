@@ -19,7 +19,7 @@ import { libelleQuantite } from "@/domain/unites";
 import { estEncadrant, type Acteur } from "../acteur";
 import { tracer } from "../audit";
 import { ErreurMetier, exiger } from "../erreurs";
-import { accepteDecimales, lignesCalculees } from "./shifts";
+import { accepteDecimales, lignesCalculees, lignesCalculeesPlusieurs } from "./shifts";
 import { aAccesAuSite } from "./utilisateurs";
 
 /**
@@ -502,8 +502,9 @@ export async function rapportLabo(db: Db, siteId: string, du: string, au: string
   const clos = shiftsLabo.filter((s) => s.statut === "cloture" || s.statut === "valide");
   const conso = new Map<string, RapportLabo["consommation"][number]>();
   const pertes = new Map<string, RapportLabo["pertes"][number]>();
+  const toutes = await lignesCalculeesPlusieurs(db, clos.map((s) => s.id));
   for (const s of clos) {
-    for (const l of await lignesCalculees(db, s.id)) {
+    for (const l of toutes.get(s.id) ?? []) {
       if (l.calcul.consommation !== null && l.calcul.consommation !== 0) {
         const x = conso.get(l.produitId) ?? { produitId: l.produitId, produit: l.nom, unite: l.unite, quantite: 0, theorique: null, valeur: 0, coutConnu: true };
         x.quantite = arrondiQ(x.quantite + l.calcul.consommation);
