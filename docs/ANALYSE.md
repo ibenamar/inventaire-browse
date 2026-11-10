@@ -61,7 +61,7 @@ Sites proposés dans la liste déroulante : **2 Mars, Anfa, Hay Hassani, Palmier
 | C8 | Historique = onglets dupliqués et renommés | Aucune consolidation, pas de courbe d'évolution, risque d'écraser des formules, pas d'audit | Base de données centrale + interface d'administration |
 | C9 | Valeur de l'écart calculée au **prix de vente** | Mesure le manque à gagner, pas la perte réelle | Afficher les deux : valeur au coût (perte réelle) et au prix de vente (manque à gagner) |
 | C10 | « Pertes / offerts » regroupés | Impossible de distinguer les causes | Pertes avec **motif** obligatoire : péremption ou endommagé |
-| C11 | « Entrées » regroupe production et livraisons | Pas de traçabilité de la provenance | Entrées avec **origine** (production sur place, fournisseur, autre site). Les 5 sites sont des points de vente, sans laboratoire central |
+| C11 | « Entrées » regroupe production et livraisons | Pas de traçabilité de la provenance | Entrées avec **origine** : livraison du **laboratoire** (réception d'un bon de livraison), fournisseur (boissons), autre point de vente |
 | C12 | Ventes ressaisies depuis la caisse (Loyverse) | Double saisie, erreurs | **Import automatique depuis l’API Loyverse**, saisie manuelle en secours |
 | C13 | Aucune photo des produits | Erreurs d'identification lors du comptage | Photo obligatoire par produit, affichée en grille dans l'écran de comptage |
 | C14 | Validation de données uniquement « entier ≥ 0 » | Fautes de frappe (ex. 100 au lieu de 10) non détectées | Contrôle de vraisemblance : alerte si écart > seuil ou quantité très supérieure à l'habitude |
@@ -128,7 +128,7 @@ alerte_réappro        = stock_réel_fin < stock_minimum(site, produit)
 
 | Sujet | Décision | Conséquence pour l'app |
 |---|---|---|
-| **Sites** | 5 points de vente : 2 Mars, Anfa, Hay Hassani, Palmier, **Browse Sweets** | Pas de laboratoire central ; tous les sites ont le même type |
+| **Sites** | 5 points de vente : 2 Mars, Anfa, Hay Hassani, Palmier, **Browse Sweets** | Voir §6 : un laboratoire de pâtisserie alimente ces points de vente |
 | **Créneaux** | Browse Sweets : 3 shifts, horaires **différents selon le jour** (semaine / week-end) | Créneaux paramétrés **par site et par jour de la semaine** |
 | **Cakes** | **8 parts**, découpés sur place | `parts_par_gateau = 8` ; un gâteau entier non découpé compte pour 8 parts au comptage ; une entrée de 1 gâteau = 8 parts |
 | **Produits à la commande** | Hors inventaire pour l'instant | `suivi_stock = non` ; ventes seules |
@@ -141,9 +141,34 @@ alerte_réappro        = stock_réel_fin < stock_minimum(site, produit)
 | **Photos** | Absentes de Loyverse | Prise de photo **directement depuis le téléphone** dans l'admin du catalogue |
 | **Planning** | Préparé par le **manager** de site et la **direction** | Droits d'édition du planning pour ces deux rôles |
 
-## 6. Questions restant ouvertes (non bloquantes pour démarrer)
+## 6. Décisions du 3ᵉ échange (10/11/2026)
 
-1. **Horaires des créneaux** : grille par site et par jour de la semaine (Browse Sweets semaine / week-end, et les 4 autres sites : 2 ou 3 shifts, fin de nuit à 3h ou 4h). Ce sont des paramètres, saisissables après la livraison.
-2. **Coût de revient** : disponible dans Loyverse (champ « coût » de l'article) ou à fournir ? Sans coût, les écarts et pertes sont valorisés au prix de vente seulement.
-3. **Loyverse** : un seul compte pour les 5 magasins ? (détermine la correspondance site ↔ magasin)
-4. **Planning** : horizon souhaité (semaine ou mois) ?
+| Sujet | Décision | Conséquence pour l'app |
+|---|---|---|
+| **Coût de revient** | Calculé et saisi **dans l'application** | Champ coût par produit, historisé (date d'effet) ; calcul à partir des fiches techniques en phase 5 |
+| **Loyverse** | **Un seul compte** pour l'ensemble | Un jeton API ; chaque site est associé à un magasin Loyverse |
+| **Ouverture des sites** | **2 points de vente ouverts**, 3 en cours d'ouverture | Statut de site `actif` / `en ouverture` ; un site s'active sans développement supplémentaire |
+| **Planning** | Vue **semaine ou mois** ; objectif : **suivi des remontées** et **responsabilisation** de l'équipe | Tableau de suivi par responsable : comptages remontés à l'heure, en retard, manquants ; écarts attribués |
+| **Laboratoire** | Un **laboratoire de pâtisserie** produit et livre les points de vente | Site de type `laboratoire` ; saisie de la **production** puis des **livraisons** vers les points de vente, rapprochées à la réception |
+
+### 6.1 Flux laboratoire → points de vente
+
+```
+LABO : production saisie ──▶ stock labo ──▶ bon de livraison (site, produits, quantités) ──▶ EXPÉDIÉ
+                                                                                         │
+POINT DE VENTE : réception pendant le shift ouvert ◀──────────────────────────────────────┘
+                 quantités pré-remplies, l'équipe confirme ou corrige ──▶ RÉCEPTIONNÉ
+                 quantités reçues = « Entrées » du shift ; différence = écart de livraison
+```
+
+- **Production** : par produit et par jour (ou shift labo), avec le responsable ; les cakes sont produits et livrés **entiers**, convertis en 8 parts à la réception.
+- **Stock labo** = production − livraisons − pertes ; un comptage labo permet de calculer l'écart du labo.
+- **Écart de livraison** = reçu − expédié : identifie les pertes pendant le transport ou les erreurs de préparation.
+- Les entrées manuelles restent possibles pour les boissons (fournisseur) et les dépannages.
+
+## 7. Questions restant ouvertes (non bloquantes pour démarrer)
+
+1. **Sites ouverts** : quels sont les 2 points de vente déjà ouverts (pour le pilote) ?
+2. **Horaires des créneaux** : grille par site et par jour de la semaine. Paramètre saisissable après la livraison.
+3. **Laboratoire** : travaille-t-il en shifts ? Combien de livraisons par jour et par point de vente ? Les boissons passent-elles par le labo ou sont-elles livrées directement par le fournisseur ?
+4. **Laboratoire** : faut-il y suivre aussi un stock de produits finis en attente de livraison (comptage quotidien) ?

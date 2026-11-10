@@ -1,6 +1,6 @@
 # Inventaire Browse
 
-Application d'inventaire inter-shifts pour les points de vente Browse : planning des shifts avec responsable d'inventaire, comptage du stock par produit (avec photo) sur téléphone ou tablette, enchaînement automatique clôture → ouverture, import des ventes Loyverse, et interface d'administration pour suivre l'évolution du stock, les pertes, les écarts et le réapprovisionnement.
+Application d'inventaire inter-shifts pour les points de vente Browse : planning des shifts avec responsable d'inventaire, comptage du stock par produit (avec photo) sur téléphone ou tablette, enchaînement automatique clôture → ouverture, suivi de la production du laboratoire et des livraisons, import des ventes Loyverse, et interface d'administration pour suivre l'évolution du stock, les pertes, les écarts et le réapprovisionnement.
 
 ## Documentation
 
@@ -10,4 +10,4 @@ Application d'inventaire inter-shifts pour les points de vente Browse : planning
 
 ## État
 
-Phase 0 — cadrage. Décisions validées le 10/11/2026 ; restent des paramètres non bloquants (voir ANALYSE.md §6).
+Phase 0 — cadrage. Décisions validées le 10/11/2026 ; restent des paramètres non bloquants (voir ANALYSE.md §7).
