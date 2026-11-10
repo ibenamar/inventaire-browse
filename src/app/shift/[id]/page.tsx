@@ -71,7 +71,16 @@ export default async function HubShift({ params }: { params: Promise<{ id: strin
       )}
       <Etape href={`/shift/${id}/entrees`} numero={++n} titre="Réceptions" detail={`Livraisons du labo, boissons du fournisseur · ${nbEntrees} saisie(s)`} />
       <Etape href={`/shift/${id}/pertes`} numero={++n} titre="Pertes" detail={`Péremption ou endommagé · ${nbPertes} saisie(s)`} />
-      <Etape href={`/shift/${id}/ventes`} numero={++n} titre="Ventes" detail={`Rapport de caisse Loyverse · ${ventes} article(s) saisi(s)`} />
+      <Etape
+        href={`/shift/${id}/ventes`}
+        numero={++n}
+        titre="Ventes"
+        detail={
+          d.shift.ventesSource === "loyverse"
+            ? `Importées de Loyverse · ${ventes} article(s) vendu(s)`
+            : `Rapport de caisse Loyverse · ${ventes} article(s) saisi(s)`
+        }
+      />
       <Etape
         href={`/shift/${id}/comptage`}
         numero={++n}

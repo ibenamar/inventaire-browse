@@ -284,8 +284,34 @@ export const ventesShift = pgTable(
       .references(() => canauxVente.id),
     quantite: integer("quantite").notNull(),
     prixUnitaire: numeric("prix_unitaire", { precision: 10, scale: 2, mode: "number" }),
+    /** Montant réellement encaissé (remises déduites) quand les ventes viennent de Loyverse. */
+    montant: numeric("montant", { precision: 12, scale: 2, mode: "number" }),
+    source: text("source", { enum: ["manuel", "loyverse"] }).notNull().default("manuel"),
   },
   (t) => [primaryKey({ columns: [t.shiftId, t.produitId, t.canalId] })],
+);
+
+/** Journal des imports de ventes Loyverse (un par import, réussi ou non). */
+export const synchrosLoyverse = pgTable(
+  "synchros_loyverse",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shiftId: uuid("shift_id")
+      .notNull()
+      .references(() => shifts.id, { onDelete: "cascade" }),
+    debut: horodatage("debut").notNull(),
+    fin: horodatage("fin").notNull(),
+    statut: text("statut", { enum: ["ok", "erreur"] }).notNull(),
+    nbRecus: integer("nb_recus").notNull().default(0),
+    nbLignes: integer("nb_lignes").notNull().default(0),
+    montant: numeric("montant", { precision: 12, scale: 2, mode: "number" }),
+    /** Articles vendus mais non rattachés à un produit : [{ sku, nom, quantite }]. */
+    nonReconnus: jsonb("non_reconnus"),
+    erreur: text("erreur"),
+    utilisateurId: uuid("utilisateur_id"),
+    horodatage: horodatage("horodatage").notNull().defaultNow(),
+  },
+  (t) => [index("synchros_loyverse_shift_idx").on(t.shiftId)],
 );
 
 export const mouvements = pgTable(

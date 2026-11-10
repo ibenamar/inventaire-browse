@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import type { MotifPerte, OrigineEntree } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { executer, type Resultat } from "@/lib/resultat";
+import { ErreurMetier } from "@/server/erreurs";
 import { exigerSession } from "@/lib/session";
+import { importerVentesShift, type RapportVentes } from "@/server/services/ventes-loyverse";
 import {
   ajouterEntrees,
   ajouterPerte,
@@ -88,10 +90,28 @@ export async function actionSupprimerMouvement(shiftId: string, mouvementId: str
   return r;
 }
 
+/** Ventes du shift depuis Loyverse (si le jeton est configuré). */
+export async function actionImporterVentes(shiftId: string): Promise<Resultat<RapportVentes>> {
+  const { acteur } = await exigerSession();
+  const r = await executer(async () => {
+    const jeton = process.env.LOYVERSE_TOKEN;
+    if (!jeton?.trim()) throw new ErreurMetier("Jeton Loyverse non configuré : saisir les ventes à la main");
+    return importerVentesShift(await getDb(), shiftId, acteur, new Date(), { jeton });
+  });
+  revalidatePath(`/shift/${shiftId}`, "layout");
+  return r;
+}
+
 export async function actionCloturer(shiftId: string, _etat: unknown, form: FormData): Promise<Resultat> {
   const { acteur } = await exigerSession();
+  const maintenant = new Date();
+  // Dernier import des ventes juste avant la clôture ; en cas d'échec (Loyverse injoignable), on clôture
+  // avec les ventes déjà connues : l'échec reste visible dans le journal et un manager peut réimporter.
+  if (process.env.LOYVERSE_TOKEN?.trim()) {
+    await importerVentesShift(await getDb(), shiftId, acteur, maintenant, { jeton: process.env.LOYVERSE_TOKEN }).catch(() => undefined);
+  }
   const r = await executer(async () =>
-    cloturerShift(await getDb(), shiftId, acteur, new Date(), String(form.get("commentaire") ?? "") || null),
+    cloturerShift(await getDb(), shiftId, acteur, maintenant, String(form.get("commentaire") ?? "") || null),
   );
   if (r.ok) {
     revalidatePath("/", "layout");

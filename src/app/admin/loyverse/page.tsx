@@ -2,6 +2,10 @@ import { Carte, Message, Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
 import { categoriesARattacher, compterArticlesRattaches, listerCanaux, magasinsConnus } from "@/server/services/caisse";
 import { listerSites } from "@/server/services/sites";
+import { dernieresSynchros } from "@/server/services/ventes-loyverse";
+import { formatLocal } from "@/domain/temps";
+import { formatMad } from "@/components/ui";
+import Link from "next/link";
 import { listerProduits } from "@/server/services/catalogue";
 import { exigerDirection } from "../acces";
 import { ArticlesNonAssocies, ImportLoyverse } from "./ImportLoyverse";
@@ -19,6 +23,7 @@ export default async function Loyverse() {
     magasinsConnus(db),
     listerSites(db),
   ]);
+  const synchros = await dernieresSynchros(db, 15);
   // Les articles retirés de la vente dans tous les magasins ne sont pas proposés (filtre côté base).
   const total = categories.reduce((t, c) => t + c.n, 0);
   const parCanal = canaux.map((c) => ({ ...c, n: rattaches.get(c.id) ?? 0 }));
@@ -68,6 +73,34 @@ export default async function Loyverse() {
             produits={produits.map((p) => ({ id: p.id, nom: p.nom, categorie: p.categorie }))}
             canaux={canaux.map((c) => ({ id: c.id, nom: c.nom }))}
           />
+        </Carte>
+        <Carte>
+          <h2 className="mb-1 text-lg font-semibold">Derniers imports de ventes</h2>
+          <p className="mb-3 text-sm text-stone-600">
+            Les ventes de chaque shift sont importées des tickets Loyverse pendant le shift et à sa clôture.
+          </p>
+          {synchros.length === 0 ? (
+            <p className="text-sm text-stone-500">Aucun import pour le moment.</p>
+          ) : (
+            <ul className="divide-y divide-stone-100 text-sm">
+              {synchros.map((x) => (
+                <li key={x.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                  <span className="w-32 shrink-0 text-stone-500">{formatLocal(x.horodatage, "dd/MM HH:mm")}</span>
+                  <Link href={`/shift/${x.shiftId}/cloture`} className="font-semibold text-marque-700 underline">
+                    {x.site} · {x.creneau} du {x.journee.split("-").reverse().join("/")}
+                  </Link>
+                  {x.statut === "ok" ? (
+                    <span className="text-stone-600">
+                      {x.nbRecus} ticket(s), {formatMad(x.montant)}
+                      {Array.isArray(x.nonReconnus) && x.nonReconnus.length > 0 && ` · ${x.nonReconnus.length} article(s) non rattaché(s)`}
+                    </span>
+                  ) : (
+                    <span className="text-red-700">Échec : {x.erreur}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </Carte>
       </div>
     </>

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GrilleQuantites } from "@/components/GrilleQuantites";
 import { cx, Message } from "@/components/ui";
+import { VentesLoyverse } from "@/components/VentesLoyverse";
+import { estEncadrant } from "@/server/acteur";
 import { getDb } from "@/lib/db";
 import { listerCanaux } from "@/server/services/caisse";
 import { chargerShift } from "../donnees";
@@ -15,7 +17,7 @@ export default async function Ventes({
   searchParams: Promise<{ canal?: string }>;
 }) {
   const { id } = await params;
-  const { d } = await chargerShift(id);
+  const { d, session, synchro, loyverseConfigure } = await chargerShift(id);
   if (d.shift.statut !== "ouvert") redirect(`/shift/${id}/cloture`);
   const canaux = await listerCanaux(await getDb());
   const { canal: code } = await searchParams;
@@ -52,14 +54,28 @@ export default async function Ventes({
           );
         })}
       </div>
-      <div className="mb-3">
-        <Message>
-          Les ventes de tous les canaux font sortir le même stock. L&apos;import automatique depuis Loyverse arrive en phase 2 : cette saisie
-          deviendra alors inutile.
-        </Message>
+      <div className="mb-3 grid gap-2">
+        {loyverseConfigure ? (
+          <>
+            <VentesLoyverse
+              shiftId={id}
+              ouvert
+              peutReimporter={estEncadrant(session.acteur)}
+              derniere={synchro}
+              auto
+              lienAdmin={session.acteur.role === "direction"}
+            />
+            <Message>
+              Les ventes viennent des tickets Loyverse du shift (tous canaux, même stock). Une correction manuelle ci-dessous sera remplacée au
+              prochain import.
+            </Message>
+          </>
+        ) : (
+          <Message>Les ventes de tous les canaux font sortir le même stock. Jeton Loyverse non configuré : saisie manuelle.</Message>
+        )}
       </div>
       <GrilleQuantites
-        key={canal.id}
+        key={`${canal.id}-${synchro?.horodatage ?? ""}`}
         shiftId={id}
         champ="ventes"
         canalId={canal.id}

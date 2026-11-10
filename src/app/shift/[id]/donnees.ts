@@ -1,9 +1,12 @@
 import { cache } from "react";
+import { heureLocale } from "@/domain/temps";
 import { getDb } from "@/lib/db";
 import { exigerSession } from "@/lib/session";
 import { estEncadrant } from "@/server/acteur";
 import { ErreurMetier } from "@/server/erreurs";
 import { detailShift } from "@/server/services/shifts";
+import { derniereSynchro } from "@/server/services/ventes-loyverse";
+import type { DerniereSynchro } from "@/components/VentesLoyverse";
 import { aAccesAuSite } from "@/server/services/utilisateurs";
 import { notFound, redirect } from "next/navigation";
 
@@ -20,5 +23,18 @@ export const chargerShift = cache(async (id: string) => {
   }
   if (!(await aAccesAuSite(db, session.acteur.id, d.shift.siteId))) redirect("/");
   const estResponsable = d.shift.responsableId === session.acteur.id || estEncadrant(session.acteur);
-  return { session, d, estResponsable };
+  const x = await derniereSynchro(db, id);
+  const synchro: DerniereSynchro | null = x
+    ? {
+        horodatage: x.horodatage.toISOString(),
+        heure: heureLocale(x.horodatage),
+        statut: x.statut,
+        nbRecus: x.nbRecus,
+        montant: x.montant,
+        erreur: x.erreur,
+        nonReconnus: (x.nonReconnus as DerniereSynchro["nonReconnus"] | null) ?? [],
+      }
+    : null;
+  const loyverseConfigure = Boolean(process.env.LOYVERSE_TOKEN?.trim());
+  return { session, d, estResponsable, synchro, loyverseConfigure };
 });

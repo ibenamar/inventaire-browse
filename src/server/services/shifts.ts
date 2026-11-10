@@ -37,6 +37,10 @@ import { listerCanaux, prixReferences, prixSurCanal } from "./caisse";
 
 export type Shift = typeof shifts.$inferSelect;
 
+/** Montant d'une vente : encaissé réel (import Loyverse), sinon quantité × prix du canal. */
+const montantVente = (v: { quantite: number; prixUnitaire: number | null; montant: number | null }) =>
+  v.montant ?? (v.prixUnitaire !== null ? v.quantite * v.prixUnitaire : null);
+
 async function lireShift(db: Db, shiftId: string): Promise<Shift> {
   const [s] = await db.select().from(shifts).where(eq(shifts.id, shiftId));
   exiger(s, "Shift introuvable");
@@ -306,7 +310,8 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
   for (const v of ventesCanaux) {
     const x = parProduit.get(v.produitId) ?? { montant: null, parCanal: {} };
     x.parCanal[v.canalId] = v.quantite;
-    if (v.prixUnitaire !== null) x.montant = Math.round(((x.montant ?? 0) + v.quantite * v.prixUnitaire) * 100) / 100;
+    const m = montantVente(v);
+    if (m !== null) x.montant = Math.round(((x.montant ?? 0) + m) * 100) / 100;
     parProduit.set(v.produitId, x);
   }
   return rows.map(({ l, ...p }) => {
@@ -412,7 +417,7 @@ export async function detailShift(db: Db, shiftId: string): Promise<DetailShift>
         canalId: c.id,
         canal: c.nom,
         quantite: duCanal.reduce((t, v) => t + v.quantite, 0),
-        montant: Math.round(duCanal.reduce((t, v) => t + v.quantite * (v.prixUnitaire ?? 0), 0) * 100) / 100,
+        montant: Math.round(duCanal.reduce((t, v) => t + (montantVente(v) ?? 0), 0) * 100) / 100,
       };
     })
     .filter((c) => c.quantite > 0);
@@ -499,10 +504,10 @@ export async function saisirVentes(
     else
       await tx
         .insert(ventesShift)
-        .values({ shiftId, produitId, canalId, quantite: q, prixUnitaire: prix })
+        .values({ shiftId, produitId, canalId, quantite: q, prixUnitaire: prix, montant: null, source: "manuel" })
         .onConflictDoUpdate({
           target: [ventesShift.shiftId, ventesShift.produitId, ventesShift.canalId],
-          set: { quantite: q, prixUnitaire: prix },
+          set: { quantite: q, prixUnitaire: prix, montant: null, source: "manuel" },
         });
     const [t] = await tx
       .select({ total: sql<number>`cast(coalesce(sum(${ventesShift.quantite}), 0) as int)` })

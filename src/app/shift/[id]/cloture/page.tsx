@@ -6,6 +6,7 @@ import { estEncadrant } from "@/server/acteur";
 import { ouvertureACompter, type LigneDetail } from "@/server/services/shifts";
 import { chargerShift } from "../donnees";
 import { FormulaireCloture, FormulaireForcer } from "./Formulaires";
+import { VentesLoyverse } from "@/components/VentesLoyverse";
 
 function CelluleEcart({ v }: { v: number | null }) {
   return (
@@ -17,7 +18,7 @@ function CelluleEcart({ v }: { v: number | null }) {
 
 export default async function Cloture({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { d, session, estResponsable } = await chargerShift(id);
+  const { d, session, estResponsable, synchro, loyverseConfigure } = await chargerShift(id);
   const s = d.shift;
   const ouvert = s.statut === "ouvert";
   const suivis = d.lignes.filter((l) => l.suiviStock);
@@ -42,6 +43,17 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           {s.clotureForcee ? "Clôture forcée" : "Clôturé"} le {formatLocal(s.clotureLe)}
           {s.commentaire ? `\n« ${s.commentaire} »` : ""}
         </Message>
+      )}
+
+      {loyverseConfigure && (
+        <VentesLoyverse
+          shiftId={id}
+          ouvert={ouvert}
+          peutReimporter={estEncadrant(session.acteur)}
+          derniere={synchro}
+          auto={ouvert}
+          lienAdmin={session.acteur.role === "direction"}
+        />
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
