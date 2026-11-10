@@ -76,7 +76,7 @@ Chaque modification fusionnée sur `main` est testée puis déployée par le wor
 
 ### Mise en place (une seule fois)
 
-1. **Supabase** : créer un projet (offre gratuite, région Europe, ex. Francfort). Dans *Connect*, relever deux chaînes de connexion :
+1. **Supabase** : créer un projet (offre gratuite, région Europe, ex. Francfort). Dans les options de sécurité proposées à la création, **activer le RLS automatique** et, si l'option est proposée, **désactiver la Data API** : l'application ne s'en sert pas. Dans tous les cas, les migrations activent elles-mêmes le RLS sur toutes les tables (`drizzle/0001_securite_rls.sql`), ce qui bloque l'accès public via l'API de Supabase sans gêner l'application. Dans *Connect*, relever deux chaînes de connexion :
    - *Transaction pooler* (port 6543) → `DATABASE_URL` (utilisée par l'application) ;
    - *Session pooler* (port 5432) → `DATABASE_URL_DIRECTE` (migrations et sauvegardes ; la connexion directe de l'offre gratuite n'est pas joignable depuis GitHub).
 2. **Cloudflare** : *My Profile › API Tokens › Create Token*, modèle **Edit Cloudflare Workers**, limité au compte et à la zone `browse.ma`. Relever aussi l'*Account ID* (page d'accueil du compte).
