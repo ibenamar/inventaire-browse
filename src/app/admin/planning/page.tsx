@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PastilleRemontee } from "@/components/StatutRemontee";
 import { cx, Message, Titre } from "@/components/ui";
-import { libelleHoraire } from "@/domain/creneaux";
+import { intervalleCreneau, libelleHoraire } from "@/domain/creneaux";
 import { statutRemontee } from "@/domain/remontees";
 import { heureLocale, jourIso, journeeLocale, libelleJournee, NOMS_JOURS_COURTS } from "@/domain/temps";
 import { getDb } from "@/lib/db";
@@ -60,6 +60,7 @@ export default async function Planning({ searchParams }: { searchParams: Promise
                         siteId={site.id}
                         journee={j.journee}
                         creneauId={c.creneau?.id ?? null}
+                        termine={!c.shift && !!c.creneau && intervalleCreneau(j.journee, c.creneau).fin <= new Date()}
                         nom={c.nomCreneau}
                         horaire={horaire}
                         equipiers={equipiers}

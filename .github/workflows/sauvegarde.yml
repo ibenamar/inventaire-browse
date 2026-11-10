@@ -1,7 +1,7 @@
 # Sauvegarde quotidienne de la base (Supabase gratuit n'en fait pas) vers Cloudflare R2.
 # Secrets GitHub requis : DATABASE_URL_DIRECTE (connexion directe ou pooler en mode session, port 5432),
 # R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
-# Recommandé : SAUVEGARDE_PHRASE (phrase secrète longue) pour chiffrer la sauvegarde, qui contient
+# Obligatoire : SAUVEGARDE_PHRASE (phrase secrète longue) pour chiffrer la sauvegarde, qui contient
 # les empreintes des codes PIN. Déchiffrer : gpg --decrypt fichier.sql.gz.gpg > fichier.sql.gz
 name: Sauvegarde quotidienne
 
@@ -51,7 +51,9 @@ jobs:
             rm "$FICHIER"
             FICHIER="$FICHIER.gpg"
           else
-            echo "::warning::Sauvegarde non chiffrée : ajouter le secret SAUVEGARDE_PHRASE."
+            # Une sauvegarde contient les empreintes des PIN : jamais envoyée en clair.
+            echo "::error::Secret SAUVEGARDE_PHRASE absent : sauvegarde non envoyée (elle doit être chiffrée)."
+            exit 1
           fi
           aws s3 cp "$FICHIER" "s3://${{ secrets.R2_BUCKET }}/$FICHIER" \
             --endpoint-url "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"

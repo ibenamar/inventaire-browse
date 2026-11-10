@@ -4,8 +4,8 @@ import { cx, formatMad, formatSigne, Kpi, LienBouton, Message } from "@/componen
 import { BoutonAction } from "@/components/BoutonAction";
 import { actionValider } from "@/app/actions-shift";
 import { getDb } from "@/lib/db";
-import { utilisateurs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { shifts, utilisateurs } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 import { formatLocal } from "@/domain/temps";
 import { formatQuantite } from "@/domain/unites";
 import { ecartsImportants } from "@/domain/vraisemblance";
@@ -41,7 +41,14 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
   const recompte = s.modeOuverture === "recomptage" || suivis.some((l) => l.ouvertureComptee !== null && l.ouvertureTheorique !== null);
   // Comptage à l'aveugle : pendant le shift, le théorique et les écarts ne s'affichent qu'au responsable
   // (ou à un manager), et seulement une fois tout compté.
-  const montrer = !ouvert || (estResponsable && !sansOuverture.length && !nonComptes.length);
+  // Shift clôturé consulté par un employé pendant un shift en cours du site : son compté de clôture
+  // permettrait de deviner le théorique du shift en cours. Détail réservé aux encadrants dans ce cas.
+  const shiftEnCoursSurSite =
+    !ouvert && !estEncadrant(session.acteur)
+      ? (await (await getDb()).select({ id: shifts.id }).from(shifts).where(and(eq(shifts.siteId, s.siteId), eq(shifts.statut, "ouvert")))).length > 0
+      : false;
+  const montrer = (!ouvert && !shiftEnCoursSurSite) || (ouvert && estResponsable && !sansOuverture.length && !nonComptes.length);
+  const masquerDetail = shiftEnCoursSurSite;
   const nbColonnes = (montrer ? (recompte ? 4 : 3) : 0) + 5;
   // Au labo, les cakes se lisent en gâteaux entiers.
   const enGateaux = (l: LigneDetail) => labo && l.unite === "part" && l.partsParGateau ? l.partsParGateau : null;
@@ -174,6 +181,8 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
         </div>
       )}
 
+      {masquerDetail && <Message>Détail des quantités masqué pendant le shift en cours (comptage à l&apos;aveugle).</Message>}
+      {!masquerDetail && (
       <div className="overflow-x-auto rounded-2xl bg-white ring-1 ring-stone-200">
         <table className="w-full min-w-[560px] text-sm">
           <thead className="bg-stone-50 text-xs text-stone-600">
@@ -231,6 +240,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           </tbody>
         </table>
       </div>
+      )}
 
       {venteSeule.length > 0 && (
         <p className="text-sm text-stone-600">

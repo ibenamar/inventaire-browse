@@ -140,7 +140,12 @@ describe("import des ventes d'un shift", () => {
     expect((await detailShift(db, shiftId)).lignes.find((l) => l.ref === "P001")!.ventes).toBe(3);
 
     const refus = (async () => new Response("", { status: 401 })) as unknown as typeof fetch;
-    await expect(importerVentesShift(db, shiftId, direction, new Date(), { jeton: "x", fetch: refus })).rejects.toThrow(/refusé/);
+    // Moins d'une minute après un import réussi : pas de nouvel appel à Loyverse (sauf à la clôture).
+    const appels: string[] = [];
+    const espion = (async (u: string) => (appels.push(u), new Response("", { status: 500 }))) as unknown as typeof fetch;
+    await importerVentesShift(db, shiftId, direction, new Date(), { jeton: "x", fetch: espion });
+    expect(appels).toEqual([]);
+    await expect(importerVentesShift(db, shiftId, direction, new Date(), { jeton: "x", fetch: refus, forcer: true })).rejects.toThrow(/refusé/);
     const journal = await db.select().from(synchrosLoyverse);
     expect(journal.filter((j) => j.statut === "erreur")).toHaveLength(1);
     expect((await db.select().from(shifts).where(eq(shifts.id, shiftId)))[0].statut).toBe("cloture");

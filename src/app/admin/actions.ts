@@ -5,7 +5,7 @@ import { MODES_OUVERTURE, ROLES, STATUTS_SITE, UNITES } from "@/db/schema";
 import type { Journee } from "@/domain/temps";
 import { journeeLocale } from "@/domain/temps";
 import { estCoupureConnexion, getDb, nouvelleConnexion } from "@/lib/db";
-import { executer, type Resultat } from "@/lib/resultat";
+import { executer, resumeErreur, type Resultat } from "@/lib/resultat";
 import { ErreurMetier, exiger } from "@/server/erreurs";
 import {
   ajouterArticle,
@@ -336,10 +336,8 @@ async function avecDetail<T>(f: () => Promise<T>): Promise<T> {
   } catch (e) {
     if (e instanceof ErreurMetier) throw e;
     if (e && typeof e === "object" && "digest" in e && String((e as { digest: unknown }).digest).startsWith("NEXT_")) throw e;
-    console.error("Import Loyverse", e);
-    const m = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-    const cause = e instanceof Error && e.cause ? ` (cause : ${String((e.cause as Error).message ?? e.cause)})` : "";
-    throw new ErreurMetier(`Erreur technique pendant l'import : ${m}${cause}`.slice(0, 600));
+    console.error("Import Loyverse", resumeErreur(e));
+    throw new ErreurMetier(`Erreur technique pendant l'import : ${resumeErreur(e)}`.slice(0, 600));
   }
 }
 

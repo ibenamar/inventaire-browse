@@ -36,6 +36,14 @@ export default async function LayoutShift({ children, params }: { children: Reac
           </p>
         </div>
       </div>
+      {s.statut === "ouvert" && s.finPrevue.getTime() + 30 * 60_000 < Date.now() && (
+        <div className="border-b border-red-200 bg-red-50">
+          <p className="mx-auto max-w-6xl px-4 py-2 text-sm text-red-900">
+            Ce shift aurait dû se terminer à {heureLocale(s.finPrevue)} : à clôturer (responsable ou manager). L&apos;équipe suivante ne doit pas y saisir
+            ses réceptions ni ses pertes.
+          </p>
+        </div>
+      )}
       {modeCorrection && (
         <div className="border-b border-amber-200 bg-amber-50">
           <p className="mx-auto max-w-6xl px-4 py-2 text-sm text-amber-900">

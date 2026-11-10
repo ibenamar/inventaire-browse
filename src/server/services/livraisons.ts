@@ -229,6 +229,38 @@ export async function receptionnerBon(
 }
 
 /**
+ * Ajuste un bon préparé avant l'expédition (bon de réapprovisionnement, stock insuffisant…) :
+ * nouvelles quantités en unité de stock ; 0 retire la ligne. Équipe du site d'origine.
+ */
+export async function modifierBon(db: Db, bonId: string, quantites: Record<string, number>, acteur: Acteur) {
+  const b = await lireBon(db, bonId);
+  exiger(await aAccesAuSite(db, acteur.id, b.siteOrigineId), "Vous n'êtes pas rattaché au site d'origine du bon");
+  exiger(b.statut === "prepare", "Seul un bon préparé (pas encore expédié) peut être modifié");
+  const lignes = await db
+    .select({ produitId: lignesBon.produitId, unite: produits.unite, nom: produits.nom })
+    .from(lignesBon)
+    .innerJoin(produits, eq(produits.id, lignesBon.produitId))
+    .where(eq(lignesBon.bonId, bonId));
+  for (const [produitId, q] of Object.entries(quantites)) {
+    const l = lignes.find((x) => x.produitId === produitId);
+    exiger(l, "Produit absent de ce bon");
+    exiger(estQuantiteValide(q, accepteDecimales(l.unite)), `${l.nom} : quantité invalide`);
+  }
+  const restantes = lignes.filter((l) => (quantites[l.produitId] ?? 1) > 0);
+  exiger(restantes.length, "Le bon serait vide : annulez-le plutôt");
+  await db.transaction(async (tx) => {
+    const x = await lireBon(tx as unknown as Db, bonId, true);
+    exiger(x.statut === "prepare", "Le bon vient d'être expédié ou annulé : rechargez la page");
+    for (const [produitId, q] of Object.entries(quantites)) {
+      const cle = and(eq(lignesBon.bonId, bonId), eq(lignesBon.produitId, produitId));
+      if (q === 0) await tx.delete(lignesBon).where(cle);
+      else await tx.update(lignesBon).set({ quantiteExpediee: q }).where(cle);
+    }
+  });
+  await tracer(db, acteur.id, "modifier_bon", "bon_livraison", bonId, { quantites });
+}
+
+/**
  * Annulation : un bon préparé, par l'équipe du site d'origine ; un bon expédié non reçu, par un
  * manager seulement (la sortie de stock est retirée). Un bon reçu ne s'annule pas.
  */

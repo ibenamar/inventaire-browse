@@ -30,8 +30,10 @@ export function FicheTechnique({
   const [retour, setRetour] = useState<{ ok: boolean; texte: string } | null>(null);
   const [enCours, demarrer] = useTransition();
   // Le coût affiché et « Appliquer » portent sur la fiche enregistrée : on le signale si l'écran a changé.
+  // Comparaison indépendante de l'ordre (la fiche enregistrée revient triée par nom d'ingrédient).
+  const cle = (x: [string, number | null][]) => JSON.stringify([...x].sort((a, b) => a[0].localeCompare(b[0])));
   const modifiee =
-    JSON.stringify(lignes.map((l) => [l.ingredientId, lireQuantite(l.texte)])) !== JSON.stringify(initiales.map((l) => [l.ingredientId, l.quantite]));
+    cle(lignes.map((l) => [l.ingredientId, lireQuantite(l.texte)])) !== cle(initiales.map((l) => [l.ingredientId, l.quantite]));
   const dispo = (courant: string) => ingredients.filter((i) => i.id === courant || !lignes.some((l) => l.ingredientId === i.id));
   const agir = (f: () => Promise<{ ok: boolean; erreur?: string; message?: string }>) =>
     demarrer(async () => {

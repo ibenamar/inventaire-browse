@@ -1,10 +1,10 @@
 "use client";
 
-import { useTransition } from "react";
-import { actionAnnulerBon, actionExpedierBon } from "@/app/actions-shift";
+import { useState, useTransition } from "react";
+import { actionAnnulerBon, actionExpedierBon, actionModifierBon } from "@/app/actions-shift";
 import { Bouton, Pastille } from "@/components/ui";
 import type { StatutBon, Unite } from "@/db/schema";
-import { libelleQuantite } from "@/domain/unites";
+import { formatQuantite, libelleQuantite, lireQuantite } from "@/domain/unites";
 
 export interface BonListe {
   id: string;
@@ -26,8 +26,11 @@ const STATUTS: Record<StatutBon, { l: string; ton: "neutre" | "orange" | "bleu" 
   annule: { l: "Annulé", ton: "neutre" },
 };
 
-export function ListeBons({ shiftId, titre, bons }: { shiftId: string; titre: string; bons: BonListe[] }) {
+export function ListeBons({ shiftId, titre, bons, enGateaux = false }: { shiftId: string; titre: string; bons: BonListe[]; enGateaux?: boolean }) {
   const [enCours, demarrer] = useTransition();
+  // Bon préparé en cours d'ajustement : quantités saisies (en gâteaux pour les cakes au labo).
+  const [edition, setEdition] = useState<{ bonId: string; textes: Record<string, string> } | null>(null);
+  const parGateau = (l: BonListe["lignes"][number]) => (enGateaux && l.unite === "part" && l.partsParGateau ? l.partsParGateau : 1);
   if (!bons.length) return null;
   const agir = (f: () => Promise<{ ok: boolean; erreur?: string }>) =>
     demarrer(async () => {
@@ -50,14 +53,27 @@ export function ListeBons({ shiftId, titre, bons }: { shiftId: string; titre: st
             </div>
             <ul className="mt-2 text-sm">
               {b.lignes.map((l) => (
-                <li key={l.produitId} className="flex justify-between gap-2 border-t border-stone-100 py-1">
+                <li key={l.produitId} className="flex items-center justify-between gap-2 border-t border-stone-100 py-1">
                   <span>{l.nom}</span>
+                  {edition?.bonId === b.id ? (
+                    <label className="flex items-center gap-1">
+                      <input
+                        inputMode="decimal"
+                        aria-label={`Quantité ${l.nom}`}
+                        value={edition.textes[l.produitId] ?? ""}
+                        onChange={(e) => setEdition({ ...edition, textes: { ...edition.textes, [l.produitId]: e.target.value.replace(/[^\d.,]/g, "") } })}
+                        className="h-9 w-20 rounded-lg text-center font-bold ring-1 ring-stone-300"
+                      />
+                      <span className="text-xs text-stone-500">{parGateau(l) > 1 ? "gâteaux" : l.unite === "part" ? "parts" : ""}</span>
+                    </label>
+                  ) : (
                   <span className="tabular-nums">
                     {libelleQuantite(l.quantiteExpediee, l)}
                     {l.quantiteRecue !== null && l.quantiteRecue !== l.quantiteExpediee && (
                       <span className="font-semibold text-red-700"> · reçu {libelleQuantite(l.quantiteRecue, l)}</span>
                     )}
                   </span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -66,7 +82,41 @@ export function ListeBons({ shiftId, titre, bons }: { shiftId: string; titre: st
             )}
             {(b.statut === "prepare" || b.annulable) && (
               <div className="mt-3 flex flex-wrap gap-2">
-                {b.statut === "prepare" && (
+                {b.statut === "prepare" && edition?.bonId !== b.id && (
+                  <Bouton
+                    variante="secondaire"
+                    disabled={enCours}
+                    onClick={() =>
+                      setEdition({
+                        bonId: b.id,
+                        textes: Object.fromEntries(b.lignes.map((l) => [l.produitId, formatQuantite(l.quantiteExpediee / parGateau(l))])),
+                      })
+                    }
+                  >
+                    Modifier
+                  </Bouton>
+                )}
+                {edition?.bonId === b.id && (
+                  <Bouton
+                    disabled={enCours}
+                    onClick={() => {
+                      const quantites: Record<string, number> = {};
+                      for (const l of b.lignes) {
+                        const n = lireQuantite(edition.textes[l.produitId] ?? "");
+                        if (n === null) return window.alert(`${l.nom} : quantité à indiquer (0 pour retirer la ligne)`);
+                        quantites[l.produitId] = Math.round(n * parGateau(l) * 1000) / 1000;
+                      }
+                      agir(async () => {
+                        const r = await actionModifierBon(shiftId, b.id, quantites);
+                        if (r.ok) setEdition(null);
+                        return r;
+                      });
+                    }}
+                  >
+                    Enregistrer
+                  </Bouton>
+                )}
+                {b.statut === "prepare" && edition?.bonId !== b.id && (
                   <Bouton
                     disabled={enCours}
                     onClick={() => {

@@ -7,7 +7,7 @@ import { getDb } from "@/lib/db";
 import { executer, type Resultat } from "@/lib/resultat";
 import { ErreurMetier } from "@/server/erreurs";
 import { exigerSession } from "@/lib/session";
-import { annulerBon, creerBon, expedierBon, receptionnerBon, type SaisieBon } from "@/server/services/livraisons";
+import { annulerBon, creerBon, expedierBon, modifierBon, receptionnerBon, type SaisieBon } from "@/server/services/livraisons";
 import { importerVentesShift, type RapportVentes } from "@/server/services/ventes-loyverse";
 import {
   ajouterEntrees,
@@ -113,7 +113,7 @@ export async function actionCloturer(shiftId: string, _etat: unknown, form: Form
   // Dernier import des ventes juste avant la clôture ; en cas d'échec (Loyverse injoignable), on clôture
   // avec les ventes déjà connues : l'échec reste visible dans le journal et un manager peut réimporter.
   if (process.env.LOYVERSE_TOKEN?.trim()) {
-    await importerVentesShift(await getDb(), shiftId, acteur, maintenant, { jeton: process.env.LOYVERSE_TOKEN }).catch(() => undefined);
+    await importerVentesShift(await getDb(), shiftId, acteur, maintenant, { jeton: process.env.LOYVERSE_TOKEN, forcer: true }).catch(() => undefined);
   }
   const r = await executer(async () =>
     cloturerShift(await getDb(), shiftId, acteur, maintenant, String(form.get("commentaire") ?? "") || null),
@@ -191,5 +191,12 @@ export async function actionReceptionnerBon(
     const { numero, ecarts } = r.valeur;
     return { ok: true, message: `Bon n° ${numero} réceptionné${ecarts ? ` · ${ecarts} produit(s) en écart signalé(s) au labo` : ""}` };
   }
+  return r;
+}
+
+export async function actionModifierBon(shiftId: string, bonId: string, quantites: Record<string, number>): Promise<Resultat> {
+  const { acteur } = await exigerSession();
+  const r = await executer(async () => modifierBon(await getDb(), bonId, quantites, acteur), "Bon modifié");
+  revalidatePath(`/shift/${shiftId}`, "layout");
   return r;
 }

@@ -76,14 +76,17 @@ describe("comptes et fichiers", () => {
 
 describe("connexion (passe 2)", () => {
   it("limite les échecs par adresse IP sur une heure", async () => {
-    const { compterEchecIp, ipBloquee, MAX_ECHECS_IP } = await import("@/server/services/limiteur");
+    const { cleIp, rendreTentativeIp, tentativeIp, MAX_ECHECS_IP } = await import("@/server/services/limiteur");
     const t = new Date("2026-11-16T10:00:00Z");
-    for (let i = 0; i < MAX_ECHECS_IP; i++) await compterEchecIp(db, "203.0.113.7", t);
-    expect(await ipBloquee(db, "203.0.113.7", t)).toBe(true);
-    expect(await ipBloquee(db, "198.51.100.1", t)).toBe(false);
-    expect(await ipBloquee(db, "203.0.113.7", new Date("2026-11-16T11:01:00Z"))).toBe(false);
-    await compterEchecIp(db, "203.0.113.7", new Date("2026-11-16T11:01:00Z")); // nouvelle fenêtre
-    expect(await ipBloquee(db, "203.0.113.7", new Date("2026-11-16T11:02:00Z"))).toBe(false);
+    const essais = await Promise.all(Array.from({ length: MAX_ECHECS_IP + 5 }, () => tentativeIp(db, "203.0.113.7", t)));
+    expect(essais.filter((e) => e.autorisee).length).toBe(MAX_ECHECS_IP);
+    expect((await tentativeIp(db, "198.51.100.1", t)).autorisee).toBe(true);
+    expect((await tentativeIp(db, "203.0.113.7", new Date("2026-11-16T11:01:00Z"))).autorisee).toBe(true); // nouvelle fenêtre
+    // Une connexion réussie rend son essai.
+    await rendreTentativeIp(db, "198.51.100.1");
+    // IPv6 : tout le /64 partage la même limite.
+    expect(cleIp("2001:db8:1:2:aaaa::1")).toBe(cleIp("2001:db8:1:2:bbbb:cccc:dddd:eeee"));
+    expect(cleIp("2001:db8:1:2::1")).not.toBe(cleIp("2001:db8:1:3::1"));
   });
 
   it("la direction se connecte par son nom, absente des listes du site", async () => {
@@ -109,5 +112,25 @@ describe("intégrité (passe 2)", () => {
     const { cloturerShift, forcerCloture } = await import("@/server/services/shifts");
     await forcerCloture(db, shiftB, dir, new Date("2026-11-16T20:00:00Z"), "Shift abandonné");
     await expect(cloturerShift(db, shiftB, dir, new Date(), "x")).rejects.toThrow(/clôturé/);
+  });
+});
+
+describe("empreintes des PIN (passe 3)", () => {
+  it("avec un poivre serveur, l'empreinte seule ne suffit pas ; les anciennes restent valides", async () => {
+    const { aRehacher, hacherPin, verifierPin } = await import("@/server/pin");
+    const ancienne = await hacherPin("1234");
+    process.env.PIN_PEPPER = "poivre-de-test-suffisamment-long";
+    try {
+      const poivree = await hacherPin("1234");
+      expect(poivree.startsWith("pbkdf2p$")).toBe(true);
+      expect(await verifierPin("1234", poivree)).toBe(true);
+      expect(await verifierPin("1235", poivree)).toBe(false);
+      expect(await verifierPin("1234", ancienne)).toBe(true);
+      expect(aRehacher(ancienne)).toBe(true);
+      process.env.PIN_PEPPER = "un-autre-poivre-tout-aussi-long";
+      expect(await verifierPin("1234", poivree)).toBe(false);
+    } finally {
+      delete process.env.PIN_PEPPER;
+    }
   });
 });

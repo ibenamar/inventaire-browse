@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { PhotoProduit } from "@/components/PhotoProduit";
 import { Bouton, Champ, classesChamp, formatMad, Message, soumettre } from "@/components/ui";
 import { UNITE_PLURIEL, UNITE_SINGULIER, UNITES_INGREDIENT } from "@/domain/unites";
@@ -85,8 +85,13 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
 
 export function FormulaireCout({ produitId, aujourdhui, unite }: { produitId: string; aujourdhui: string; unite: Unite }) {
   const [etat, action, enCours] = useActionState(actionAjouterCout.bind(null, produitId), null);
+  // Coût enregistré : le champ se vide (un second clic ne crée pas de doublon dans l'historique).
+  const ref = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (etat?.ok) ref.current?.reset();
+  }, [etat]);
   return (
-    <form onSubmit={soumettre(action)} className="flex flex-wrap items-end gap-2">
+    <form ref={ref} onSubmit={soumettre(action)} className="flex flex-wrap items-end gap-2">
       <Champ label={`Nouveau coût par ${UNITE_SINGULIER[unite]} (MAD)`}>
         <input name="cout" inputMode="decimal" required className={`${classesChamp} w-32`} />
       </Champ>

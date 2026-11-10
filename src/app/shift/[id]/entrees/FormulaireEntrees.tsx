@@ -71,11 +71,20 @@ export function FormulaireEntrees({
         e.stopPropagation();
       }
     };
+    // Boutons de formulaire de l'en-tête (Quitter, Changer de site) : même confirmation.
+    const surEnvoi = (e: SubmitEvent) => {
+      if (!window.confirm("La saisie en cours n'est pas enregistrée. Quitter quand même ?")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
     window.addEventListener("beforeunload", avertir);
     document.addEventListener("click", surClic, true);
+    document.addEventListener("submit", surEnvoi, true);
     return () => {
       window.removeEventListener("beforeunload", avertir);
       document.removeEventListener("click", surClic, true);
+      document.removeEventListener("submit", surEnvoi, true);
     };
   }, [lignes.length]);
   const saisisParCategorie = (c: string | null) => produits.filter((p) => (!c || p.categorie === c) && (qtes[p.produitId] ?? 0) > 0).length;
@@ -91,6 +100,7 @@ export function FormulaireEntrees({
       if (r.ok) {
         setQtes({});
         setTextes({});
+        setAlertes({});
         setCommentaire("");
         setRetour({ ok: true, texte: r.message ?? "Enregistré" });
       } else setRetour({ ok: false, texte: r.erreur });
@@ -141,6 +151,7 @@ export function FormulaireEntrees({
           const decimales = DECIMALES.includes(p.unite);
           const changer = (x: number) => {
             setTextes((t) => ({ ...t, [p.produitId]: "" }));
+            setAlertes((a) => ({ ...a, [p.produitId]: null }));
             setQtes((v) => ({ ...v, [p.produitId]: Math.max(0, Math.round(x * 1000) / 1000) }));
           };
           return (

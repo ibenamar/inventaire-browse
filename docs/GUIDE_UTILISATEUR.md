@@ -35,8 +35,8 @@ Contrôles automatiques :
 2. Toucher son **nom**, puis taper son **code PIN** (4 à 6 chiffres, personnel). La **direction** n'apparaît pas dans la liste : « Compte direction », puis son nom et son code.
 
 Contrôles :
-- après **5 codes faux**, le compte est **bloqué 5 minutes** ; trop d'échecs depuis un même appareil le bloquent une heure ;
-- seules les personnes rattachées au site (et la direction) apparaissent ;
+- après **5 codes faux**, le compte est **bloqué 5 minutes** ; trop d'échecs depuis le même réseau (la boutique) bloquent les connexions une heure : prévenir un manager ;
+- seules les personnes rattachées au site apparaissent (la direction passe par « Compte direction ») ;
 - la connexion dure **12 heures** ; un compte désactivé perd l'accès immédiatement ;
 - chaque saisie est enregistrée **au nom de la personne connectée** : ne jamais utiliser le PIN d'un collègue ; sur une tablette partagée, toucher **« Quitter »** (en haut) avant de passer la main ;
 - managers et direction ont un PIN de **6 chiffres** ; les blocages successifs s'allongent (5, 10, 20, 40 min, puis 1 h).
@@ -182,7 +182,7 @@ Pour chaque responsable d'inventaire : nombre de shifts, taux de remontée à l'
 | Livraison en attente | bon expédié depuis plus de 6 h et toujours pas réceptionné |
 | DLC dépassée ? | stock plus ancien que la durée de conservation du produit (à vérifier puis déclarer en perte) |
 
-**Réapprovisionnement** (onglet Réappro.) : produits sous leur stock minimum au dernier comptage, avec la quantité à fournir (déduction faite des bons déjà en route, cakes arrondis au gâteau entier). « Préparer le bon du laboratoire » crée le bon : l'équipe du labo l'ajuste et l'expédie. Les boissons sont listées « à commander au fournisseur ».
+**Réapprovisionnement** (onglet Réappro.) : produits sous leur stock minimum au dernier comptage, avec la quantité à fournir (déduction faite des bons déjà en route, cakes arrondis au gâteau entier). « Préparer le bon du laboratoire » crée le bon : l'équipe du labo le retrouve dans ses Livraisons, l'ajuste (« Modifier », 0 retire une ligne) et l'expédie. Les boissons sont listées « à commander au fournisseur ».
 
 ## 11. Le laboratoire
 

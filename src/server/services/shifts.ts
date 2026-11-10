@@ -221,11 +221,14 @@ export async function ouvrirShift(db: Db, shiftId: string, acteur: Acteur, maint
         cout: coutParProduit.get(p.id) ?? null,
         stockMinimum: minimums.get(p.id)?.stockMinimum ?? null,
       }));
-    if (valeurs.length) await tx.insert(lignesShift).values(valeurs);
-    await tx
+    // Deux appareils qui ouvrent en même temps : le second est refusé proprement (état revérifié à l'écriture).
+    const [ok] = await tx
       .update(shifts)
       .set({ statut: "ouvert", ouvertPar: acteur.id, ouvertLe: maintenant, shiftPrecedentId: precedent?.id ?? null })
-      .where(eq(shifts.id, s.id));
+      .where(and(eq(shifts.id, s.id), eq(shifts.statut, "planifie")))
+      .returning({ id: shifts.id });
+    exiger(ok, "Ce shift vient d'être ouvert depuis un autre appareil : rechargez la page");
+    if (valeurs.length) await tx.insert(lignesShift).values(valeurs);
   });
   await tracer(db, acteur.id, "ouvrir", "shift", s.id, { precedent: precedent?.id ?? null });
 }

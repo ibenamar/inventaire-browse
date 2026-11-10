@@ -19,6 +19,8 @@ export default async function Livraisons({ params }: { params: Promise<{ id: str
   const destinations = (await destinationsPossibles(db, d.shift.siteId)).filter((s) => (labo ? s.type === "point_de_vente" : true));
   const depuis = new Date(Date.now() - 3 * 24 * 3600_000);
   const bons = await listerBons(db, { siteOrigineId: d.shift.siteId, depuis, limite: 40 });
+  // Les bons préparés restent visibles quel que soit leur âge (ex. réapprovisionnement préparé il y a plusieurs jours).
+  const prepares = await listerBons(db, { siteOrigineId: d.shift.siteId, statuts: ["prepare"], limite: 40 });
   const encadrant = estEncadrant(session.acteur);
   const vue = (b: BonVue): BonListe => ({
     id: b.id,
@@ -43,7 +45,12 @@ export default async function Livraisons({ params }: { params: Promise<{ id: str
             : "Pour dépanner un autre point de vente : les produits sortent de votre stock à l'expédition et entrent dans le sien à la réception."
         }
       />
-      <ListeBons shiftId={id} titre="Bons préparés, à expédier" bons={bons.filter((b) => b.statut === "prepare").map(vue)} />
+      <ListeBons
+        shiftId={id}
+        titre="Bons préparés : vérifier, ajuster si besoin (0 retire une ligne), puis expédier"
+        bons={prepares.map(vue)}
+        enGateaux={labo}
+      />
       <h2 className="mt-6 mb-2 text-lg font-semibold">Nouveau bon</h2>
       <FormulaireEntrees
         shiftId={id}

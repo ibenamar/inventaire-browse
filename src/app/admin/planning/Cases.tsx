@@ -23,6 +23,7 @@ export function CasePlanning({
   equipiers,
   shift,
   remontee,
+  termine = false,
 }: {
   siteId: string;
   journee: string;
@@ -32,6 +33,7 @@ export function CasePlanning({
   equipiers: { id: string; nom: string }[];
   shift: ShiftCase | null;
   remontee: React.ReactNode;
+  termine?: boolean;
 }) {
   const router = useRouter();
   const [edition, setEdition] = useState(false);
@@ -39,7 +41,8 @@ export function CasePlanning({
   const [equip, setEquip] = useState(shift?.equipierId ?? "");
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, demarrer] = useTransition();
-  const modifiable = creneauId && (!shift || shift.statut === "planifie" || shift.statut === "ouvert");
+  // Créneau terminé sans shift : on ne planifie pas le passé (le serveur le refuse aussi).
+  const modifiable = creneauId && !termine && (!shift || shift.statut === "planifie" || shift.statut === "ouvert");
 
   const lancer = (f: () => Promise<{ ok: boolean; erreur?: string }>) =>
     demarrer(async () => {

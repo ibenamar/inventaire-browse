@@ -92,6 +92,8 @@ const g = globalThis as unknown as { __dbInventaire?: Promise<Db> };
  */
 export function getDbProcessus(): Promise<Db> {
   const url = process.env.DATABASE_URL;
+  // En production, jamais de base de démonstration (compte Direction au PIN connu) : DATABASE_URL est obligatoire.
+  if (!url && process.env.NODE_ENV === "production" && !process.env.PGLITE_DIR) throw new Error("DATABASE_URL manquant en production");
   if (!g.__dbInventaire) {
     g.__dbInventaire = url
       ? creerDbPostgres(url)

@@ -96,6 +96,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECTE }}
           DIRECTION_PIN: ${{ secrets.DIRECTION_PIN }}
+          PIN_PEPPER: ${{ secrets.PIN_PEPPER }}
 
       - name: Construire
         run: npx opennextjs-cloudflare build
@@ -115,9 +116,10 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           LOYVERSE_TOKEN: ${{ secrets.LOYVERSE_TOKEN }}
+          PIN_PEPPER: ${{ secrets.PIN_PEPPER }}
         run: |
           # Les valeurs vides sont ignorées (ex. LOYVERSE_TOKEN pas encore disponible).
-          jq -n 'env | {DATABASE_URL, SESSION_SECRET, LOYVERSE_TOKEN} | with_entries(select(.value != null and .value != ""))' \
+          jq -n 'env | {DATABASE_URL, SESSION_SECRET, LOYVERSE_TOKEN, PIN_PEPPER} | with_entries(select(.value != null and .value != ""))' \
             > secrets.json
           npx wrangler secret bulk secrets.json
           rm secrets.json

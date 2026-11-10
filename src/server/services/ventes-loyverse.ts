@@ -38,6 +38,8 @@ export interface RecuLoyverse {
 
 type Fetch = typeof fetch;
 
+export const INTERVALLE_MIN_IMPORT_MS = 60_000;
+
 /** Délai de synchronisation toléré entre la vente en caisse et son arrivée chez Loyverse (constaté : ~45 min). */
 export const RETARD_SYNCHRO_MS = 3 * 3600_000;
 
@@ -188,7 +190,7 @@ export async function importerVentesShift(
   shiftId: string,
   acteur: Acteur,
   maintenant: Date,
-  opts: { jeton: string; fetch?: Fetch },
+  opts: { jeton: string; fetch?: Fetch; forcer?: boolean },
 ): Promise<RapportVentes> {
   const f = opts.fetch ?? fetch;
   const [s] = await db.select().from(shifts).where(eq(shifts.id, shiftId));
@@ -198,6 +200,27 @@ export async function importerVentesShift(
   exiger(s.statut === "ouvert" || estEncadrant(acteur), "Seul un manager peut réimporter les ventes d'un shift clôturé");
   exiger(s.statut !== "valide", "Ce shift est validé : ses ventes ne peuvent plus être modifiées");
   const { debut, fin } = await fenetreVentes(db, shiftId, maintenant);
+  // Pas plus d'un import par minute et par shift (plusieurs appareils, rechargements) : protège le quota Loyverse.
+  // La clôture force un dernier import.
+  if (!opts.forcer) {
+    const [dernier] = await db
+      .select()
+      .from(synchrosLoyverse)
+      .where(and(eq(synchrosLoyverse.shiftId, shiftId), eq(synchrosLoyverse.statut, "ok")))
+      .orderBy(desc(synchrosLoyverse.horodatage))
+      .limit(1);
+    if (dernier && maintenant.getTime() - dernier.horodatage.getTime() < INTERVALLE_MIN_IMPORT_MS) {
+      return {
+        nbRecus: dernier.nbRecus,
+        nbLignes: dernier.nbLignes,
+        montant: dernier.montant ?? 0,
+        produits: (await db.select({ p: ventesShift.produitId }).from(ventesShift).where(eq(ventesShift.shiftId, shiftId))).length,
+        nonReconnus: (dernier.nonReconnus as Agregat["nonReconnus"] | null) ?? [],
+        debut: dernier.debut,
+        fin: dernier.fin,
+      };
+    }
+  }
   try {
     const storeId = await magasinLoyverse(db, s.siteId, opts.jeton, f);
     const recus = await lireRecus(opts.jeton, storeId, debut, fin, maintenant, f);

@@ -170,3 +170,24 @@ describe("rapport du laboratoire", () => {
     expect(r.shiftsClos).toBe(1);
   });
 });
+
+describe("ajustement d'un bon préparé", () => {
+  it("modifie les quantités, retire une ligne à 0, refuse un bon vide ou déjà expédié", async () => {
+    const { modifierBon } = await import("@/server/services/livraisons");
+    // Shift du labo encore ouvert (celui du 17).
+    const { shifts } = await import("@/db/schema");
+    const { and } = await import("drizzle-orm");
+    const [{ id: shiftLabo3 }] = await db.select({ id: shifts.id }).from(shifts).where(and(eq(shifts.siteId, labo), eq(shifts.statut, "ouvert")));
+    const id = await creerBon(
+      db,
+      { shiftId: shiftLabo3, siteDestinationId: mars, lignes: [{ produitId: matilda, quantite: 1, saisie: "gateaux" }, { produitId: mango, quantite: 4, saisie: "parts" }], commentaire: null, expedier: false },
+      dir,
+      new Date(),
+    );
+    await modifierBon(db, id, { [matilda]: 16, [mango]: 0 }, dir);
+    const [b] = await listerBons(db, { siteOrigineId: labo, statuts: ["prepare"] });
+    expect(b.lignes.map((l) => [l.nom, l.quantiteExpediee])).toEqual([["Matilda Cake", 16]]);
+    await expect(modifierBon(db, id, { [matilda]: 0 }, dir)).rejects.toThrow(/vide/);
+    await expect(modifierBon(db, id, { [matilda]: 1.5 }, dir)).rejects.toThrow(/invalide/);
+  });
+});

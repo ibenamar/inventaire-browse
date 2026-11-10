@@ -87,6 +87,7 @@ export function FormulaireConnexion({ site, utilisateurs }: { site: { id: string
         <input type="hidden" name="siteId" value={site.id} />
         <input type="hidden" name="utilisateurId" value={choisi?.id ?? ""} />
         {direction && <input type="hidden" name="nomDirection" value={nomDirection} />}
+        {direction && <input type="hidden" name="modeDirection" value="1" />}
         <input type="hidden" name="pin" value={pin} />
         <div className="mb-4 flex justify-center gap-3" aria-label={`${pin.length} chiffres saisis`}>
           {Array.from({ length: 6 }).map((_, i) => (
@@ -115,7 +116,7 @@ export function FormulaireConnexion({ site, utilisateurs }: { site: { id: string
             ),
           )}
         </div>
-        <Bouton type="submit" grand className="mt-4 w-full" disabled={pin.length < 4 || enCours}>
+        <Bouton type="submit" grand className="mt-4 w-full" disabled={pin.length < 4 || enCours || (direction && !nomDirection.trim())}>
           {enCours ? "Vérification…" : "Valider"}
         </Bouton>
       </form>

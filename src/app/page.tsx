@@ -3,6 +3,7 @@ import { BarreHaut } from "@/components/BarreHaut";
 import { BoutonAction } from "@/components/BoutonAction";
 import { Carte, LienBouton, Message, Pastille } from "@/components/ui";
 import { libelleHoraire } from "@/domain/creneaux";
+import { TOLERANCE_CLOTURE_MIN } from "@/domain/remontees";
 import { formatLocal, heureLocale, libelleJournee } from "@/domain/temps";
 import { getDb } from "@/lib/db";
 import { exigerSession } from "@/lib/session";
@@ -51,6 +52,16 @@ export default async function Accueil() {
               <Horaire s={etat.ouvert} />
             </p>
             <p className="mb-4 text-stone-600">Responsable d&apos;inventaire : {etat.ouvert.responsable ?? "—"}</p>
+            {etat.ouvert.finPrevue.getTime() + TOLERANCE_CLOTURE_MIN * 60_000 < maintenant.getTime() && (
+              <div className="mb-4">
+                <Message ton="erreur">
+                  Ce shift aurait dû se terminer à {heureLocale(etat.ouvert.finPrevue)} : il doit être clôturé par {etat.ouvert.responsable ?? "son responsable"}{" "}
+                  ou par un manager (clôture forcée) avant d&apos;ouvrir le suivant
+                  {etat.aOuvrir ? ` (« ${etat.aOuvrir.nomCreneau} », responsable ${etat.aOuvrir.responsable ?? "—"})` : ""}. Ne saisissez pas vos réceptions
+                  ou pertes dans ce shift.
+                </Message>
+              </div>
+            )}
             <LienBouton href={`/shift/${etat.ouvert.id}`} grand className="w-full">
               Continuer la saisie
             </LienBouton>
@@ -110,7 +121,8 @@ export default async function Accueil() {
           </Carte>
         )}
 
-        {etat.dernierClos && (
+        {/* Le récapitulatif précédent (compté de clôture) est réservé aux encadrants : il fausserait le recomptage à l'aveugle. */}
+        {etat.dernierClos && estEncadrant(acteur) && (
           <p className="text-sm text-stone-600">
             Dernier shift clôturé :{" "}
             <Link className="font-semibold text-marque-700 underline" href={`/shift/${etat.dernierClos.id}/cloture`}>

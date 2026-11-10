@@ -4,7 +4,7 @@ import { ROLES, utilisateurs, utilisateursSites, type Role } from "@/db/schema";
 import type { Acteur } from "../acteur";
 import { tracer } from "../audit";
 import { exiger } from "../erreurs";
-import { estPinValide, hacherPin, verifierPin } from "../pin";
+import { aRehacher, estPinValide, hacherPin, verifierPin } from "../pin";
 
 export const ECHECS_AVANT_BLOCAGE = 5;
 export const DUREE_BLOCAGE_MIN = 5;
@@ -47,6 +47,19 @@ export async function utilisateursDuSite(db: Db, siteId: string, opts: { avecDir
     .orderBy(asc(utilisateurs.nom));
 }
 
+export async function estCompteDirection(db: Db, utilisateurId: string): Promise<boolean> {
+  const [u] = await db.select({ role: utilisateurs.role }).from(utilisateurs).where(eq(utilisateurs.id, utilisateurId));
+  return u?.role === "direction";
+}
+
+let empreinteLeurre: Promise<string> | null = null;
+/** Vérification factice (même coût qu'un vrai code) pour un nom inconnu : rien ne se mesure. */
+export async function leurrePin(pin: string): Promise<ResultatConnexion> {
+  empreinteLeurre ??= hacherPin("000000");
+  await verifierPin(pin, await empreinteLeurre);
+  return { ok: false, message: "Code incorrect" };
+}
+
 /** Compte direction actif portant ce nom (casse et espaces ignorés). */
 export async function idDirectionParNom(db: Db, nom: string): Promise<string | null> {
   const [u] = await db
@@ -80,12 +93,14 @@ function valider(v: SaisieUtilisateur, pinObligatoire: boolean) {
   exiger(ROLES.includes(v.role), "Rôle invalide");
   if (pinObligatoire || v.pin) exiger(v.pin && estPinValide(v.pin), "Le code PIN doit comporter 4 à 6 chiffres");
   // Les comptes qui pilotent plusieurs sites ou tout le réseau ont un code plus long.
+  // (Unicité du nom de la direction : vérifiée dans exigerNomDirectionUnique, la direction se connecte par son nom.)
   if (v.pin && (v.role === "manager" || v.role === "direction")) exiger(/^\d{6}$/.test(v.pin), "Un manager ou la direction doit avoir un PIN de 6 chiffres");
   exiger(v.role === "direction" || v.siteIds.length > 0, "Rattacher l'utilisateur à au moins un site");
 }
 
 export async function creerUtilisateur(db: Db, v: SaisieUtilisateur, acteur: Acteur | null): Promise<string> {
   valider(v, true);
+  await exigerNomDirectionUnique(db, v.nom, v.role, null);
   const [u] = await db
     .insert(utilisateurs)
     .values({ nom: v.nom.trim(), role: v.role, actif: v.actif, pinHash: await hacherPin(v.pin!) })
@@ -97,8 +112,19 @@ export async function creerUtilisateur(db: Db, v: SaisieUtilisateur, acteur: Act
   return u.id;
 }
 
+/** La direction se connecte en tapant son nom : deux comptes direction ne peuvent pas porter le même. */
+async function exigerNomDirectionUnique(db: Db, nom: string, role: string, saufId: string | null) {
+  if (role !== "direction") return;
+  const meme = await db
+    .select({ id: utilisateurs.id })
+    .from(utilisateurs)
+    .where(and(eq(utilisateurs.role, "direction"), eq(utilisateurs.actif, true), sql`lower(trim(${utilisateurs.nom})) = ${nom.trim().toLowerCase()}`));
+  exiger(!meme.some((u) => u.id !== saufId), `Un compte direction s'appelle déjà « ${nom.trim()} » : choisissez un autre nom`);
+}
+
 export async function modifierUtilisateur(db: Db, id: string, v: SaisieUtilisateur, acteur: Acteur) {
   valider(v, false);
+  await exigerNomDirectionUnique(db, v.nom, v.role, id);
   // Toute modification des droits ou du code ferme les sessions ouvertes de la personne.
   const maj: Partial<typeof utilisateurs.$inferInsert> = { nom: v.nom.trim(), role: v.role, actif: v.actif };
   if (v.pin) Object.assign(maj, { pinHash: await hacherPin(v.pin), echecsPin: 0, bloqueJusqua: null });
@@ -152,7 +178,11 @@ export async function authentifier(db: Db, utilisateurId: string, pin: string, m
     return { ok: false, message: x?.b && x.b > maintenant ? blocage(x.b) : "Réessayez." };
   }
   if (await verifierPin(pin, essai.pinHash)) {
-    await db.update(utilisateurs).set({ echecsPin: 0, bloqueJusqua: null }).where(eq(utilisateurs.id, u.id));
+    await db
+      .update(utilisateurs)
+      // Empreinte d'avant le poivre : refaite avec, sans que la personne ait à changer de code.
+      .set({ echecsPin: 0, bloqueJusqua: null, ...(aRehacher(essai.pinHash) ? { pinHash: await hacherPin(pin) } : {}) })
+      .where(eq(utilisateurs.id, u.id));
     // Compte encadrant créé avant la règle des 6 chiffres : connexion acceptée, avec un rappel permanent.
     const pinFaible = (u.role === "manager" || u.role === "direction") && pin.length < 6;
     return { ok: true, acteur: { id: u.id, nom: u.nom, role: u.role }, pinFaible };
