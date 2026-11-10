@@ -32,7 +32,7 @@ export const chargerShift = cache(async (id: string) => {
         nbRecus: x.nbRecus,
         montant: x.montant,
         // Le détail technique (base de données) est réservé à la direction.
-        erreur: x.erreur && x.erreur.startsWith("Erreur base de données") && session.acteur.role !== "direction" ? "Erreur technique pendant l'import (détail visible par la direction)." : x.erreur,
+        erreur: x.erreur && x.erreur.startsWith("Erreur technique") && session.acteur.role !== "direction" ? "Erreur technique pendant l'import (détail visible par la direction)." : x.erreur,
         nonReconnus: (x.nonReconnus as DerniereSynchro["nonReconnus"] | null) ?? [],
       }
     : null;

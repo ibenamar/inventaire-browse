@@ -427,6 +427,13 @@ export const lignesBon = pgTable(
   (t) => [primaryKey({ columns: [t.bonId, t.produitId] })],
 );
 
+/** Échecs de connexion par adresse IP (fenêtre d'une heure) : freine les essais en série sur plusieurs comptes. */
+export const tentativesConnexion = pgTable("tentatives_connexion", {
+  cle: text("cle").primaryKey(),
+  debut: horodatage("debut").notNull(),
+  echecs: integer("echecs").notNull().default(0),
+});
+
 export const journalAudit = pgTable("journal_audit", {
   id: uuid("id").primaryKey().defaultRandom(),
   utilisateurId: uuid("utilisateur_id"),

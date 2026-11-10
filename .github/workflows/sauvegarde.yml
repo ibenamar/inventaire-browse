@@ -1,7 +1,12 @@
 # Sauvegarde quotidienne de la base (Supabase gratuit n'en fait pas) vers Cloudflare R2.
 # Secrets GitHub requis : DATABASE_URL_DIRECTE (connexion directe ou pooler en mode session, port 5432),
 # R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
+# Recommandé : SAUVEGARDE_PHRASE (phrase secrète longue) pour chiffrer la sauvegarde, qui contient
+# les empreintes des codes PIN. Déchiffrer : gpg --decrypt fichier.sql.gz.gpg > fichier.sql.gz
 name: Sauvegarde quotidienne
+
+permissions:
+  contents: read
 
 on:
   schedule:
@@ -36,10 +41,18 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
+          SAUVEGARDE_PHRASE: ${{ secrets.SAUVEGARDE_PHRASE }}
         run: |
           set -euo pipefail
           FICHIER="inventaire-$(date -u +%Y-%m-%d).sql.gz"
           /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" --no-owner --no-privileges --schema=public | gzip > "$FICHIER"
+          if [ -n "${SAUVEGARDE_PHRASE:-}" ]; then
+            gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase-fd 0 -o "$FICHIER.gpg" "$FICHIER" <<< "$SAUVEGARDE_PHRASE"
+            rm "$FICHIER"
+            FICHIER="$FICHIER.gpg"
+          else
+            echo "::warning::Sauvegarde non chiffrée : ajouter le secret SAUVEGARDE_PHRASE."
+          fi
           aws s3 cp "$FICHIER" "s3://${{ secrets.R2_BUCKET }}/$FICHIER" \
             --endpoint-url "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"
           echo "Sauvegarde $FICHIER envoyée ($(du -h "$FICHIER" | cut -f1))."

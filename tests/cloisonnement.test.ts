@@ -73,3 +73,41 @@ describe("comptes et fichiers", () => {
     await enregistrerPhoto(db, produit, png, "image/png", dir);
   });
 });
+
+describe("connexion (passe 2)", () => {
+  it("limite les échecs par adresse IP sur une heure", async () => {
+    const { compterEchecIp, ipBloquee, MAX_ECHECS_IP } = await import("@/server/services/limiteur");
+    const t = new Date("2026-11-16T10:00:00Z");
+    for (let i = 0; i < MAX_ECHECS_IP; i++) await compterEchecIp(db, "203.0.113.7", t);
+    expect(await ipBloquee(db, "203.0.113.7", t)).toBe(true);
+    expect(await ipBloquee(db, "198.51.100.1", t)).toBe(false);
+    expect(await ipBloquee(db, "203.0.113.7", new Date("2026-11-16T11:01:00Z"))).toBe(false);
+    await compterEchecIp(db, "203.0.113.7", new Date("2026-11-16T11:01:00Z")); // nouvelle fenêtre
+    expect(await ipBloquee(db, "203.0.113.7", new Date("2026-11-16T11:02:00Z"))).toBe(false);
+  });
+
+  it("la direction se connecte par son nom, absente des listes du site", async () => {
+    const { idDirectionParNom, utilisateursDuSite, authentifier } = await import("@/server/services/utilisateurs");
+    expect(await idDirectionParNom(db, "  direction ")).toBe(dir.id);
+    expect(await idDirectionParNom(db, "Karim")).toBeNull(); // un manager n'utilise pas ce chemin
+    expect((await utilisateursDuSite(db, siteB, { avecDirection: false })).some((u) => u.role === "direction")).toBe(false);
+    const r = await authentifier(db, managerA.id, "456789", new Date());
+    expect(r.ok && r.pinFaible).toBe(false);
+  });
+});
+
+describe("intégrité (passe 2)", () => {
+  it("un bon ne part pas vers un site pas encore ouvert", async () => {
+    const { creerBon } = await import("@/server/services/livraisons");
+    const anfa = (await db.select().from(sites)).find((x) => x.nom === "Anfa")!.id;
+    await expect(
+      creerBon(db, { shiftId: shiftB, siteDestinationId: anfa, lignes: [{ produitId: (await db.query.produits.findFirst())!.id, quantite: 1, saisie: "parts" }], commentaire: null, expedier: false }, dir, new Date()),
+    ).rejects.toThrow(/pas encore ouvert/);
+  });
+
+  it("une clôture déjà faite par quelqu'un d'autre est refusée", async () => {
+    const { cloturerShift, forcerCloture } = await import("@/server/services/shifts");
+    await forcerCloture(db, shiftB, dir, new Date("2026-11-16T20:00:00Z"), "Shift abandonné");
+    await expect(cloturerShift(db, shiftB, dir, new Date(), "x")).rejects.toThrow(/clôturé/);
+  });
+});

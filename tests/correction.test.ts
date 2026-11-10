@@ -60,6 +60,13 @@ describe("correction et validation d'un shift clôturé", () => {
     expect(l.calcul.ecart).toBe(-2); // 9 → compté 7 sans vente : l'écart apparaît désormais sur le second shift
   });
 
+  it("ne corrige pas un comptage dont le shift suivant est validé, et trace la répercussion", async () => {
+    const actions = (await listerJournal(db, { entite: "shift", entiteId: second })).map((x) => x.j.action);
+    expect(actions).toContain("corriger"); // répercussion sur l'ouverture du second shift
+    await validerShift(db, second, direction, new Date("2026-11-18T08:00:00Z"));
+    await expect(saisirQuantite(db, premier, mangoId, "stockReelFin", 6, direction, new Date())).rejects.toThrow(/suivant est déjà validé/);
+  });
+
   it("permet de corriger ventes et pertes, puis verrouille le shift validé", async () => {
     const [surPlace] = await listerCanaux(db);
     await saisirVentes(db, premier, mangoId, surPlace.id, 1, direction, new Date());

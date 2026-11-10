@@ -31,17 +31,29 @@ export async function listerUtilisateurs(db: Db): Promise<UtilisateurVue[]> {
 }
 
 /** Utilisateurs pouvant se connecter sur un site : ceux rattachés au site, plus la direction. */
-export async function utilisateursDuSite(db: Db, siteId: string) {
+/**
+ * Personnes d'un site. `avecDirection` : ajoute la direction (planning). La page de connexion ne
+ * l'affiche pas : la direction y saisit son nom, ce qui évite d'exposer ses comptes.
+ */
+export async function utilisateursDuSite(db: Db, siteId: string, opts: { avecDirection?: boolean } = { avecDirection: true }) {
   const liens = await db.select().from(utilisateursSites).where(eq(utilisateursSites.siteId, siteId));
   const ids = liens.map((l) => l.utilisateurId);
-  const cond = ids.length
-    ? or(inArray(utilisateurs.id, ids), eq(utilisateurs.role, "direction"))
-    : eq(utilisateurs.role, "direction");
+  const direction = opts.avecDirection ? eq(utilisateurs.role, "direction") : undefined;
+  const cond = ids.length ? or(inArray(utilisateurs.id, ids), direction) : (direction ?? sql`false`);
   return db
     .select({ id: utilisateurs.id, nom: utilisateurs.nom, role: utilisateurs.role })
     .from(utilisateurs)
     .where(and(eq(utilisateurs.actif, true), cond))
     .orderBy(asc(utilisateurs.nom));
+}
+
+/** Compte direction actif portant ce nom (casse et espaces ignorés). */
+export async function idDirectionParNom(db: Db, nom: string): Promise<string | null> {
+  const [u] = await db
+    .select({ id: utilisateurs.id })
+    .from(utilisateurs)
+    .where(and(eq(utilisateurs.role, "direction"), eq(utilisateurs.actif, true), sql`lower(trim(${utilisateurs.nom})) = ${nom.trim().toLowerCase()}`));
+  return u?.id ?? null;
 }
 
 export async function aAccesAuSite(db: Db, utilisateurId: string, siteId: string): Promise<boolean> {
@@ -104,7 +116,7 @@ export async function modifierUtilisateur(db: Db, id: string, v: SaisieUtilisate
 }
 
 export type ResultatConnexion =
-  | { ok: true; acteur: Acteur }
+  | { ok: true; acteur: Acteur; pinFaible: boolean }
   | { ok: false; message: string };
 
 /**
@@ -141,7 +153,9 @@ export async function authentifier(db: Db, utilisateurId: string, pin: string, m
   }
   if (await verifierPin(pin, essai.pinHash)) {
     await db.update(utilisateurs).set({ echecsPin: 0, bloqueJusqua: null }).where(eq(utilisateurs.id, u.id));
-    return { ok: true, acteur: { id: u.id, nom: u.nom, role: u.role } };
+    // Compte encadrant créé avant la règle des 6 chiffres : connexion acceptée, avec un rappel permanent.
+    const pinFaible = (u.role === "manager" || u.role === "direction") && pin.length < 6;
+    return { ok: true, acteur: { id: u.id, nom: u.nom, role: u.role }, pinFaible };
   }
   const bloque = essai.bloqueJusqua && essai.bloqueJusqua > maintenant;
   return { ok: false, message: bloque ? `Code incorrect. ${blocage(essai.bloqueJusqua!)}` : "Code incorrect" };

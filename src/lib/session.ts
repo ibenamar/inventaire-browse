@@ -2,13 +2,15 @@ import { eq, sql } from "drizzle-orm";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { utilisateurs, type Role } from "@/db/schema";
+import { sites, utilisateurs, type Role } from "@/db/schema";
 import type { Acteur } from "@/server/acteur";
 import { aAccesAuSite } from "@/server/services/utilisateurs";
 import { getDb } from "./db";
 
-const COOKIE_SESSION = "inv_session";
-const COOKIE_SITE = "inv_site";
+// En production, préfixe __Host- : cookie lié au domaine exact, impossible à poser depuis un sous-domaine de browse.ma.
+const PREFIXE = process.env.NODE_ENV === "production" ? "__Host-" : "";
+const COOKIE_SESSION = `${PREFIXE}inv_session`;
+const COOKIE_SITE = `${PREFIXE}inv_site`;
 const DUREE_SESSION_H = 12;
 
 function cle(): Uint8Array {
@@ -28,10 +30,10 @@ const optionsCookie = (maxAge: number) => ({
   maxAge,
 });
 
-export async function ouvrirSession(acteur: Acteur, siteId: string) {
+export async function ouvrirSession(acteur: Acteur, siteId: string, opts: { pinFaible?: boolean } = {}) {
   const db = await getDb();
   const [u] = await db.select({ v: utilisateurs.versionSession }).from(utilisateurs).where(eq(utilisateurs.id, acteur.id));
-  const jeton = await new SignJWT({ site: siteId, v: u?.v ?? 0 })
+  const jeton = await new SignJWT({ site: siteId, v: u?.v ?? 0, pf: Boolean(opts.pinFaible) })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(acteur.id)
     .setIssuedAt()
@@ -67,6 +69,8 @@ export async function siteAppareil(): Promise<string | null> {
 export interface Session {
   acteur: Acteur;
   siteId: string;
+  /** Encadrant dont le PIN a moins de 6 chiffres (à changer). */
+  pinFaible?: boolean;
 }
 
 /** Session courante, relue en base (un compte désactivé perd l'accès immédiatement). */
@@ -81,9 +85,11 @@ export async function lireSession(): Promise<Session | null> {
     if (!u || !u.actif) return null;
     // Jeton révoqué (déconnexion, changement de PIN, de rôle ou de sites).
     if ((payload.v ?? 0) !== u.versionSession) return null;
-    // Rattachement au site toujours valable.
+    // Rattachement au site toujours valable, site toujours ouvert.
     if (!(await aAccesAuSite(db, u.id, payload.site))) return null;
-    return { acteur: { id: u.id, nom: u.nom, role: u.role }, siteId: payload.site };
+    const [site] = await db.select({ statut: sites.statut }).from(sites).where(eq(sites.id, payload.site));
+    if (site?.statut !== "actif") return null;
+    return { acteur: { id: u.id, nom: u.nom, role: u.role }, siteId: payload.site, pinFaible: payload.pf === true };
   } catch {
     return null;
   }

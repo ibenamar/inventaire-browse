@@ -43,6 +43,11 @@ export function BarreHaut({ session, nomSite }: { session: Session; nomSite: str
           </details>
         </nav>
       </div>
+      {session.pinFaible && (
+        <p className="border-t border-amber-200 bg-amber-50 px-4 py-1.5 text-center text-sm text-amber-900">
+          Votre code PIN a moins de 6 chiffres : demandez-en un nouveau à la direction (Administration › Utilisateurs).
+        </p>
+      )}
     </header>
   );
 }

@@ -36,8 +36,11 @@ async function dernierClos(db: Db, siteId: string) {
   return s ?? null;
 }
 
-export async function previsionProduction(db: Db, journee: Journee) {
-  const pdv = await db.select().from(sites).where(and(eq(sites.type, "point_de_vente"), eq(sites.statut, "actif"))).orderBy(asc(sites.ordre));
+/** `siteIds` : points de vente visibles par la personne (les autres ne sont ni lus ni affichés). */
+export async function previsionProduction(db: Db, journee: Journee, siteIds?: string[]) {
+  const pdv = (await db.select().from(sites).where(and(eq(sites.type, "point_de_vente"), eq(sites.statut, "actif"))).orderBy(asc(sites.ordre))).filter(
+    (s) => !siteIds || siteIds.includes(s.id),
+  );
   const [labo] = await db.select().from(sites).where(eq(sites.type, "laboratoire")).orderBy(asc(sites.ordre)).limit(1);
   const prods = await db.select().from(produits).where(and(eq(produits.fabriqueLabo, true), eq(produits.actif, true))).orderBy(asc(produits.ordre));
   const jours = Array.from({ length: SEMAINES_HISTORIQUE }, (_, i) => ajouterJours(journee, -7 * (i + 1)));

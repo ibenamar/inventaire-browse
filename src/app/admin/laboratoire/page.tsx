@@ -36,7 +36,8 @@ export default async function Laboratoire({
   const r = await rapportLabo(db, labo.id, p.du, p.au);
   const demain = ajouterJours(journeeLocale(new Date()), 1);
   const jourPrevision = sp.prevision && estJournee(sp.prevision) ? sp.prevision : demain;
-  const prev = await previsionProduction(db, jourPrevision);
+  const pdvVisibles = (await sitesPilotables(db, acteur)).map((s) => s.id);
+  const prev = await previsionProduction(db, jourPrevision, pdvVisibles);
   const lienPrevision = (j: string) => `?${new URLSearchParams({ ...(sp as Record<string, string>), prevision: j })}`;
   const totalBons = r.livraisons.reduce((t, l) => t + l.bons, 0);
   const bonsEcart = r.livraisons.reduce((t, l) => t + l.avecEcart, 0);

@@ -270,7 +270,15 @@ export async function importerVentesShift(
   } catch (e) {
     await db
       .insert(synchrosLoyverse)
-      .values({ shiftId, debut, fin, statut: "erreur", erreur: messageErreur(e).slice(0, 500), utilisateurId: acteur.id })
+      .values({
+        shiftId,
+        debut,
+        fin,
+        statut: "erreur",
+        // Messages métier (Loyverse injoignable, jeton refusé…) tels quels ; le reste est marqué technique (réservé à la direction).
+        erreur: (e instanceof ErreurMetier ? e.message : `Erreur technique : ${messageErreur(e)}`).slice(0, 500),
+        utilisateurId: acteur.id,
+      })
       .catch(() => undefined);
     throw e;
   }

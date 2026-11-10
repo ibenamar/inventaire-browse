@@ -327,7 +327,7 @@ export async function enregistrerRecette(db: Db, produitId: string, lignes: { in
   }
   await db.transaction(async (tx) => {
     await tx.delete(recettes).where(eq(recettes.produitId, produitId));
-    if (utiles.length) await tx.insert(recettes).values(utiles.map((l) => ({ produitId, ...l })));
+    if (utiles.length) await tx.insert(recettes).values(utiles.map((l) => ({ produitId, ingredientId: l.ingredientId, quantite: l.quantite })));
   });
   await tracer(db, acteur.id, "fiche_technique", "produit", produitId, { lignes: utiles });
 }

@@ -545,6 +545,12 @@ export async function saisirQuantite(
   exiger(valeur === null || estQuantiteValide(valeur, accepteDecimales(r.unite)), messageQuantite(r.unite));
   exiger(l.suiviStock, "Ce produit n'est pas suivi en stock (vente seule)");
   if (correction) exiger(valeur !== null, "Un shift clôturé doit rester entièrement compté");
+  const suivants =
+    correction && champ === "stockReelFin"
+      ? await db.select({ id: shifts.id, statut: shifts.statut }).from(shifts).where(eq(shifts.shiftPrecedentId, shiftId))
+      : [];
+  // Le stock de fin est l'ouverture du shift suivant : impossible de le changer si ce dernier est validé (verrouillé).
+  exiger(!suivants.some((x) => x.statut === "valide"), "Le shift suivant est déjà validé : ce comptage ne peut plus être corrigé");
   await db
     .update(lignesShift)
     .set({ [champ]: valeur, modifieLe: maintenant, modifiePar: acteur.id })
@@ -552,14 +558,12 @@ export async function saisirQuantite(
   if (correction && l[champ] !== valeur) {
     await tracer(db, acteur.id, "corriger", "shift", shiftId, { champ, produitId, avant: l[champ], apres: valeur });
     // Le stock compté à la clôture est l'ouverture du shift suivant : on la met à jour.
-    if (champ === "stockReelFin") {
-      const suivants = await db.select({ id: shifts.id }).from(shifts).where(eq(shifts.shiftPrecedentId, shiftId));
-      for (const x of suivants) {
-        await db
-          .update(lignesShift)
-          .set({ ouvertureTheorique: valeur })
-          .where(and(eq(lignesShift.shiftId, x.id), eq(lignesShift.produitId, produitId)));
-      }
+    for (const x of suivants) {
+      await db
+        .update(lignesShift)
+        .set({ ouvertureTheorique: valeur })
+        .where(and(eq(lignesShift.shiftId, x.id), eq(lignesShift.produitId, produitId)));
+      await tracer(db, acteur.id, "corriger", "shift", x.id, { champ: "ouvertureTheorique", produitId, apres: valeur, origine: shiftId });
     }
   }
 }
@@ -647,6 +651,8 @@ export async function ajouterEntrees(
   exiger(ORIGINES_ENTREE.includes(origine), "Origine invalide");
   const utiles = saisies.filter((e) => e.quantite !== 0);
   exiger(utiles.length, "Aucune quantité saisie");
+  exiger(utiles.length <= 300, "Trop de lignes dans une seule saisie");
+  exiger(new Set(utiles.map((e) => e.produitId)).size === utiles.length, "Un produit apparaît deux fois dans la saisie");
   const s = await lireShift(db, shiftId);
   const correction = exigerModifiable(s, acteur);
   await exigerAcces(db, s, acteur);
@@ -661,7 +667,7 @@ export async function ajouterEntrees(
       type: "entree" as const,
       quantite: e.saisie === "gateaux" ? enParts(e.quantite, "gateaux", p.partsParGateau) : e.quantite,
       origine,
-      commentaire: commentaire?.trim() || null,
+      commentaire: commentaire?.trim().slice(0, 500) || null,
       utilisateurId: acteur.id,
     });
   }
@@ -687,7 +693,7 @@ export async function ajouterPerte(
     type: "perte",
     quantite: v.saisie === "gateaux" ? enParts(v.quantite, "gateaux", p.partsParGateau) : v.quantite,
     motif: v.motif,
-    commentaire: v.commentaire?.trim() || null,
+    commentaire: v.commentaire?.trim().slice(0, 500) || null,
     utilisateurId: acteur.id,
   });
 }
@@ -726,10 +732,12 @@ export async function cloturerShift(db: Db, shiftId: string, acteur: Acteur, mai
     !importants.length || (commentaire?.trim().length ?? 0) >= 5,
     `Écart important (${importants.join(", ")}) : recomptez, puis expliquez l'écart dans le commentaire avant de clôturer.`,
   );
-  await db
+  const [clos] = await db
     .update(shifts)
-    .set({ statut: "cloture", cloturePar: acteur.id, clotureLe: maintenant, commentaire: commentaire?.trim() || null })
-    .where(eq(shifts.id, shiftId));
+    .set({ statut: "cloture", cloturePar: acteur.id, clotureLe: maintenant, commentaire: commentaire?.trim().slice(0, 1000) || null })
+    .where(and(eq(shifts.id, shiftId), eq(shifts.statut, "ouvert")))
+    .returning({ id: shifts.id });
+  exiger(clos, "Le shift vient d'être clôturé par quelqu'un d'autre");
   await tracer(db, acteur.id, "cloturer", "shift", shiftId, { synthese: d.synthese });
 }
 
@@ -752,10 +760,12 @@ export async function forcerCloture(db: Db, shiftId: string, acteur: Acteur, mai
           .where(and(eq(lignesShift.shiftId, shiftId), eq(lignesShift.produitId, l.produitId)));
       }
     }
-    await tx
+    const [x] = await tx
       .update(shifts)
-      .set({ statut: "cloture", clotureForcee: true, cloturePar: acteur.id, clotureLe: maintenant, commentaire: motif.trim() })
-      .where(eq(shifts.id, shiftId));
+      .set({ statut: "cloture", clotureForcee: true, cloturePar: acteur.id, clotureLe: maintenant, commentaire: motif.trim().slice(0, 1000) })
+      .where(and(eq(shifts.id, shiftId), eq(shifts.statut, "ouvert")))
+      .returning({ id: shifts.id });
+    exiger(x, "Le shift vient d'être clôturé par quelqu'un d'autre");
   });
   await tracer(db, acteur.id, "forcer_cloture", "shift", shiftId, { motif });
 }
@@ -767,6 +777,11 @@ export async function validerShift(db: Db, shiftId: string, acteur: Acteur, main
   const s = await lireShift(db, shiftId);
   await exigerAcces(db, s, acteur);
   exiger(s.statut === "cloture", s.statut === "valide" ? "Ce shift est déjà validé" : "Seul un shift clôturé peut être validé");
-  await db.update(shifts).set({ statut: "valide", validePar: acteur.id, valideLe: maintenant }).where(eq(shifts.id, shiftId));
+  const [v] = await db
+    .update(shifts)
+    .set({ statut: "valide", validePar: acteur.id, valideLe: maintenant })
+    .where(and(eq(shifts.id, shiftId), eq(shifts.statut, "cloture")))
+    .returning({ id: shifts.id });
+  exiger(v, "Ce shift vient de changer d'état : rechargez la page");
   await tracer(db, acteur.id, "valider", "shift", shiftId);
 }

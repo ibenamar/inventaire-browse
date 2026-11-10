@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Bouton, Carte, cx, Message } from "@/components/ui";
 import { connexion } from "./actions";
 
@@ -16,8 +16,14 @@ export function FormulaireConnexion({ site, utilisateurs }: { site: { id: string
   const [choisi, setChoisi] = useState<U | null>(null);
   const [pin, setPin] = useState("");
   const [etat, action, enCours] = useActionState(connexion, null);
+  const [direction, setDirection] = useState(false);
+  const [nomDirection, setNomDirection] = useState("");
+  // Code refusé : on repart d'un code vide plutôt que d'obliger à effacer chiffre par chiffre.
+  useEffect(() => {
+    if (etat?.erreur) setPin("");
+  }, [etat]);
 
-  if (!choisi) {
+  if (!choisi && !direction) {
     return (
       <Carte>
         <div className="mb-3 flex items-baseline justify-between gap-2">
@@ -42,20 +48,45 @@ export function FormulaireConnexion({ site, utilisateurs }: { site: { id: string
           ))}
         </div>
         {utilisateurs.length === 0 && <Message ton="alerte">Aucun utilisateur rattaché à ce site.</Message>}
+        <button onClick={() => setDirection(true)} className="mt-4 text-sm font-semibold text-marque-700 underline">
+          Compte direction
+        </button>
       </Carte>
     );
   }
 
   return (
     <Carte>
-      <button onClick={() => { setChoisi(null); setPin(""); }} className="mb-2 text-sm text-marque-700 underline">
+      <button
+        onClick={() => {
+          setChoisi(null);
+          setDirection(false);
+          setPin("");
+        }}
+        className="mb-2 text-sm text-marque-700 underline"
+      >
         ← Changer d&apos;utilisateur
       </button>
-      <h2 className="text-lg font-semibold">{choisi.nom}</h2>
+      {direction ? (
+        <label className="mb-2 block">
+          <span className="text-lg font-semibold">Compte direction</span>
+          <input
+            aria-label="Nom du compte direction"
+            value={nomDirection}
+            onChange={(e) => setNomDirection(e.target.value)}
+            autoComplete="username"
+            placeholder="Votre nom"
+            className="mt-1 block w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-stone-300"
+          />
+        </label>
+      ) : (
+        <h2 className="text-lg font-semibold">{choisi!.nom}</h2>
+      )}
       <p className="mb-4 text-stone-600">Saisissez votre code PIN</p>
       <form action={action}>
         <input type="hidden" name="siteId" value={site.id} />
-        <input type="hidden" name="utilisateurId" value={choisi.id} />
+        <input type="hidden" name="utilisateurId" value={choisi?.id ?? ""} />
+        {direction && <input type="hidden" name="nomDirection" value={nomDirection} />}
         <input type="hidden" name="pin" value={pin} />
         <div className="mb-4 flex justify-center gap-3" aria-label={`${pin.length} chiffres saisis`}>
           {Array.from({ length: 6 }).map((_, i) => (

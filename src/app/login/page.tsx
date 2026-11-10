@@ -43,7 +43,7 @@ export default async function PageConnexion({ searchParams }: { searchParams: Pr
       ) : (
         <FormulaireConnexion
           site={{ id: site.id, nom: site.nom }}
-          utilisateurs={(await utilisateursDuSite(db, site.id)).map((u) => ({ id: u.id, nom: u.nom }))}
+          utilisateurs={(await utilisateursDuSite(db, site.id, { avecDirection: false })).filter((u) => u.role !== "direction").map((u) => ({ id: u.id, nom: u.nom }))}
         />
       )}
       <p className="mt-6 text-center text-sm">

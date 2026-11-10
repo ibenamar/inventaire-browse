@@ -31,7 +31,10 @@ export default async function TableauDeBord({
   const vue: Vue = sp.vue === "mois" ? "mois" : "semaine";
   const p = periode(vue, sp.date);
   const t = await tableauDeBord(db, { siteIds, du: p.du, au: p.au });
-  const remontees = await suiviRemontees(db, { siteId: siteIds.length === 1 ? siteIds[0] : undefined, du: p.du, au: p.au }, new Date());
+  // Sans point de vente visible, rien à agréger (sinon le suivi porterait sur tout le réseau).
+  const remontees = siteIds.length
+    ? await suiviRemontees(db, { siteId: siteIds.length === 1 ? siteIds[0] : undefined, du: p.du, au: p.au }, new Date())
+    : { parResponsable: [] as { planifies: number; aLHeure: number }[] };
   // Alertes d'exploitation : sites choisis, plus le laboratoire pour la direction ou ses managers.
   const pilotes = (await sitesPilotables(db, acteur, { avecLabo: true })).filter((s) => s.statut === "actif");
   const siteIdsAlertes = site ? [site.id] : pilotes.map((s) => s.id);

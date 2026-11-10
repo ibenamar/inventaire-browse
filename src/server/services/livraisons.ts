@@ -94,6 +94,9 @@ export async function creerBon(
   exiger(v.siteDestinationId !== s.siteId, "Choisir un site destinataire différent");
   const [dest] = await db.select().from(sites).where(eq(sites.id, v.siteDestinationId));
   exiger(dest, "Site destinataire introuvable");
+  // Seul un site ouvert peut réceptionner ; le labo livre les points de vente, un point de vente transfère vers un autre.
+  exiger(dest.statut === "actif", `« ${dest.nom} » n'est pas encore ouvert : personne ne pourrait réceptionner ce bon`);
+  exiger(dest.type === "point_de_vente", "Les bons vont vers un point de vente");
   const utiles = v.lignes.filter((l) => l.quantite > 0);
   exiger(utiles.length, "Aucune quantité saisie");
   exiger(new Set(utiles.map((l) => l.produitId)).size === utiles.length, "Un produit apparaît deux fois sur le bon");
@@ -116,7 +119,7 @@ export async function creerBon(
       .values({
         siteOrigineId: s.siteId,
         siteDestinationId: v.siteDestinationId,
-        commentaire: v.commentaire?.trim() || null,
+        commentaire: v.commentaire?.trim().slice(0, 500) || null,
         creePar: acteur.id,
         creeLe: maintenant,
       })
@@ -189,6 +192,7 @@ export async function receptionnerBon(
       const q = v.recus[l.produitId] ?? l.quantiteExpediee;
       exiger(estQuantiteValide(q, accepteDecimales(p.unite)), `${p.nom} : quantité reçue invalide`);
       if (q !== l.quantiteExpediee) ecarts++;
+      exiger(q === l.quantiteExpediee || (v.commentaire?.trim().length ?? 0) >= 3, `${p.nom} : quantité différente de l'expédié — expliquez l'écart dans le commentaire`);
       await tx
         .update(lignesBon)
         .set({ quantiteRecue: q })
@@ -209,7 +213,7 @@ export async function receptionnerBon(
     if (entrees.length) await tx.insert(mouvements).values(entrees);
     await tx
       .update(bonsLivraison)
-      .set({ statut: "recu", shiftReceptionId: v.shiftId, recuPar: acteur.id, recuLe: maintenant, commentaireReception: v.commentaire?.trim() || null })
+      .set({ statut: "recu", shiftReceptionId: v.shiftId, recuPar: acteur.id, recuLe: maintenant, commentaireReception: v.commentaire?.trim().slice(0, 500) || null })
       .where(eq(bonsLivraison.id, v.bonId));
     return { numero: b.numero, ecarts };
   });
@@ -356,12 +360,12 @@ export async function listerBons(
   });
 }
 
-/** Sites vers lesquels un site peut livrer : tous les autres sites (actifs ou en ouverture). */
+/** Sites vers lesquels un site peut livrer : les autres points de vente ouverts. */
 export async function destinationsPossibles(db: Db, siteId: string) {
   return db
     .select({ id: sites.id, nom: sites.nom, type: sites.type })
     .from(sites)
-    .where(ne(sites.id, siteId))
+    .where(and(ne(sites.id, siteId), eq(sites.statut, "actif"), eq(sites.type, "point_de_vente")))
     .orderBy(asc(sites.ordre), asc(sites.nom));
 }
 
