@@ -205,3 +205,17 @@ describe("statut de remontée", () => {
     expect(statutRemontee({ ...s, statut: "planifie", clotureLe: null }, new Date("2026-11-14T05:00:00Z"))).toBe("manquant");
   });
 });
+describe("vraisemblance", () => {
+  it("signale les quantités inhabituelles selon l'unité", async () => {
+    const { estQuantiteInhabituelle } = await import("@/domain/vraisemblance");
+    expect(estQuantiteInhabituelle(120, "piece")).toBe(false);
+    expect(estQuantiteInhabituelle(1000, "piece")).toBe(true);
+    expect(estQuantiteInhabituelle(null, "kg")).toBe(false);
+  });
+  it("demande d'expliquer un écart d'au moins 3 unités ou 100 MAD", async () => {
+    const { ecartsImportants } = await import("@/domain/vraisemblance");
+    expect(ecartsImportants([{ nom: "Mango Can", ecart: -1 }], -38)).toEqual([]);
+    expect(ecartsImportants([{ nom: "Mango Can", ecart: -3 }], -114)).toEqual(["Mango Can (-3)", "valeur totale des écarts -114 MAD"]);
+    expect(ecartsImportants([{ nom: "Matilda", ecart: 2 }, { nom: "Farine", ecart: null }], 0)).toEqual([]);
+  });
+});

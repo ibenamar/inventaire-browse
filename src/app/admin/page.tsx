@@ -6,6 +6,8 @@ import { getDb } from "@/lib/db";
 import { listerProduits } from "@/server/services/catalogue";
 import { suiviRemontees } from "@/server/services/remontees";
 import { evolutionStock, tableauDeBord } from "@/server/services/tableau-de-bord";
+import { ListeAlertes } from "@/components/ListeAlertes";
+import { alertesExploitation } from "@/server/services/alertes";
 import { exigerEncadrant, sitesPilotables } from "./acces";
 import { Filtres } from "./Filtres";
 import { periode, type Vue } from "./periode";
@@ -29,6 +31,10 @@ export default async function TableauDeBord({
   const p = periode(vue, sp.date);
   const t = await tableauDeBord(db, { siteIds, du: p.du, au: p.au });
   const remontees = await suiviRemontees(db, { siteId: siteIds.length === 1 ? siteIds[0] : undefined, du: p.du, au: p.au }, new Date());
+  // Alertes d'exploitation : sites choisis, plus le laboratoire pour la direction ou ses managers.
+  const pilotes = (await sitesPilotables(db, acteur, { avecLabo: true })).filter((s) => s.statut === "actif");
+  const siteIdsAlertes = site ? [site.id] : pilotes.map((s) => s.id);
+  const alertes = await alertesExploitation(db, siteIdsAlertes, new Date());
   const echus = remontees.parResponsable.reduce((a, b) => a + b.planifies, 0);
   const aLHeure = remontees.parResponsable.reduce((a, b) => a + b.aLHeure, 0);
 
@@ -58,6 +64,11 @@ export default async function TableauDeBord({
         Tableau de bord
       </Titre>
       <Filtres sites={sites} siteId={site?.id ?? (tous ? null : (siteIds[0] ?? null))} tousLesSites={tous} vue={vue} {...p} />
+      {alertes.length > 0 && (
+        <div className="mt-4">
+          <ListeAlertes alertes={alertes} afficherSite={siteIdsAlertes.length > 1} />
+        </div>
+      )}
       {t.kpi.shiftsClos === 0 && <Message>Aucun shift clôturé sur la période.</Message>}
 
       <div className="my-4 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">

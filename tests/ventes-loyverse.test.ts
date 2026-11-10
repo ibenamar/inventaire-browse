@@ -132,7 +132,7 @@ describe("import des ventes d'un shift", () => {
       await saisirQuantite(db, shiftId, l.produitId, "ouvertureComptee", 20, direction, new Date());
       await saisirQuantite(db, shiftId, l.produitId, "stockReelFin", 10, direction, new Date());
     }
-    await cloturerShift(db, shiftId, direction, new Date("2026-11-16T20:05:00Z"), null);
+    await cloturerShift(db, shiftId, direction, new Date("2026-11-16T20:05:00Z"), "Écarts de test : stock fictif");
     const { f } = fauxLoyverse([...RECUS, recu("1-9", "2026-11-16T19:50:00.000Z", [["10342", 1, 38]])]);
     await expect(importerVentesShift(db, shiftId, employe, new Date("2026-11-16T21:00:00Z"), { jeton: "x", fetch: f })).rejects.toThrow(/manager/);
     const r = await importerVentesShift(db, shiftId, direction, new Date("2026-11-16T21:00:00Z"), { jeton: "x", fetch: f });

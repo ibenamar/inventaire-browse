@@ -26,6 +26,7 @@ import { enregistrerCreneaux, modifierMagasinSite, modifierSite, type SaisieCren
 import { aAccesAuSite, creerUtilisateur, modifierUtilisateur } from "@/server/services/utilisateurs";
 import { ajouterJours } from "@/domain/temps";
 import { exigerDirection, exigerEncadrant } from "./acces";
+import { preparerBonReappro } from "@/server/services/reappro";
 
 async function exigerSitePilotable(siteId: string) {
   const s = await exigerEncadrant();
@@ -367,4 +368,17 @@ export async function actionStocksMinimum(produitId: string, _e: unknown, form: 
     await definirStocksMinimum(await getDb(), produitId, valeurs, acteur);
     revalidatePath(`/admin/catalogue/${produitId}`);
   }, "Stocks minimum enregistrés");
+}
+
+export async function actionPreparerReappro(siteId: string): Promise<Resultat> {
+  return executer(async () => {
+    const { acteur } = await exigerEncadrant();
+    const r = await preparerBonReappro(await getDb(), siteId, acteur, new Date());
+    revalidatePath("/admin/reappro");
+    return r;
+  }).then((r) =>
+    r.ok && r.valeur
+      ? { ok: true as const, message: `Bon n° ${(r.valeur as { numero: number }).numero} préparé au laboratoire : l'équipe du labo l'ajuste et l'expédie.` }
+      : r,
+  );
 }

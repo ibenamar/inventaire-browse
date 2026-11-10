@@ -6,6 +6,7 @@ import { PhotoProduit } from "@/components/PhotoProduit";
 import { Bouton, classesChamp, cx, Message } from "@/components/ui";
 import type { OrigineEntree, Unite } from "@/db/schema";
 import { formatQuantite, lireQuantite, UNITE_PLURIEL } from "@/domain/unites";
+import { estQuantiteInhabituelle } from "@/domain/vraisemblance";
 
 interface P {
   produitId: string;
@@ -172,6 +173,9 @@ export function FormulaireEntrees({
                   </button>
                 </div>
                 {gat && q > 0 && <div className="mt-1 text-center text-xs text-stone-600">= {total(p)} parts</div>}
+                {estQuantiteInhabituelle(total(p), p.unite) && (
+                  <div className="mt-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-center text-xs font-semibold text-amber-900">Quantité inhabituelle : vérifiez</div>
+                )}
               </div>
             </div>
           );

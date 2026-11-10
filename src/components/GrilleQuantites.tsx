@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { actionSaisirQuantite, actionSaisirVentes } from "@/app/actions-shift";
 import type { Unite } from "@/db/schema";
 import { formatQuantite, lireQuantite, UNITE_PLURIEL } from "@/domain/unites";
+import { estQuantiteInhabituelle } from "@/domain/vraisemblance";
 import type { ChampQuantite } from "@/server/services/shifts";
 import { PhotoProduit } from "./PhotoProduit";
 import { cx } from "./ui";
@@ -237,6 +238,11 @@ export function GrilleQuantites({
                     +
                   </button>
                 </div>
+                {estQuantiteInhabituelle(v, p.unite) && (
+                  <div className="mt-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-center text-xs font-semibold text-amber-900" role="status">
+                    Quantité inhabituelle : vérifiez
+                  </div>
+                )}
                 {p.unite === "part" && p.partsParGateau && !g && (
                   <button
                     onClick={() => enregistrer(p.produitId, (v ?? 0) + p.partsParGateau!)}

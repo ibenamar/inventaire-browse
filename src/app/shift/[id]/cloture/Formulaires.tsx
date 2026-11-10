@@ -1,14 +1,32 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { actionCloturer, actionForcerCloture } from "@/app/actions-shift";
 import { Bouton, classesChamp, Message } from "@/components/ui";
 
-export function FormulaireCloture({ shiftId, pret }: { shiftId: string; pret: boolean }) {
+export function FormulaireCloture({ shiftId, pret, ecartsAExpliquer = [] }: { shiftId: string; pret: boolean; ecartsAExpliquer?: string[] }) {
   const [etat, action, enCours] = useActionState(actionCloturer.bind(null, shiftId), null);
+  // Champ contrôlé : le commentaire n'est pas effacé si la clôture est refusée.
+  const [commentaire, setCommentaire] = useState("");
+  const obligatoire = ecartsAExpliquer.length > 0;
   return (
     <form action={action} className="grid gap-3">
-      <textarea name="commentaire" rows={2} placeholder="Commentaire de passation (facultatif)" className={classesChamp} />
+      {obligatoire && (
+        <Message ton="alerte">
+          Écart important : {ecartsAExpliquer.join(", ")}. Recomptez ces produits ; si l&apos;écart se confirme, expliquez-le ci-dessous (commentaire
+          obligatoire).
+        </Message>
+      )}
+      <textarea
+        name="commentaire"
+        rows={2}
+        value={commentaire}
+        onChange={(e) => setCommentaire(e.target.value)}
+        required={obligatoire}
+        minLength={obligatoire ? 5 : undefined}
+        placeholder={obligatoire ? "Explication de l'écart (obligatoire)" : "Commentaire de passation (facultatif)"}
+        className={classesChamp}
+      />
       {etat && !etat.ok && <Message ton="erreur">{etat.erreur}</Message>}
       <Bouton grand disabled={!pret || enCours} type="submit">
         {enCours ? "Clôture…" : "Clôturer et signer le shift"}

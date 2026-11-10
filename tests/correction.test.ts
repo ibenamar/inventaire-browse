@@ -26,7 +26,7 @@ async function shiftComplet(siteId: string, creneauId: string, journee: string, 
     if (l.ouvertureTheorique === null) await saisirQuantite(db, id, l.produitId, "ouvertureComptee", 10, employe, new Date());
     await saisirQuantite(db, id, l.produitId, "stockReelFin", l.produitId === mangoId ? fin : 10, employe, new Date());
   }
-  await cloturerShift(db, id, employe, new Date(`${journee}T20:00:00Z`), null);
+  await cloturerShift(db, id, employe, new Date(`${journee}T20:00:00Z`), "Écart constaté au comptage");
   return id;
 }
 

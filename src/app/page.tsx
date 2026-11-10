@@ -7,6 +7,8 @@ import { formatLocal, heureLocale, libelleJournee } from "@/domain/temps";
 import { getDb } from "@/lib/db";
 import { exigerSession } from "@/lib/session";
 import { estEncadrant } from "@/server/acteur";
+import { ListeAlertes } from "@/components/ListeAlertes";
+import { alertesExploitation } from "@/server/services/alertes";
 import { etatAccueil, type ResumeShift } from "@/server/services/shifts";
 import { lireSite } from "@/server/services/sites";
 import { actionCreerEtOuvrir, actionOuvrirShift } from "./actions-shift";
@@ -29,12 +31,15 @@ export default async function Accueil() {
   const etat = await etatAccueil(db, site.id, maintenant);
   const { acteur } = session;
   const peutOuvrir = (s: ResumeShift) => s.responsableId === acteur.id || estEncadrant(acteur);
+  // Les encadrants voient ce qui demande une action sur ce site (shift non clôturé, écart, rupture…).
+  const alertes = estEncadrant(acteur) ? await alertesExploitation(db, [site.id], maintenant) : [];
 
   return (
     <>
       <BarreHaut session={session} nomSite={site.nom} />
       <main className="mx-auto grid max-w-2xl gap-4 px-4 py-5">
         <h1 className="text-2xl font-bold">Bonjour {acteur.nom}</h1>
+        {alertes.length > 0 && <ListeAlertes alertes={alertes} max={3} afficherSite={false} />}
 
         {etat.ouvert ? (
           <Carte className="ring-2 ring-marque-500">

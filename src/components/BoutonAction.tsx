@@ -22,6 +22,7 @@ export function BoutonAction({
 }) {
   const [enCours, demarrer] = useTransition();
   const [erreur, setErreur] = useState<string | null>(null);
+  const [succes, setSucces] = useState<string | null>(null);
   return (
     <div className="grid gap-2">
       <Bouton
@@ -32,15 +33,18 @@ export function BoutonAction({
         onClick={() => {
           if (confirmation && !window.confirm(confirmation)) return;
           setErreur(null);
+          setSucces(null);
           demarrer(async () => {
             const r = await action();
             if (r && !r.ok) setErreur(r.erreur);
+            else if (r?.ok && r.message) setSucces(r.message);
           });
         }}
       >
         {enCours ? "Un instant…" : children}
       </Bouton>
       {erreur && <Message ton="erreur">{erreur}</Message>}
+      {succes && <Message ton="succes">{succes}</Message>}
     </div>
   );
 }

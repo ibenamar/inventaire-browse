@@ -13,6 +13,7 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
     { href: "/admin", libelle: "Tableau de bord" },
     { href: "/admin/remontees", libelle: "Remontées" },
     { href: "/admin/planning", libelle: "Planning" },
+    { href: "/admin/reappro", libelle: "Réappro." },
     { href: "/admin/laboratoire", libelle: "Laboratoire" },
     ...(session.acteur.role === "direction"
       ? [

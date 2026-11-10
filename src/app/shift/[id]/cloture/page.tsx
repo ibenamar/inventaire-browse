@@ -8,6 +8,7 @@ import { utilisateurs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { formatLocal } from "@/domain/temps";
 import { formatQuantite } from "@/domain/unites";
+import { ecartsImportants } from "@/domain/vraisemblance";
 import { estEncadrant } from "@/server/acteur";
 import { ouvertureACompter, type LigneDetail } from "@/server/services/shifts";
 import { chargerShift } from "../donnees";
@@ -217,7 +218,14 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
             En clôturant, vous ({session.acteur.nom}) validez ce comptage en tant que responsable d&apos;inventaire. Le stock compté deviendra
             l&apos;ouverture du shift suivant.
           </p>
-          <FormulaireCloture shiftId={id} pret={!sansOuverture.length && !nonComptes.length} />
+          <FormulaireCloture
+            shiftId={id}
+            pret={!sansOuverture.length && !nonComptes.length}
+            ecartsAExpliquer={ecartsImportants(
+              d.lignes.map((l) => ({ nom: l.nom, ecart: l.calcul.ecart })),
+              syn.valeurEcartsVente,
+            )}
+          />
         </div>
       )}
       {ouvert && !estResponsable && <Message>Seul le responsable d&apos;inventaire ({s.responsable}) ou un manager peut clôturer ce shift.</Message>}

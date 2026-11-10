@@ -31,6 +31,7 @@ import {
   type Synthese,
 } from "@/domain/calculs";
 import { creneauEnCours } from "@/domain/creneaux";
+import { ecartsImportants } from "@/domain/vraisemblance";
 import { journeeLocale, type Journee } from "@/domain/temps";
 import { estEncadrant, type Acteur } from "../acteur";
 import { tracer } from "../audit";
@@ -684,6 +685,12 @@ export async function cloturerShift(db: Db, shiftId: string, acteur: Acteur, mai
   exiger(!sansOuverture.length, `${sansOuverture.length} produit(s) sans stock d'ouverture : compléter le comptage d'ouverture.`);
   const nonComptes = d.lignes.filter((l) => l.suiviStock && l.stockReelFin === null);
   exiger(!nonComptes.length, `${nonComptes.length} produit(s) non comptés en fin de shift.`);
+  // Un écart important doit être expliqué : le commentaire devient obligatoire.
+  const importants = ecartsImportants(d.lignes.map((l) => ({ nom: l.nom, ecart: l.calcul.ecart })), d.synthese.valeurEcartsVente);
+  exiger(
+    !importants.length || (commentaire?.trim().length ?? 0) >= 5,
+    `Écart important (${importants.join(", ")}) : recomptez, puis expliquez l'écart dans le commentaire avant de clôturer.`,
+  );
   await db
     .update(shifts)
     .set({ statut: "cloture", cloturePar: acteur.id, clotureLe: maintenant, commentaire: commentaire?.trim() || null })
