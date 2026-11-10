@@ -7,7 +7,15 @@ import { journeeLocale } from "@/domain/temps";
 import { getDb } from "@/lib/db";
 import { executer, type Resultat } from "@/lib/resultat";
 import { ErreurMetier, exiger } from "@/server/erreurs";
-import { ajouterArticle, associerArticle, ignorerArticle, ignorerCategorie, retirerArticle } from "@/server/services/caisse";
+import {
+  ajouterArticle,
+  articlesARattacher,
+  associerArticle,
+  ignorerArticle,
+  ignorerCategorie,
+  retirerArticle,
+  type ArticleARattacher,
+} from "@/server/services/caisse";
 import { ajouterCout, enregistrerPhoto, modifierProduit } from "@/server/services/catalogue";
 import { CORRESPONDANCES_LOYVERSE } from "@/server/correspondances-loyverse";
 import { importerArticles, lireArticlesLoyverse, lireExportCsv, type RapportImport } from "@/server/services/loyverse";
@@ -264,5 +272,22 @@ export async function actionIgnorerCategorie(categorie: string | null): Promise<
     const { acteur } = await exigerDirection();
     await ignorerCategorie(await getDb(), categorie, acteur);
     revalidatePath("/admin/loyverse");
+  });
+}
+
+/** Articles à rattacher d'une catégorie, chargés à l'ouverture de la catégorie (page Loyverse légère). */
+export async function actionArticlesCategorie(categorie: string | null): Promise<Resultat<ArticleARattacher[]>> {
+  return executer(async () => {
+    await exigerDirection();
+    return articlesARattacher(await getDb(), { categorie });
+  });
+}
+
+export async function actionChercherArticles(recherche: string): Promise<Resultat<ArticleARattacher[]>> {
+  return executer(async () => {
+    await exigerDirection();
+    const r = recherche.trim();
+    exiger(r.length >= 2, "Saisir au moins 2 caractères");
+    return articlesARattacher(await getDb(), { recherche: r }, 50);
   });
 }

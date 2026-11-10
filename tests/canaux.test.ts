@@ -8,7 +8,9 @@ import { CORRESPONDANCES_LOYVERSE } from "@/server/correspondances-loyverse";
 import { initialiser } from "@/server/seed";
 import {
   ajouterArticle,
+  articlesARattacher,
   associerArticle,
+  categoriesARattacher,
   detecterCanal,
   estDisponible,
   ignorerArticle,
@@ -96,6 +98,17 @@ describe("import des articles", () => {
     expect(r.nonAssocies.sort()).toEqual(["AFFOGATO", "Mango cake", "Strawberry Can"]);
     const enAttente = (await listerArticles(db, { nonAssocies: true })).filter(estDisponible).map((a) => a.nomCaisse);
     expect(enAttente.sort()).toEqual(["AFFOGATO", "Mango cake", "Strawberry Can"]);
+
+    // Même résultat par les requêtes légères de l'écran Loyverse (décompte par catégorie, chargement à la demande).
+    expect(await categoriesARattacher(db)).toEqual([
+      { categorie: "CAKES", n: 1 },
+      { categorie: "Can Cakes", n: 1 },
+      { categorie: "COFFEES", n: 1 },
+    ]);
+    const cakes = await articlesARattacher(db, { categorie: "CAKES" });
+    expect(cakes.map((x) => [x.nom, x.prix.map((p) => p.prix)])).toEqual([["Mango cake", [null, null]]]);
+    expect((await articlesARattacher(db, { recherche: "straw" })).map((x) => x.sku)).toEqual(["10372"]);
+    expect(await articlesARattacher(db, { recherche: "Banofie" })).toEqual([]); // retiré de la vente
   });
 
   it("garde les rattachements manuels et les articles ignorés lors d'un nouvel import", async () => {

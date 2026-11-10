@@ -1,6 +1,6 @@
 import { Carte, Message, Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
-import { compterArticlesRattaches, estDisponible, listerArticles, listerCanaux, magasinsConnus } from "@/server/services/caisse";
+import { categoriesARattacher, compterArticlesRattaches, listerCanaux, magasinsConnus } from "@/server/services/caisse";
 import { listerSites } from "@/server/services/sites";
 import { listerProduits } from "@/server/services/catalogue";
 import { exigerDirection } from "../acces";
@@ -11,16 +11,16 @@ export default async function Loyverse() {
   await exigerDirection();
   const db = await getDb();
   const configure = Boolean(process.env.LOYVERSE_TOKEN);
-  const [tousNonAssocies, canaux, produits, rattaches, magasins, sites] = await Promise.all([
-    listerArticles(db, { nonAssocies: true }),
+  const [categories, canaux, produits, rattaches, magasins, sites] = await Promise.all([
+    categoriesARattacher(db),
     listerCanaux(db),
     listerProduits(db, { actifsSeulement: true }),
     compterArticlesRattaches(db),
     magasinsConnus(db),
     listerSites(db),
   ]);
-  // Les articles retirés de la vente dans tous les magasins ne sont pas proposés.
-  const nonAssocies = tousNonAssocies.filter(estDisponible);
+  // Les articles retirés de la vente dans tous les magasins ne sont pas proposés (filtre côté base).
+  const total = categories.reduce((t, c) => t + c.n, 0);
   const parCanal = canaux.map((c) => ({ ...c, n: rattaches.get(c.id) ?? 0 }));
   return (
     <>
@@ -58,20 +58,13 @@ export default async function Loyverse() {
           />
         </Carte>
         <Carte>
-          <h2 className="mb-1 text-lg font-semibold">Articles à rattacher ({nonAssocies.length})</h2>
+          <h2 className="mb-1 text-lg font-semibold">Articles à rattacher ({total})</h2>
           <p className="mb-3 text-sm text-stone-600">
             Articles Loyverse non reconnus automatiquement. Indiquez le produit qu&apos;ils font sortir du stock et leur canal. Tant qu&apos;un article
             n&apos;est pas rattaché, ses ventes ne seront pas importées.
           </p>
           <ArticlesNonAssocies
-            articles={nonAssocies.map((a) => ({
-              id: a.id,
-              nom: a.nomCaisse,
-              categorie: a.categorieCaisse,
-              sku: a.sku,
-              prix: a.prixMagasins.length ? a.prixMagasins : [{ magasin: "Défaut", prix: a.prixVente }],
-              canalId: a.canalId,
-            }))}
+            categories={categories}
             produits={produits.map((p) => ({ id: p.id, nom: p.nom, categorie: p.categorie }))}
             canaux={canaux.map((c) => ({ id: c.id, nom: c.nom }))}
           />

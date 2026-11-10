@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { articlesCaisse, canauxVente, prixArticlesMagasins, produits, sites } from "@/db/schema";
 import type { Acteur } from "../acteur";
@@ -266,4 +266,62 @@ export async function compterArticlesRattaches(db: Db): Promise<Map<string, numb
     .where(and(eq(articlesCaisse.actif, true), isNotNull(articlesCaisse.produitId)))
     .groupBy(articlesCaisse.canalId);
   return new Map(rows.map((r) => [r.canalId, Number(r.n)]));
+}
+
+/** Article non rattaché encore en vente : sans prix par magasin, ou disponible dans au moins un magasin. */
+const enVente = sql`(not exists (select 1 from prix_articles_magasins pm where pm.article_id = ${articlesCaisse.id})
+  or exists (select 1 from prix_articles_magasins pm where pm.article_id = ${articlesCaisse.id} and pm.disponible))`;
+
+const aRattacher = and(eq(articlesCaisse.actif, true), isNull(articlesCaisse.produitId), enVente);
+
+/** Catégories Loyverse ayant des articles à rattacher, avec leur nombre (une seule requête). */
+export async function categoriesARattacher(db: Db): Promise<{ categorie: string | null; n: number }[]> {
+  const rows = await db
+    .select({ categorie: articlesCaisse.categorieCaisse, n: sql<number>`cast(count(*) as int)` })
+    .from(articlesCaisse)
+    .where(aRattacher)
+    .groupBy(articlesCaisse.categorieCaisse);
+  return rows.map((r) => ({ categorie: r.categorie, n: Number(r.n) })).sort((a, b) => (a.categorie ?? "").localeCompare(b.categorie ?? "", "fr"));
+}
+
+export interface ArticleARattacher {
+  id: string;
+  nom: string;
+  categorie: string | null;
+  sku: string | null;
+  canalId: string;
+  prix: { magasin: string; prix: number | null }[];
+}
+
+/** Articles à rattacher d'une catégorie (catégorie vide = sans catégorie) ou correspondant à une recherche. */
+export async function articlesARattacher(
+  db: Db,
+  filtre: { categorie: string | null } | { recherche: string },
+  limite = 150,
+): Promise<ArticleARattacher[]> {
+  const cond =
+    "recherche" in filtre
+      ? or(ilike(articlesCaisse.nomCaisse, `%${filtre.recherche}%`), ilike(articlesCaisse.sku, `%${filtre.recherche}%`))
+      : filtre.categorie === null
+        ? isNull(articlesCaisse.categorieCaisse)
+        : eq(articlesCaisse.categorieCaisse, filtre.categorie);
+  const rows = await db
+    .select()
+    .from(articlesCaisse)
+    .where(and(aRattacher, cond))
+    .orderBy(asc(articlesCaisse.nomCaisse))
+    .limit(limite);
+  const ids = rows.map((r) => r.id);
+  const prix = ids.length ? await db.select().from(prixArticlesMagasins).where(inArray(prixArticlesMagasins.articleId, ids)) : [];
+  return rows.map((r) => {
+    const pm = prix.filter((p) => p.articleId === r.id).sort((x, y) => x.magasin.localeCompare(y.magasin));
+    return {
+      id: r.id,
+      nom: r.nomCaisse,
+      categorie: r.categorieCaisse,
+      sku: r.sku,
+      canalId: r.canalId,
+      prix: pm.length ? pm.map(({ magasin, prix: px }) => ({ magasin, prix: px })) : [{ magasin: "Défaut", prix: r.prixVente }],
+    };
+  });
 }
