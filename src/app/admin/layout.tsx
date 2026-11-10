@@ -10,7 +10,8 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
   const session = await exigerEncadrant();
   const site = await lireSite(await getDb(), session.siteId);
   const liens = [
-    { href: "/admin", libelle: "Remontées" },
+    { href: "/admin", libelle: "Tableau de bord" },
+    { href: "/admin/remontees", libelle: "Remontées" },
     { href: "/admin/planning", libelle: "Planning" },
     ...(session.acteur.role === "direction"
       ? [

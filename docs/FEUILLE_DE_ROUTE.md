@@ -178,11 +178,11 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [x] Correspondance site ↔ magasin Loyverse
 - [x] Import automatique des ventes (reçus Loyverse → article de caisse → produit × facteur, par canal, montant encaissé réel) : à l'affichage des ventes et du récapitulatif, et à la clôture ; réimport après clôture par un manager ; saisie manuelle en secours ; journal des imports
 - [x] Gestion du catalogue : création de produits (référence automatique, nouvelle catégorie), stock minimum par site (modification, photo et coût de revient livrés en phase 1)
-- [ ] Tableau de bord consolidé et par site
-- [ ] Courbes d'évolution du stock par produit / site
-- [ ] Rapports d'écarts (produit, shift, responsable, passation) et de pertes (par motif)
-- [ ] Alertes de réapprovisionnement
-- [ ] Tableau de responsabilisation : remontées et écarts par responsable d'inventaire, sur la semaine / le mois
+- [x] Tableau de bord consolidé et par site (CA par canal, pertes, écarts, remontées)
+- [x] Courbes d'évolution du stock par produit / site
+- [x] Rapports d'écarts (produit, shift, responsable, passation) et de pertes (par motif)
+- [x] Alertes de réapprovisionnement
+- [x] Tableau de responsabilisation : remontées et écarts par responsable d'inventaire, sur la semaine / le mois
 - [ ] Correction / validation des shifts, journal d'audit
 - [ ] Exports Excel / CSV
 - [ ] Déploiement sur les **2 points de vente ouverts**, arrêt du fichier Excel ; activation des 3 autres à leur ouverture
