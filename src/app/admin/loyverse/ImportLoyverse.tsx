@@ -169,6 +169,7 @@ export function ArticlesNonAssocies({
 }) {
   const router = useRouter();
   const [filtre, setFiltre] = useState("");
+  const [ouverts, setOuverts] = useState<Set<string>>(new Set());
   const [enCours, demarrer] = useTransition();
   if (!articles.length) return <p className="text-sm text-stone-500">Aucun article en attente.</p>;
   const f = filtre.trim().toLowerCase();
@@ -176,6 +177,7 @@ export function ArticlesNonAssocies({
   const groupes = new Map<string | null, ArticleAAssocier[]>();
   for (const a of visibles) groupes.set(a.categorie, [...(groupes.get(a.categorie) ?? []), a]);
   const ordonnes = [...groupes.entries()].sort((x, y) => (x[0] ?? "").localeCompare(y[0] ?? "", "fr"));
+  const cle = (cat: string | null) => cat ?? "\u0000";
   return (
     <div>
       <input
@@ -185,35 +187,55 @@ export function ArticlesNonAssocies({
         onChange={(e) => setFiltre(e.target.value)}
         className={`${classesChamp} mb-2`}
       />
-      {ordonnes.map(([cat, liste]) => (
-        <details key={cat ?? "-"} className="border-t border-stone-100 py-1" open={ordonnes.length === 1}>
-          <summary className="flex cursor-pointer items-center gap-2 py-2">
-            <span className="font-semibold">{cat ?? "(sans catégorie)"}</span>
-            <span className="text-sm text-stone-500">{liste.length}</span>
-            <button
-              type="button"
-              disabled={enCours}
-              onClick={(e) => {
-                e.preventDefault();
-                if (!window.confirm(`Ignorer les ${liste.length} article(s) non rattachés de « ${cat ?? "sans catégorie"} » (hors inventaire) ?`)) return;
-                demarrer(async () => {
-                  const r = await actionIgnorerCategorie(cat);
-                  if (!r.ok) window.alert(r.erreur);
-                  router.refresh();
-                });
-              }}
-              className="ml-auto rounded-lg px-2 py-1 text-sm font-semibold text-marque-700 hover:bg-marque-50"
-            >
-              Ignorer la catégorie
-            </button>
-          </summary>
-          <ul className="divide-y divide-stone-100">
-            {liste.map((a) => (
-              <LigneArticle key={a.id} a={a} produits={produits} canaux={canaux} />
-            ))}
-          </ul>
-        </details>
-      ))}
+      {ordonnes.map(([cat, liste]) => {
+        // Les lignes ne sont construites qu'à l'ouverture d'une catégorie : la page reste légère.
+        const ouvert = ouverts.has(cle(cat)) || (f.length >= 2 && visibles.length <= 40);
+        return (
+          <div key={cle(cat)} className="border-t border-stone-100 py-1">
+            <div className="flex items-center gap-2 py-2">
+              <button
+                type="button"
+                aria-expanded={ouvert}
+                onClick={() =>
+                  setOuverts((o) => {
+                    const n = new Set(o);
+                    if (n.has(cle(cat))) n.delete(cle(cat));
+                    else n.add(cle(cat));
+                    return n;
+                  })
+                }
+                className="flex items-center gap-2 text-left"
+              >
+                <span className="w-4 text-stone-400">{ouvert ? "▾" : "▸"}</span>
+                <span className="font-semibold">{cat ?? "(sans catégorie)"}</span>
+                <span className="text-sm text-stone-500">{liste.length}</span>
+              </button>
+              <button
+                type="button"
+                disabled={enCours}
+                onClick={() => {
+                  if (!window.confirm(`Ignorer les ${liste.length} article(s) non rattachés de « ${cat ?? "sans catégorie"} » (hors inventaire) ?`)) return;
+                  demarrer(async () => {
+                    const r = await actionIgnorerCategorie(cat);
+                    if (!r.ok) window.alert(r.erreur);
+                    router.refresh();
+                  });
+                }}
+                className="ml-auto rounded-lg px-2 py-1 text-sm font-semibold text-marque-700 hover:bg-marque-50"
+              >
+                Ignorer la catégorie
+              </button>
+            </div>
+            {ouvert && (
+              <ul className="divide-y divide-stone-100">
+                {liste.map((a) => (
+                  <LigneArticle key={a.id} a={a} produits={produits} canaux={canaux} />
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

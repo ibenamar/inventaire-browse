@@ -1,6 +1,6 @@
 import { Carte, Message, Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
-import { estDisponible, listerArticles, listerCanaux, magasinsConnus } from "@/server/services/caisse";
+import { compterArticlesRattaches, estDisponible, listerArticles, listerCanaux, magasinsConnus } from "@/server/services/caisse";
 import { listerSites } from "@/server/services/sites";
 import { listerProduits } from "@/server/services/catalogue";
 import { exigerDirection } from "../acces";
@@ -11,17 +11,17 @@ export default async function Loyverse() {
   await exigerDirection();
   const db = await getDb();
   const configure = Boolean(process.env.LOYVERSE_TOKEN);
-  const [tousNonAssocies, canaux, produits, tous, magasins, sites] = await Promise.all([
+  const [tousNonAssocies, canaux, produits, rattaches, magasins, sites] = await Promise.all([
     listerArticles(db, { nonAssocies: true }),
     listerCanaux(db),
     listerProduits(db, { actifsSeulement: true }),
-    listerArticles(db),
+    compterArticlesRattaches(db),
     magasinsConnus(db),
     listerSites(db),
   ]);
   // Les articles retirés de la vente dans tous les magasins ne sont pas proposés.
   const nonAssocies = tousNonAssocies.filter(estDisponible);
-  const parCanal = canaux.map((c) => ({ ...c, n: tous.filter((a) => a.canalId === c.id && a.produitId).length }));
+  const parCanal = canaux.map((c) => ({ ...c, n: rattaches.get(c.id) ?? 0 }));
   return (
     <>
       <Titre sousTitre="Loyverse reste la référence des articles et des prix. Un produit peut avoir un article par canal (sur place, Glovo…).">

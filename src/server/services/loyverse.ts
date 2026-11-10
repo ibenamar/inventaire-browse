@@ -1,11 +1,11 @@
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { articlesCaisse, prixArticlesMagasins, produits } from "@/db/schema";
 import { lireCsv } from "@/lib/csv";
 import type { Acteur } from "../acteur";
 import { tracer } from "../audit";
 import { ErreurMetier, exiger } from "../erreurs";
-import { detecterCanal, listerCanaux, nomSansCanal, normaliser, synchroniserPrixReference } from "./caisse";
+import { detecterCanal, listerCanaux, nomSansCanal, normaliser } from "./caisse";
 
 /**
  * Intégration Loyverse : articles, SKU, catégories et prix par magasin, depuis l'API publique v1.0
@@ -170,6 +170,9 @@ export interface RapportImport {
  *    puis d'après son nom quand il correspond à un seul produit ;
  *  - le canal vient de la catégorie (« Glovo »), sinon du nom ;
  *  - les autres restent « à rattacher » (seulement s'ils sont encore en vente dans un magasin).
+ *
+ * Tout est calculé en mémoire puis écrit en quelques requêtes groupées : en production, chaque
+ * requête est un aller-retour réseau vers la base, et l'hébergement limite le temps par requête.
  */
 export async function importerArticles(
   db: Db,
@@ -177,9 +180,13 @@ export async function importerArticles(
   acteur: Acteur,
   correspondances: Correspondance[] = [],
 ): Promise<RapportImport> {
-  const canaux = await listerCanaux(db);
+  const [canaux, tousProduits, existants] = await Promise.all([
+    listerCanaux(db),
+    db.select().from(produits),
+    db.select().from(articlesCaisse),
+  ]);
   const nomsCanaux = new Map(canaux.map((c) => [c.id, c.nom]));
-  const prods = (await db.select().from(produits)).filter((p) => p.actif);
+  const prods = tousProduits.filter((p) => p.actif);
   const parRef = new Map(prods.map((p) => [p.ref, p]));
   const parNom = new Map<string, typeof prods>();
   for (const p of prods) {
@@ -187,25 +194,17 @@ export async function importerArticles(
     parNom.set(k, [...(parNom.get(k) ?? []), p]);
   }
   const corr = new Map(correspondances.map((c) => [c.sku, c]));
-  const existants = await db.select().from(articlesCaisse);
   const parVariante = new Map(existants.filter((e) => e.loyverseVariantId).map((e) => [e.loyverseVariantId!, e]));
   const parSku = new Map(existants.filter((e) => e.sku).map((e) => [e.sku!.toLowerCase(), e]));
 
   const rapport: RapportImport = { articlesImportes: 0, nouveauxAssocies: [], nonAssocies: [], produitsSansArticleSurPlace: [] };
-  const produitsTouches = new Set<string>();
+  const lignes = new Map<string, typeof articlesCaisse.$inferInsert & { id: string }>();
+  const prix: (typeof prixArticlesMagasins.$inferInsert)[] = [];
+  const maintenant = new Date();
 
   for (const a of articles) {
     rapport.articlesImportes++;
     const ex = (a.variantId ? parVariante.get(a.variantId) : undefined) ?? (a.sku ? parSku.get(a.sku.toLowerCase()) : undefined);
-    const maj = {
-      nomCaisse: a.nom,
-      categorieCaisse: a.categorie,
-      sku: a.sku,
-      prixVente: a.prix,
-      source: "loyverse" as const,
-      majLe: new Date(),
-      ...(a.variantId ? { loyverseItemId: a.itemId, loyverseVariantId: a.variantId } : {}),
-    };
 
     // Rattachement proposé pour un article nouveau ou encore non rattaché (et non ignoré).
     let proposition: { produitId: string; produit: string; facteur: number; par: "correspondance" | "nom" } | null = null;
@@ -219,25 +218,24 @@ export async function importerArticles(
       }
     }
     const canal = detecterCanal(a, canaux)!;
-
-    let id: string;
-    let produitId: string | null;
-    if (ex) {
-      id = ex.id;
-      produitId = ex.produitId ?? proposition?.produitId ?? null;
-      await db
-        .update(articlesCaisse)
-        .set({ ...maj, ...(proposition && !ex.produitId ? { produitId, facteur: proposition.facteur, canalId: canal.id } : {}) })
-        .where(eq(articlesCaisse.id, ex.id));
-    } else {
-      produitId = proposition?.produitId ?? null;
-      const [ins] = await db
-        .insert(articlesCaisse)
-        .values({ ...maj, canalId: canal.id, produitId, facteur: proposition?.facteur ?? 1 })
-        .returning({ id: articlesCaisse.id });
-      id = ins.id;
-    }
-    if (proposition && (!ex || !ex.produitId)) {
+    const garde = ex?.produitId ? ex : null; // rattachement existant conservé tel quel
+    const ligne = {
+      id: ex?.id ?? crypto.randomUUID(),
+      nomCaisse: a.nom,
+      categorieCaisse: a.categorie,
+      sku: a.sku,
+      prixVente: a.prix,
+      source: "loyverse" as const,
+      majLe: maintenant,
+      loyverseItemId: a.itemId ?? ex?.loyverseItemId ?? null,
+      loyverseVariantId: a.variantId ?? ex?.loyverseVariantId ?? null,
+      produitId: garde ? garde.produitId : (proposition?.produitId ?? null),
+      canalId: garde ? garde.canalId : canal.id,
+      facteur: garde ? garde.facteur : (proposition?.facteur ?? ex?.facteur ?? 1),
+      actif: ex ? ex.actif : true,
+    };
+    lignes.set(ligne.id, ligne);
+    if (proposition && !garde) {
       rapport.nouveauxAssocies.push({
         article: a.nom,
         produit: proposition.produit,
@@ -247,29 +245,55 @@ export async function importerArticles(
         par: proposition.par,
       });
     }
-
-    for (const pm of a.prixMagasins) {
-      await db
-        .insert(prixArticlesMagasins)
-        .values({ articleId: id, ...pm })
-        .onConflictDoUpdate({
-          target: [prixArticlesMagasins.articleId, prixArticlesMagasins.magasin],
-          set: { prix: pm.prix, disponible: pm.disponible },
-        });
-    }
-    const ignore = ex && !ex.actif;
+    for (const pm of a.prixMagasins) prix.push({ articleId: ligne.id, ...pm });
     const enVente = a.prixMagasins.length === 0 || a.prixMagasins.some((p) => p.disponible);
-    if (produitId) produitsTouches.add(produitId);
-    else if (!ignore && enVente) rapport.nonAssocies.push(a.nom);
+    if (!ligne.produitId && ligne.actif && enVente) rapport.nonAssocies.push(a.nom);
   }
 
-  for (const id of produitsTouches) await synchroniserPrixReference(db, id);
+  const lots = <T,>(t: T[], n = 250) => Array.from({ length: Math.ceil(t.length / n) }, (_, i) => t.slice(i * n, (i + 1) * n));
+  const excl = (col: string) => sql.raw(`excluded."${col}"`);
+  await db.transaction(async (tx) => {
+    for (const lot of lots([...lignes.values()])) {
+      await tx
+        .insert(articlesCaisse)
+        .values(lot)
+        .onConflictDoUpdate({
+          target: articlesCaisse.id,
+          set: {
+            nomCaisse: excl("nom_caisse"),
+            categorieCaisse: excl("categorie_caisse"),
+            sku: excl("sku"),
+            prixVente: excl("prix_vente"),
+            source: excl("source"),
+            majLe: excl("maj_le"),
+            loyverseItemId: excl("loyverse_item_id"),
+            loyverseVariantId: excl("loyverse_variant_id"),
+            produitId: excl("produit_id"),
+            canalId: excl("canal_id"),
+            facteur: excl("facteur"),
+          },
+        });
+    }
+    for (const lot of lots(prix)) {
+      await tx
+        .insert(prixArticlesMagasins)
+        .values(lot)
+        .onConflictDoUpdate({
+          target: [prixArticlesMagasins.articleId, prixArticlesMagasins.magasin],
+          set: { prix: excl("prix"), disponible: excl("disponible") },
+        });
+    }
+    // Prix de référence = prix par défaut de l'article « sur place » unitaire, en une seule requête.
+    await tx.execute(sql`
+      UPDATE produits p SET prix_vente = a.prix_vente
+      FROM articles_caisse a JOIN canaux_vente c ON c.id = a.canal_id
+      WHERE a.produit_id = p.id AND a.actif AND a.facteur = 1 AND c.code = 'sur_place' AND a.prix_vente IS NOT NULL`);
+  });
+
   const surPlace = canaux.find((c) => c.code === "sur_place");
-  const avecSurPlace = new Set(
-    (await db.select().from(articlesCaisse))
-      .filter((x) => x.actif && x.produitId && x.canalId === surPlace?.id)
-      .map((x) => x.produitId),
-  );
+  const toutes = new Map(existants.map((e) => [e.id, e as { produitId: string | null; canalId: string; actif: boolean }]));
+  for (const l of lignes.values()) toutes.set(l.id, { produitId: l.produitId ?? null, canalId: l.canalId, actif: l.actif ?? true });
+  const avecSurPlace = new Set([...toutes.values()].filter((x) => x.actif && x.produitId && x.canalId === surPlace?.id).map((x) => x.produitId));
   rapport.produitsSansArticleSurPlace = prods.filter((p) => !avecSurPlace.has(p.id)).map((p) => p.nom);
   await tracer(db, acteur.id, "import_loyverse", "catalogue", null, {
     importes: rapport.articlesImportes,

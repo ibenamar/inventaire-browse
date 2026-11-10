@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { articlesCaisse, canauxVente, prixArticlesMagasins, produits, sites } from "@/db/schema";
 import type { Acteur } from "../acteur";
@@ -256,4 +256,14 @@ export async function ignorerCategorie(db: Db, categorie: string | null, acteur:
 export async function magasinsConnus(db: Db): Promise<string[]> {
   const rows = await db.selectDistinct({ m: prixArticlesMagasins.magasin }).from(prixArticlesMagasins);
   return rows.map((r) => r.m).sort();
+}
+
+/** Nombre d'articles rattachés par canal (identifiant du canal → nombre). */
+export async function compterArticlesRattaches(db: Db): Promise<Map<string, number>> {
+  const rows = await db
+    .select({ canalId: articlesCaisse.canalId, n: sql<number>`cast(count(*) as int)` })
+    .from(articlesCaisse)
+    .where(and(eq(articlesCaisse.actif, true), isNotNull(articlesCaisse.produitId)))
+    .groupBy(articlesCaisse.canalId);
+  return new Map(rows.map((r) => [r.canalId, Number(r.n)]));
 }
