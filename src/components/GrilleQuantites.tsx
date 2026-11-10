@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { actionSaisirQuantite, actionSaisirVentes } from "@/app/actions-shift";
+import type { Unite } from "@/db/schema";
+import { formatQuantite, lireQuantite, UNITE_PLURIEL } from "@/domain/unites";
 import type { ChampQuantite } from "@/server/services/shifts";
 import { PhotoProduit } from "./PhotoProduit";
 import { cx } from "./ui";
@@ -10,14 +12,16 @@ export interface ProduitGrille {
   produitId: string;
   nom: string;
   categorie: string;
-  unite: "piece" | "part" | "bouteille";
+  unite: Unite;
   partsParGateau: number | null;
   photoId: string | null;
   valeur: number | null;
   aide?: string | null;
+  /** Comptage en gâteaux entiers (laboratoire) : le stock reste enregistré en parts. */
+  parGateau?: number | null;
 }
 
-const LIBELLE_UNITE = { piece: "pièces", part: "parts", bouteille: "bouteilles" };
+const DECIMALES: Unite[] = ["kg", "litre"];
 type Etat = "ok" | "en_cours" | "erreur";
 
 /**
@@ -48,6 +52,8 @@ export function GrilleQuantites({
   const [categorie, setCategorie] = useState<string | null>(null);
   const [recherche, setRecherche] = useState("");
   const [restants, setRestants] = useState(false);
+  // Texte en cours de frappe (« 1, » avant « 1,5 ») : la valeur enregistrée est relue à chaque frappe.
+  const [textes, setTextes] = useState<Record<string, string>>({});
   const minuteurs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const enAttente = Object.values(etats).filter((e) => e === "en_cours").length;
@@ -164,6 +170,12 @@ export function GrilleQuantites({
         {visibles.map((p) => {
           const v = valeurs[p.produitId];
           const e = etats[p.produitId];
+          const g = p.parGateau ?? null;
+          const decimales = DECIMALES.includes(p.unite) || g !== null;
+          // Valeur affichée dans l'unité de comptage (gâteaux au labo), enregistrée dans l'unité de stock.
+          const affiche = v === null ? null : g ? Math.round((v / g) * 1000) / 1000 : v;
+          const versStock = (x: number) => (g ? Math.round(x * g) : x);
+          const pas = 1;
           return (
             <div
               key={p.produitId}
@@ -183,39 +195,49 @@ export function GrilleQuantites({
               <div className="p-2">
                 <div className="line-clamp-2 min-h-10 text-sm leading-tight font-semibold">{p.nom}</div>
                 <div className="text-xs text-stone-500">
-                  en {LIBELLE_UNITE[p.unite]}
+                  en {g ? "gâteaux" : UNITE_PLURIEL[p.unite]}
+                  {g && v !== null ? ` · ${v} parts` : ""}
                   {p.aide ? ` · ${p.aide}` : ""}
                 </div>
                 <div className="mt-2 flex items-center gap-1">
                   <button
                     aria-label={`Moins ${p.nom}`}
-                    onClick={() => enregistrer(p.produitId, Math.max(0, (v ?? 1) - 1))}
+                    onClick={() => {
+                      setTextes((x) => ({ ...x, [p.produitId]: "" }));
+                      enregistrer(p.produitId, versStock(Math.max(0, Math.round(((affiche ?? pas) - pas) * 1000) / 1000)));
+                    }}
                     className="size-11 shrink-0 rounded-xl bg-stone-100 text-2xl font-bold active:bg-stone-200"
                   >
                     −
                   </button>
                   <input
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    inputMode={decimales ? "decimal" : "numeric"}
                     aria-label={`Quantité ${p.nom}`}
-                    value={v ?? ""}
+                    value={textes[p.produitId] || (affiche === null ? "" : decimales ? formatQuantite(affiche) : String(affiche))}
                     placeholder="–"
                     onChange={(ev) => {
-                      const t = ev.target.value.replace(/\D/g, "");
-                      enregistrer(p.produitId, t === "" ? (nullable ? null : 0) : Math.min(99999, Number(t)));
+                      const t = decimales ? ev.target.value.replace(/[^\d.,]/g, "") : ev.target.value.replace(/\D/g, "");
+                      setTextes((x) => ({ ...x, [p.produitId]: t }));
+                      if (t === "") return enregistrer(p.produitId, nullable ? null : 0);
+                      const n = lireQuantite(t);
+                      if (n !== null) enregistrer(p.produitId, versStock(Math.min(99999, Math.round(n * 1000) / 1000)));
                     }}
+                    onBlur={() => setTextes((x) => ({ ...x, [p.produitId]: "" }))}
                     onFocus={(ev) => ev.target.select()}
                     className="h-11 w-full min-w-0 rounded-xl bg-white text-center text-xl font-bold ring-1 ring-stone-300 focus:ring-2 focus:ring-marque-500 focus:outline-none"
                   />
                   <button
                     aria-label={`Plus ${p.nom}`}
-                    onClick={() => enregistrer(p.produitId, (v ?? 0) + 1)}
+                    onClick={() => {
+                      setTextes((x) => ({ ...x, [p.produitId]: "" }));
+                      enregistrer(p.produitId, versStock(Math.round(((affiche ?? 0) + pas) * 1000) / 1000));
+                    }}
                     className="size-11 shrink-0 rounded-xl bg-stone-100 text-2xl font-bold active:bg-stone-200"
                   >
                     +
                   </button>
                 </div>
-                {p.unite === "part" && p.partsParGateau && (
+                {p.unite === "part" && p.partsParGateau && !g && (
                   <button
                     onClick={() => enregistrer(p.produitId, (v ?? 0) + p.partsParGateau!)}
                     className="mt-1 w-full rounded-lg py-1 text-xs font-semibold text-marque-700 ring-1 ring-marque-200 active:bg-marque-50"

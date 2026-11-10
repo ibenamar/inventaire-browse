@@ -6,9 +6,12 @@ import type { Acteur } from "@/server/acteur";
 import { listerSites, type Site } from "@/server/services/sites";
 import { aAccesAuSite } from "@/server/services/utilisateurs";
 
-/** Points de vente qu'un encadrant peut piloter : tous pour la direction, les siens pour un manager. */
-export async function sitesPilotables(db: Db, acteur: Acteur): Promise<Site[]> {
-  const tous = (await listerSites(db)).filter((s) => s.type === "point_de_vente");
+/**
+ * Sites qu'un encadrant peut piloter : tous pour la direction, les siens pour un manager.
+ * Par défaut les points de vente ; `avecLabo` ajoute le laboratoire (planning, remontées).
+ */
+export async function sitesPilotables(db: Db, acteur: Acteur, opts: { avecLabo?: boolean } = {}): Promise<Site[]> {
+  const tous = (await listerSites(db)).filter((s) => s.type === "point_de_vente" || (opts.avecLabo && s.type === "laboratoire"));
   if (acteur.role === "direction") return tous;
   const res: Site[] = [];
   for (const s of tous) if (await aAccesAuSite(db, acteur.id, s.id)) res.push(s);

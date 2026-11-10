@@ -149,6 +149,7 @@ export async function actionModifierProduit(id: string, _e: unknown, form: FormD
         partsParGateau: unite === "part" ? nombreOuNull(form.get("partsParGateau")) : null,
         prixVente: nombreOuNull(form.get("prixVente")),
         suiviStock: form.get("suiviStock") === "on",
+        fabriqueLabo: form.get("fabriqueLabo") === "on",
         actif: form.get("actif") === "on",
       },
       acteur,
@@ -346,6 +347,8 @@ export async function actionCreerProduit(_e: unknown, form: FormData): Promise<R
         partsParGateau: unite === "part" ? nombreOuNull(form.get("partsParGateau")) : null,
         format: String(form.get("format") ?? "") || null,
         suiviStock: form.get("suiviStock") === "on",
+        nature: form.get("nature") === "ingredient" ? "ingredient" : "produit",
+        fabriqueLabo: form.get("fabriqueLabo") === "on",
       },
       acteur,
     );

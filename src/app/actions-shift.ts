@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db";
 import { executer, type Resultat } from "@/lib/resultat";
 import { ErreurMetier } from "@/server/erreurs";
 import { exigerSession } from "@/lib/session";
+import { annulerBon, creerBon, expedierBon, receptionnerBon, type SaisieBon } from "@/server/services/livraisons";
 import { importerVentesShift, type RapportVentes } from "@/server/services/ventes-loyverse";
 import {
   ajouterEntrees,
@@ -69,7 +70,10 @@ export async function actionAjouterEntrees(
   commentaire: string | null,
 ): Promise<Resultat> {
   const { acteur } = await exigerSession();
-  const r = await executer(async () => ajouterEntrees(await getDb(), shiftId, saisies, origine, commentaire, acteur), "Réception enregistrée");
+  const r = await executer(
+    async () => ajouterEntrees(await getDb(), shiftId, saisies, origine, commentaire, acteur),
+    origine === "production" ? "Production enregistrée" : "Réception enregistrée",
+  );
   revalidatePath(`/shift/${shiftId}`, "layout");
   return r;
 }
@@ -135,5 +139,55 @@ export async function actionValider(shiftId: string): Promise<Resultat> {
   const { acteur } = await exigerSession(["manager", "direction"]);
   const r = await executer(async () => validerShift(await getDb(), shiftId, acteur, new Date()));
   revalidatePath(`/shift/${shiftId}`, "layout");
+  return r;
+}
+
+// ---------------------------------------------------------------------------
+// Bons de livraison (laboratoire → points de vente, transferts)
+// ---------------------------------------------------------------------------
+
+export async function actionCreerBon(
+  shiftId: string,
+  v: { siteDestinationId: string; lignes: SaisieBon[]; commentaire: string | null; expedier: boolean },
+): Promise<Resultat> {
+  const { acteur } = await exigerSession();
+  const r = await executer(
+    async () => creerBon(await getDb(), { ...v, shiftId }, acteur, new Date()),
+    v.expedier ? "Bon expédié : il sort du stock et attend la réception" : "Bon préparé : à expédier au départ de la livraison",
+  );
+  revalidatePath(`/shift/${shiftId}`, "layout");
+  return r;
+}
+
+export async function actionExpedierBon(shiftId: string, bonId: string): Promise<Resultat> {
+  const { acteur } = await exigerSession();
+  const r = await executer(async () => expedierBon(await getDb(), bonId, shiftId, acteur, new Date()), "Bon expédié");
+  revalidatePath(`/shift/${shiftId}`, "layout");
+  return r;
+}
+
+export async function actionAnnulerBon(shiftId: string, bonId: string): Promise<Resultat> {
+  const { acteur } = await exigerSession();
+  const r = await executer(async () => annulerBon(await getDb(), bonId, acteur), "Bon annulé");
+  revalidatePath(`/shift/${shiftId}`, "layout");
+  return r;
+}
+
+export async function actionReceptionnerBon(
+  shiftId: string,
+  bonId: string,
+  recus: Record<string, number>,
+  commentaire: string | null,
+): Promise<Resultat> {
+  const { acteur } = await exigerSession();
+  const r = await executer(async () => {
+    const x = await receptionnerBon(await getDb(), { bonId, shiftId, recus, commentaire }, acteur, new Date());
+    return x;
+  });
+  revalidatePath(`/shift/${shiftId}`, "layout");
+  if (r.ok && r.valeur) {
+    const { numero, ecarts } = r.valeur;
+    return { ok: true, message: `Bon n° ${numero} réceptionné${ecarts ? ` · ${ecarts} produit(s) en écart signalé(s) au labo` : ""}` };
+  }
   return r;
 }

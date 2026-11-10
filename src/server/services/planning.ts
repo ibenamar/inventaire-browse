@@ -245,6 +245,8 @@ export async function dupliquerPeriode(
 /** Utilisateurs proposables dans le planning d'un site. */
 export async function equipiersPossibles(db: Db, siteId: string) {
   const { utilisateursDuSite } = await import("./utilisateurs");
-  return (await utilisateursDuSite(db, siteId)).filter((u) => u.role !== "labo");
+  const [site] = await db.select({ type: sites.type }).from(sites).where(eq(sites.id, siteId));
+  // Le rôle « labo » ne travaille qu'au laboratoire.
+  return (await utilisateursDuSite(db, siteId)).filter((u) => u.role !== "labo" || site?.type === "laboratoire");
 }
 

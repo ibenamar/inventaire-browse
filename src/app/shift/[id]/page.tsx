@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cx, LienBouton, Message } from "@/components/ui";
+import { getDb } from "@/lib/db";
+import { listerBons } from "@/server/services/livraisons";
 import { chargerShift } from "./donnees";
 
 function Etape({
@@ -9,12 +11,14 @@ function Etape({
   titre,
   detail,
   fait,
+  alerte,
 }: {
   href: string;
   numero: number;
   titre: string;
   detail: string;
   fait?: boolean;
+  alerte?: string | null;
 }) {
   return (
     <Link
@@ -35,6 +39,7 @@ function Etape({
       <span className="min-w-0">
         <span className="block text-lg font-semibold">{titre}</span>
         <span className="block text-sm text-stone-600">{detail}</span>
+        {alerte && <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">{alerte}</span>}
       </span>
       <span className="ml-auto text-2xl text-stone-400">›</span>
     </Link>
@@ -47,9 +52,16 @@ export default async function HubShift({ params }: { params: Promise<{ id: strin
   if (d.shift.statut === "planifie") redirect("/");
   if (!peutSaisir) redirect(`/shift/${id}/cloture`);
   const a = d.avancement;
-  const nbEntrees = d.mouvements.filter((m) => m.type === "entree").length;
+  const labo = d.shift.typeSite === "laboratoire";
+  const nbProduction = d.mouvements.filter((m) => m.type === "entree" && m.origine === "production").length;
+  const nbEntrees = d.mouvements.filter((m) => m.type === "entree" && m.origine !== "production").length;
   const nbPertes = d.mouvements.filter((m) => m.type === "perte").length;
   const ventes = d.lignes.reduce((t, l) => t + l.ventes, 0);
+  const db = await getDb();
+  const aRecevoir = (await listerBons(db, { siteDestinationId: d.shift.siteId, statuts: ["expedie"] })).length;
+  const envoyes = await listerBons(db, { siteOrigineId: d.shift.siteId, statuts: ["prepare", "expedie"] });
+  const aExpedier = envoyes.filter((b) => b.statut === "prepare").length;
+  const expediesDuShift = d.mouvements.filter((m) => m.type === "sortie").length;
   let n = 0;
   return (
     <div className="mx-auto grid max-w-2xl gap-3">
@@ -69,18 +81,36 @@ export default async function HubShift({ params }: { params: Promise<{ id: strin
       {a.aCompterOuverture === 0 && (
         <Message ton="info">Stock d&apos;ouverture repris automatiquement de la clôture du shift précédent.</Message>
       )}
-      <Etape href={`/shift/${id}/entrees`} numero={++n} titre="Réceptions" detail={`Livraisons du labo, boissons du fournisseur · ${nbEntrees} saisie(s)`} />
-      <Etape href={`/shift/${id}/pertes`} numero={++n} titre="Pertes" detail={`Péremption ou endommagé · ${nbPertes} saisie(s)`} />
+      {labo && <Etape href={`/shift/${id}/production`} numero={++n} titre="Production" detail={`Gâteaux et pâtisseries fabriqués · ${nbProduction} saisie(s)`} />}
       <Etape
-        href={`/shift/${id}/ventes`}
+        href={`/shift/${id}/entrees`}
         numero={++n}
-        titre="Ventes"
-        detail={
-          d.shift.ventesSource === "loyverse"
-            ? `Importées de Loyverse · ${ventes} article(s) vendu(s)`
-            : `Rapport de caisse Loyverse · ${ventes} article(s) saisi(s)`
-        }
+        titre="Réceptions"
+        detail={labo ? `Ingrédients et fournitures reçus · ${nbEntrees} saisie(s)` : `Livraisons du labo, boissons du fournisseur · ${nbEntrees} saisie(s)`}
+        alerte={aRecevoir ? `${aRecevoir} livraison${aRecevoir > 1 ? "s" : ""} à réceptionner` : null}
       />
+      {labo && (
+        <Etape
+          href={`/shift/${id}/livraisons`}
+          numero={++n}
+          titre="Livraisons"
+          detail={`Bons de livraison vers les points de vente · ${expediesDuShift} ligne(s) expédiée(s)`}
+          alerte={aExpedier ? `${aExpedier} bon${aExpedier > 1 ? "s" : ""} préparé${aExpedier > 1 ? "s" : ""} à expédier` : null}
+        />
+      )}
+      <Etape href={`/shift/${id}/pertes`} numero={++n} titre="Pertes" detail={`Péremption ou endommagé · ${nbPertes} saisie(s)`} />
+      {!labo && (
+        <Etape
+          href={`/shift/${id}/ventes`}
+          numero={++n}
+          titre="Ventes"
+          detail={
+            d.shift.ventesSource === "loyverse"
+              ? `Importées de Loyverse · ${ventes} article(s) vendu(s)`
+              : `Rapport de caisse Loyverse · ${ventes} article(s) saisi(s)`
+          }
+        />
+      )}
       <Etape
         href={`/shift/${id}/comptage`}
         numero={++n}
@@ -88,6 +118,11 @@ export default async function HubShift({ params }: { params: Promise<{ id: strin
         detail={`${a.compteesFin}/${a.aCompterFin} produits comptés`}
         fait={a.compteesFin === a.aCompterFin}
       />
+      {!labo && (
+        <Link href={`/shift/${id}/livraisons`} className="text-center text-sm font-semibold text-marque-700 hover:underline">
+          Transférer des produits vers un autre point de vente{aExpedier ? ` · ${aExpedier} bon(s) à expédier` : ""}
+        </Link>
+      )}
       <LienBouton href={`/shift/${id}/cloture`} grand variante={estResponsable ? "primaire" : "secondaire"} className="mt-2">
         {modeCorrection ? "Retour au récapitulatif" : estResponsable ? "Vérifier et clôturer le shift" : "Voir le récapitulatif"}
       </LienBouton>

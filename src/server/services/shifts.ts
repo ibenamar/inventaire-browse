@@ -15,10 +15,14 @@ import {
   shifts,
   sites,
   utilisateurs,
+  UNITES_DECIMALES,
   type MotifPerte,
   type OrigineEntree,
+  type TypeMouvement,
+  type Unite,
 } from "@/db/schema";
 import {
+  arrondiQ,
   calculerLigne,
   enParts,
   estQuantiteValide,
@@ -183,7 +187,11 @@ export async function ouvrirShift(db: Db, shiftId: string, acteur: Acteur, maint
     : [];
   const clotures = new Map(lignesPrec.map((l) => [l.produitId, l.stockReelFin]));
 
-  const prods = await db.select().from(produits).where(eq(produits.actif, true));
+  const [site] = await db.select({ type: sites.type }).from(sites).where(eq(sites.id, s.siteId));
+  // Laboratoire : ses ingrédients et les produits qu'il fabrique ; point de vente : les produits.
+  const prods = (await db.select().from(produits).where(eq(produits.actif, true))).filter((p) =>
+    site?.type === "laboratoire" ? p.nature === "ingredient" || p.fabriqueLabo : p.nature === "produit",
+  );
   const minimums = new Map(
     (await db.select().from(produitsSites).where(eq(produitsSites.siteId, s.siteId))).map((m) => [m.produitId, m]),
   );
@@ -245,16 +253,21 @@ export interface LigneDetail {
   ref: string;
   nom: string;
   categorie: string;
-  unite: (typeof produits.$inferSelect)["unite"];
+  unite: Unite;
   format: string | null;
   partsParGateau: number | null;
   photoId: string | null;
+  nature: "produit" | "ingredient";
   suiviStock: boolean;
   ouvertureTheorique: number | null;
   ouvertureComptee: number | null;
   entrees: number;
+  /** Dont production du laboratoire. */
+  production: number;
   ventes: number;
   pertes: number;
+  /** Expédié sur des bons de livraison. */
+  sorties: number;
   pertesPeremption: number;
   pertesEndommage: number;
   stockReelFin: number | null;
@@ -268,7 +281,8 @@ export interface LigneDetail {
   calcul: LigneCalculee;
 }
 
-type Agregats = { entrees: number; pertes: number; peremption: number; endommage: number };
+type Agregats = { entrees: number; production: number; pertes: number; peremption: number; endommage: number; sorties: number };
+const agregatsVides = (): Agregats => ({ entrees: 0, production: 0, pertes: 0, peremption: 0, endommage: 0, sorties: 0 });
 
 export async function agregatsMouvements(db: Db, shiftIds: string[]): Promise<Map<string, Agregats>> {
   const res = new Map<string, Agregats>();
@@ -279,18 +293,21 @@ export async function agregatsMouvements(db: Db, shiftIds: string[]): Promise<Ma
       produitId: mouvements.produitId,
       type: mouvements.type,
       motif: mouvements.motif,
-      total: sql<number>`cast(sum(${mouvements.quantite}) as int)`,
+      origine: mouvements.origine,
+      total: sql<number>`cast(sum(${mouvements.quantite}) as float8)`,
     })
     .from(mouvements)
     .where(inArray(mouvements.shiftId, shiftIds))
-    .groupBy(mouvements.shiftId, mouvements.produitId, mouvements.type, mouvements.motif);
+    .groupBy(mouvements.shiftId, mouvements.produitId, mouvements.type, mouvements.motif, mouvements.origine);
   for (const r of rows) {
     const cle = `${r.shiftId}:${r.produitId}`;
-    const a = res.get(cle) ?? { entrees: 0, pertes: 0, peremption: 0, endommage: 0 };
+    const a = res.get(cle) ?? agregatsVides();
     const n = Number(r.total);
-    if (r.type === "entree") a.entrees += n;
+    if (r.type === "entree") a.entrees = arrondiQ(a.entrees + n);
+    if (r.type === "entree" && r.origine === "production") a.production = arrondiQ(a.production + n);
+    if (r.type === "sortie") a.sorties = arrondiQ(a.sorties + n);
     if (r.type === "perte") {
-      a.pertes += n;
+      a.pertes = arrondiQ(a.pertes + n);
       if (r.motif === "peremption") a.peremption += n;
       if (r.motif === "endommage") a.endommage += n;
     }
@@ -310,6 +327,7 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
       format: produits.format,
       partsParGateau: produits.partsParGateau,
       photoId: produits.photoId,
+      nature: produits.nature,
     })
     .from(lignesShift)
     .innerJoin(produits, eq(produits.id, lignesShift.produitId))
@@ -328,13 +346,15 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
   }
   return rows.map(({ l, ...p }) => {
     const vc = parProduit.get(l.produitId);
-    const a = ag.get(`${shiftId}:${l.produitId}`) ?? { entrees: 0, pertes: 0, peremption: 0, endommage: 0 };
+    const a = ag.get(`${shiftId}:${l.produitId}`) ?? agregatsVides();
     const entree = {
       ouvertureTheorique: l.ouvertureTheorique,
       ouvertureComptee: l.ouvertureComptee,
       entrees: a.entrees,
       ventes: l.ventes,
       pertes: a.pertes,
+      sorties: a.sorties,
+      ingredient: p.nature === "ingredient",
       stockReelFin: l.stockReelFin,
       prixVente: l.prixVente,
       cout: l.cout,
@@ -346,6 +366,7 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
       ...p,
       suiviStock: l.suiviStock,
       ...entree,
+      production: a.production,
       pertesPeremption: a.peremption,
       pertesEndommage: a.endommage,
       ventesParCanal: vc?.parCanal ?? {},
@@ -355,15 +376,21 @@ export async function lignesCalculees(db: Db, shiftId: string): Promise<LigneDet
 }
 
 export interface DetailShift {
-  shift: Shift & { site: string; modeOuverture: "reprise" | "recomptage"; responsable: string | null };
+  shift: Shift & {
+    site: string;
+    typeSite: "point_de_vente" | "laboratoire";
+    modeOuverture: "reprise" | "recomptage";
+    responsable: string | null;
+  };
   equipe: { id: string; nom: string }[];
   lignes: LigneDetail[];
   mouvements: {
     id: string;
     produitId: string;
     produit: string;
-    type: "entree" | "perte" | "ajustement";
+    type: TypeMouvement;
     quantite: number;
+    bonId: string | null;
     motif: MotifPerte | null;
     origine: OrigineEntree | null;
     commentaire: string | null;
@@ -389,7 +416,7 @@ export function ouvertureACompter(mode: "reprise" | "recomptage", l: Pick<LigneD
 
 export async function detailShift(db: Db, shiftId: string): Promise<DetailShift> {
   const [row] = await db
-    .select({ s: shifts, site: sites.nom, modeOuverture: sites.modeOuverture, responsable: utilisateurs.nom })
+    .select({ s: shifts, site: sites.nom, typeSite: sites.type, modeOuverture: sites.modeOuverture, responsable: utilisateurs.nom })
     .from(shifts)
     .innerJoin(sites, eq(sites.id, shifts.siteId))
     .leftJoin(utilisateurs, eq(utilisateurs.id, shifts.responsableId))
@@ -411,6 +438,7 @@ export async function detailShift(db: Db, shiftId: string): Promise<DetailShift>
       motif: mouvements.motif,
       origine: mouvements.origine,
       commentaire: mouvements.commentaire,
+      bonId: mouvements.bonId,
       utilisateurId: mouvements.utilisateurId,
       utilisateur: utilisateurs.nom,
       horodatage: mouvements.horodatage,
@@ -437,7 +465,7 @@ export async function detailShift(db: Db, shiftId: string): Promise<DetailShift>
   const aCompterOuv = lignes.filter((l) => ouvertureACompter(mode, l));
   const suivis = lignes.filter((l) => l.suiviStock);
   return {
-    shift: { ...row.s, site: row.site, modeOuverture: mode, responsable: row.responsable },
+    shift: { ...row.s, site: row.site, typeSite: row.typeSite, modeOuverture: mode, responsable: row.responsable },
     equipe,
     lignes,
     mouvements: mvts,
@@ -468,15 +496,17 @@ export async function saisirQuantite(
   maintenant: Date,
 ) {
   exiger(["ouvertureComptee", "stockReelFin"].includes(champ), "Champ invalide");
-  exiger(valeur === null || estQuantiteValide(valeur), "Quantité invalide (nombre entier positif)");
   const s = await lireShift(db, shiftId);
   const correction = exigerModifiable(s, acteur);
   await exigerAcces(db, s, acteur);
-  const [l] = await db
-    .select()
+  const [r] = await db
+    .select({ l: lignesShift, unite: produits.unite })
     .from(lignesShift)
+    .innerJoin(produits, eq(produits.id, lignesShift.produitId))
     .where(and(eq(lignesShift.shiftId, shiftId), eq(lignesShift.produitId, produitId)));
-  exiger(l, "Produit absent de ce shift");
+  exiger(r, "Produit absent de ce shift");
+  const l = r.l;
+  exiger(valeur === null || estQuantiteValide(valeur, accepteDecimales(r.unite)), messageQuantite(r.unite));
   exiger(l.suiviStock, "Ce produit n'est pas suivi en stock (vente seule)");
   if (correction) exiger(valeur !== null, "Un shift clôturé doit rester entièrement compté");
   await db
@@ -547,6 +577,11 @@ export async function saisirVentes(
   });
 }
 
+/** Les ingrédients au poids ou au volume se comptent avec décimales ; le reste en nombres entiers. */
+export const accepteDecimales = (unite: Unite) => UNITES_DECIMALES.includes(unite);
+const messageQuantite = (unite: Unite) =>
+  accepteDecimales(unite) ? "Quantité invalide (nombre positif, 3 décimales au plus)" : "Quantité invalide (nombre entier positif)";
+
 export interface SaisieEntree {
   produitId: string;
   quantite: number;
@@ -582,8 +617,8 @@ export async function ajouterEntrees(
   if (correction) await tracer(db, acteur.id, "corriger", "shift", shiftId, { champ: "entrees", saisies, origine });
   const valeurs = [];
   for (const e of utiles) {
-    exiger(estQuantiteValide(e.quantite), "Quantité invalide");
     const p = await produitDuShift(db, shiftId, e.produitId);
+    exiger(estQuantiteValide(e.quantite, accepteDecimales(p.unite)), `${p.nom} : ${messageQuantite(p.unite)}`);
     valeurs.push({
       shiftId,
       produitId: e.produitId,
@@ -604,12 +639,12 @@ export async function ajouterPerte(
   acteur: Acteur,
 ) {
   exiger(MOTIFS_PERTE.includes(v.motif), "Choisir le motif : péremption ou endommagé");
-  exiger(estQuantiteValide(v.quantite) && v.quantite > 0, "Quantité invalide");
   const s = await lireShift(db, shiftId);
   const correction = exigerModifiable(s, acteur);
   await exigerAcces(db, s, acteur);
-  if (correction) await tracer(db, acteur.id, "corriger", "shift", shiftId, { champ: "perte", ...v });
   const p = await produitDuShift(db, shiftId, v.produitId);
+  exiger(estQuantiteValide(v.quantite, accepteDecimales(p.unite)) && v.quantite > 0, messageQuantite(p.unite));
+  if (correction) await tracer(db, acteur.id, "corriger", "shift", shiftId, { champ: "perte", ...v });
   await db.insert(mouvements).values({
     shiftId,
     produitId: v.produitId,
@@ -624,6 +659,7 @@ export async function ajouterPerte(
 export async function supprimerMouvement(db: Db, mouvementId: string, acteur: Acteur) {
   const [m] = await db.select().from(mouvements).where(eq(mouvements.id, mouvementId));
   exiger(m, "Saisie introuvable");
+  exiger(!m.bonId, "Cette saisie vient d'un bon de livraison : elle se modifie depuis le bon");
   const s = await lireShift(db, m.shiftId);
   exigerModifiable(s, acteur);
   await exigerAcces(db, s, acteur);

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useActionState, useRef, useState, useTransition } from "react";
 import { PhotoProduit } from "@/components/PhotoProduit";
 import { Bouton, Champ, classesChamp, formatMad, Message } from "@/components/ui";
+import { UNITE_PLURIEL, UNITE_SINGULIER, UNITES_INGREDIENT } from "@/domain/unites";
+import type { Unite } from "@/db/schema";
 import type { ProduitVue } from "@/server/services/catalogue";
 import { actionAjouterArticle, actionAjouterCout, actionModifierProduit, actionPhoto, actionRetirerArticle, actionStocksMinimum } from "../../actions";
 
@@ -15,14 +17,22 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
       <Champ label="Nom">
         <input name="nom" defaultValue={p.nom} required className={classesChamp} />
       </Champ>
-      <Champ label="Prix de référence (MAD)" aide="Prix sur place ; suit l'article Loyverse « sur place ». Sert à valoriser pertes et écarts.">
-        <input name="prixVente" inputMode="decimal" defaultValue={p.prixVente ?? ""} className={classesChamp} />
-      </Champ>
+      {p.nature === "ingredient" ? (
+        <Champ label="Nature">
+          <p className="py-2 text-sm text-stone-600">Ingrédient du laboratoire : compté au labo, valorisé au coût de revient.</p>
+        </Champ>
+      ) : (
+        <Champ label="Prix de référence (MAD)" aide="Prix sur place ; suit l'article Loyverse « sur place ». Sert à valoriser pertes et écarts.">
+          <input name="prixVente" inputMode="decimal" defaultValue={p.prixVente ?? ""} className={classesChamp} />
+        </Champ>
+      )}
       <Champ label="Unité de comptage">
         <select name="unite" value={unite} onChange={(e) => setUnite(e.target.value as typeof unite)} className={classesChamp}>
-          <option value="piece">Pièce</option>
-          <option value="part">Part (gâteau découpé)</option>
-          <option value="bouteille">Bouteille</option>
+          {(p.nature === "ingredient" ? UNITES_INGREDIENT : (["piece", "part", "bouteille"] as const)).map((u) => (
+            <option key={u} value={u}>
+              {u === "part" ? "Part (gâteau découpé)" : UNITE_SINGULIER[u][0].toUpperCase() + UNITE_SINGULIER[u].slice(1)}
+            </option>
+          ))}
         </select>
       </Champ>
       {unite === "part" ? (
@@ -35,10 +45,20 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
         </Champ>
       )}
       <div className="grid content-end gap-2">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="suiviStock" defaultChecked={p.suiviStock} className="size-5" />
-          Suivi en stock (décocher pour un produit préparé à la commande)
-        </label>
+        {p.nature === "ingredient" ? (
+          <input type="hidden" name="suiviStock" value="on" />
+        ) : (
+          <>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" name="suiviStock" defaultChecked={p.suiviStock} className="size-5" />
+              Suivi en stock (décocher pour un produit préparé à la commande)
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" name="fabriqueLabo" defaultChecked={p.fabriqueLabo} className="size-5" />
+              Fabriqué par le laboratoire (compté au labo, livré aux points de vente)
+            </label>
+          </>
+        )}
         <label className="flex items-center gap-2">
           <input type="checkbox" name="actif" defaultChecked={p.actif} className="size-5" />
           Produit actif
@@ -227,7 +247,8 @@ export function FormulaireStocksMinimum({
   minimums: { siteId: string; site: string; statut: string; stockMinimum: number | null }[];
 }) {
   const [etat, action, enCours] = useActionState(actionStocksMinimum.bind(null, produitId), null);
-  const libelle = unite === "part" ? "parts" : unite === "bouteille" ? "bouteilles" : "pièces";
+  const libelle = UNITE_PLURIEL[unite as Unite] ?? unite;
+  const decimales = unite === "kg" || unite === "litre";
   return (
     <form action={action} className="grid gap-2">
       <div className="grid gap-2 sm:grid-cols-2">
@@ -239,7 +260,7 @@ export function FormulaireStocksMinimum({
             </span>
             <input
               name={`min_${m.siteId}`}
-              inputMode="numeric"
+              inputMode={decimales ? "decimal" : "numeric"}
               defaultValue={m.stockMinimum ?? ""}
               placeholder="—"
               className={`${classesChamp} w-24 text-center`}

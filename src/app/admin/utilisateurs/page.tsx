@@ -12,7 +12,7 @@ const ROLES = { employe: "Employé", manager: "Manager", direction: "Direction",
 export default async function Utilisateurs() {
   await exigerDirection();
   const db = await getDb();
-  const sites = (await listerSites(db)).filter((s) => s.type === "point_de_vente");
+  const sites = await listerSites(db);
   const noms = new Map(sites.map((s) => [s.id, s.nom]));
   const us = await listerUtilisateurs(db);
   return (

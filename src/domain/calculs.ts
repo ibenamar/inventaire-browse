@@ -5,8 +5,10 @@
  * le CA utilise le prix réel de chaque canal de vente quand il est fourni.
  *   ouverture        = ouverture recomptée, sinon clôture du shift précédent
  *   écart passation  = ouverture recomptée − clôture du shift précédent
- *   théorique fin    = ouverture + entrées − ventes − pertes
+ *   théorique fin    = ouverture + entrées − ventes − pertes − sorties (livraisons expédiées)
  *   écart            = stock réel fin − théorique fin
+ * Ingrédients (laboratoire) : leur utilisation en production n'est pas saisie, donc la différence
+ * entre le théorique et le compté n'est pas un écart mais la consommation du shift.
  */
 export interface LigneEntree {
   ouvertureTheorique: number | null;
@@ -14,6 +16,10 @@ export interface LigneEntree {
   entrees: number;
   ventes: number;
   pertes: number;
+  /** Quantités expédiées sur des bons de livraison. */
+  sorties?: number;
+  /** Ingrédient : la différence théorique − compté est une consommation, pas un écart. */
+  ingredient?: boolean;
   stockReelFin: number | null;
   prixVente: number | null;
   cout: number | null;
@@ -27,6 +33,9 @@ export interface LigneCalculee {
   ecartPassation: number | null;
   theoriqueFin: number | null;
   ecart: number | null;
+  /** Ingrédients : quantité consommée (théorique − compté) et sa valeur au coût. */
+  consommation: number | null;
+  valeurConsommation: number | null;
   valeurEcartVente: number | null;
   valeurEcartCout: number | null;
   valeurPertesVente: number | null;
@@ -36,21 +45,27 @@ export interface LigneCalculee {
 }
 
 const arrondi = (n: number) => Math.round(n * 100) / 100;
+/** Quantités : 3 décimales au plus (kg, litres), sans résidu de calcul flottant. */
+export const arrondiQ = (n: number) => Math.round(n * 1000) / 1000;
 const fois = (q: number | null, p: number | null) => (q === null || p === null ? null : arrondi(q * p));
 
 export function calculerLigne(l: LigneEntree): LigneCalculee {
   const ouverture = l.ouvertureComptee ?? l.ouvertureTheorique;
   const ecartPassation =
     l.ouvertureComptee !== null && l.ouvertureTheorique !== null
-      ? l.ouvertureComptee - l.ouvertureTheorique
+      ? arrondiQ(l.ouvertureComptee - l.ouvertureTheorique)
       : null;
-  const theoriqueFin = ouverture === null ? null : ouverture + l.entrees - l.ventes - l.pertes;
-  const ecart = theoriqueFin === null || l.stockReelFin === null ? null : l.stockReelFin - theoriqueFin;
+  const theoriqueFin = ouverture === null ? null : arrondiQ(ouverture + l.entrees - l.ventes - l.pertes - (l.sorties ?? 0));
+  const difference = theoriqueFin === null || l.stockReelFin === null ? null : arrondiQ(l.stockReelFin - theoriqueFin);
+  const ecart = l.ingredient ? null : difference;
+  const consommation = l.ingredient && difference !== null ? arrondiQ(-difference) : null;
   return {
     ouverture,
     ecartPassation,
     theoriqueFin,
     ecart,
+    consommation,
+    valeurConsommation: fois(consommation, l.cout),
     valeurEcartVente: fois(ecart, l.prixVente),
     valeurEcartCout: fois(ecart, l.cout),
     valeurPertesVente: fois(l.pertes, l.prixVente),
@@ -74,6 +89,9 @@ export interface Synthese {
   produitsAvecEcart: number;
   produitsAvecEcartPassation: number;
   produitsAReapprovisionner: number;
+  /** Laboratoire : valeur au coût des ingrédients consommés, et quantités expédiées. */
+  valeurConsommation: number;
+  sorties: number;
 }
 
 export function synthetiser(lignes: Array<LigneEntree & { calcul: LigneCalculee }>): Synthese {
@@ -87,6 +105,8 @@ export function synthetiser(lignes: Array<LigneEntree & { calcul: LigneCalculee 
     produitsAvecEcart: 0,
     produitsAvecEcartPassation: 0,
     produitsAReapprovisionner: 0,
+    valeurConsommation: 0,
+    sorties: 0,
   };
   for (const l of lignes) {
     s.articlesVendus += l.ventes;
@@ -98,8 +118,12 @@ export function synthetiser(lignes: Array<LigneEntree & { calcul: LigneCalculee 
     if (l.calcul.ecart !== null && l.calcul.ecart !== 0) s.produitsAvecEcart++;
     if (l.calcul.ecartPassation !== null && l.calcul.ecartPassation !== 0) s.produitsAvecEcartPassation++;
     if (l.calcul.aReapprovisionner) s.produitsAReapprovisionner++;
+    s.valeurConsommation += l.calcul.valeurConsommation ?? 0;
+    s.sorties += l.sorties ?? 0;
   }
-  for (const k of ["ca", "valeurPertesVente", "valeurEcartsVente", "valeurEcartsCout"] as const) {
+  s.pertes = arrondiQ(s.pertes);
+  s.sorties = arrondiQ(s.sorties);
+  for (const k of ["ca", "valeurPertesVente", "valeurEcartsVente", "valeurEcartsCout", "valeurConsommation"] as const) {
     s[k] = arrondi(s[k]);
   }
   return s;
@@ -112,6 +136,8 @@ export function enParts(quantite: number, saisie: "parts" | "gateaux", partsParG
   return quantite * partsParGateau;
 }
 
-export function estQuantiteValide(n: unknown): n is number {
-  return typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 100000;
+/** Quantité positive ; entière sauf pour les unités au poids ou au volume (3 décimales au plus). */
+export function estQuantiteValide(n: unknown, decimales = false): n is number {
+  if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 100000) return false;
+  return decimales ? Math.abs(n * 1000 - Math.round(n * 1000)) < 1e-6 : Number.isInteger(n);
 }

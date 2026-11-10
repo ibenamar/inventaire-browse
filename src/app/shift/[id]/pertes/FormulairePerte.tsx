@@ -4,13 +4,14 @@ import { useState, useTransition } from "react";
 import { actionAjouterPerte } from "@/app/actions-shift";
 import { PhotoProduit } from "@/components/PhotoProduit";
 import { Bouton, classesChamp, cx, Message } from "@/components/ui";
-import type { MotifPerte } from "@/db/schema";
+import type { MotifPerte, Unite } from "@/db/schema";
+import { formatQuantite, lireQuantite, UNITE_PLURIEL } from "@/domain/unites";
 
 interface P {
   produitId: string;
   nom: string;
   categorie: string;
-  unite: "piece" | "part" | "bouteille";
+  unite: Unite;
   partsParGateau: number | null;
   photoId: string | null;
 }
@@ -18,6 +19,7 @@ interface P {
 export function FormulairePerte({ shiftId, produits }: { shiftId: string; produits: P[] }) {
   const [choisi, setChoisi] = useState<P | null>(null);
   const [quantite, setQuantite] = useState(1);
+  const [texte, setTexte] = useState("");
   const [gateaux, setGateaux] = useState(false);
   const [motif, setMotif] = useState<MotifPerte | null>(null);
   const [commentaire, setCommentaire] = useState("");
@@ -28,6 +30,7 @@ export function FormulairePerte({ shiftId, produits }: { shiftId: string; produi
   const fermer = () => {
     setChoisi(null);
     setQuantite(1);
+    setTexte("");
     setGateaux(false);
     setMotif(null);
     setCommentaire("");
@@ -44,11 +47,15 @@ export function FormulairePerte({ shiftId, produits }: { shiftId: string; produi
         commentaire: commentaire || null,
       });
       if (r.ok) {
-        setRetour({ ok: true, texte: `${choisi.nom} : ${quantite}${gateaux ? " gâteau(x)" : ""} déclaré(s) en perte` });
+        setRetour({
+          ok: true,
+          texte: `${choisi.nom} : ${formatQuantite(quantite)} ${gateaux ? "gâteau(x)" : UNITE_PLURIEL[choisi.unite]} déclaré(s) en perte`,
+        });
         fermer();
       } else setRetour({ ok: false, texte: r.erreur });
     });
 
+  const decimales = choisi ? choisi.unite === "kg" || choisi.unite === "litre" : false;
   const f = recherche.trim().toLowerCase();
   const visibles = produits.filter((p) => !f || p.nom.toLowerCase().includes(f) || p.categorie.toLowerCase().includes(f));
 
@@ -116,6 +123,7 @@ export function FormulairePerte({ shiftId, produits }: { shiftId: string; produi
                 </button>
               ))}
             </div>
+            {decimales && <div className="mb-1 text-sm text-stone-600">Quantité en {UNITE_PLURIEL[choisi.unite]}</div>}
             {choisi.unite === "part" && choisi.partsParGateau && (
               <div className="mb-3 grid grid-cols-2 rounded-xl bg-stone-100 p-1 text-sm font-semibold">
                 {[false, true].map((g) => (
@@ -126,14 +134,21 @@ export function FormulairePerte({ shiftId, produits }: { shiftId: string; produi
               </div>
             )}
             <div className="mb-3 flex items-center gap-2">
-              <button onClick={() => setQuantite((q) => Math.max(1, q - 1))} className="size-14 rounded-xl bg-stone-100 text-3xl font-bold" aria-label="Moins">
+              <button onClick={() => setQuantite((q) => Math.max(decimales ? 0.1 : 1, Math.round((q - 1) * 1000) / 1000))} className="size-14 rounded-xl bg-stone-100 text-3xl font-bold" aria-label="Moins">
                 −
               </button>
               <input
-                inputMode="numeric"
+                inputMode={decimales ? "decimal" : "numeric"}
                 aria-label="Quantité perdue"
-                value={quantite}
-                onChange={(e) => setQuantite(Math.max(1, Number(e.target.value.replace(/\D/g, "") || 1)))}
+                value={texte || formatQuantite(quantite)}
+                onChange={(e) => {
+                  if (!decimales) return setQuantite(Math.max(1, Number(e.target.value.replace(/\D/g, "") || 1)));
+                  const t = e.target.value.replace(/[^\d.,]/g, "");
+                  setTexte(t);
+                  const n = lireQuantite(t);
+                  if (n !== null && n > 0) setQuantite(Math.round(n * 1000) / 1000);
+                }}
+                onBlur={() => setTexte("")}
                 className="h-14 w-full rounded-xl text-center text-2xl font-bold ring-1 ring-stone-300"
               />
               <button onClick={() => setQuantite((q) => q + 1)} className="size-14 rounded-xl bg-stone-100 text-3xl font-bold" aria-label="Plus">

@@ -1,3 +1,4 @@
+import { UNITE_SINGULIER } from "@/domain/unites";
 import Link from "next/link";
 import { PhotoProduit } from "@/components/PhotoProduit";
 import { cx, formatMad, Kpi, LienBouton, Pastille, Titre } from "@/components/ui";
@@ -5,7 +6,7 @@ import { getDb } from "@/lib/db";
 import { listerProduits, type ProduitVue } from "@/server/services/catalogue";
 import { exigerDirection } from "../acces";
 
-const UNITES = { piece: "pièce", part: "part", bouteille: "bouteille" };
+const UNITES = UNITE_SINGULIER;
 
 export default async function Catalogue() {
   await exigerDirection();
@@ -41,8 +42,10 @@ export default async function Catalogue() {
                 <div className="p-2">
                   <div className="line-clamp-2 min-h-10 text-sm leading-tight font-semibold">{p.nom}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-stone-600">
-                    <span>{formatMad(p.prixVente)}</span>
-                    <span>· {UNITES[p.unite]}</span>
+                    {p.nature !== "ingredient" && <span>{formatMad(p.prixVente)} ·</span>}
+                    <span>{UNITES[p.unite]}</span>
+                    {p.nature === "ingredient" && <Pastille ton="marque">ingrédient</Pastille>}
+                    {p.fabriqueLabo && <Pastille ton="bleu">labo</Pastille>}
                     {!p.suiviStock && <Pastille>vente seule</Pastille>}
                     {!p.actif && <Pastille ton="rouge">inactif</Pastille>}
                   </div>

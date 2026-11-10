@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Carte, Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
 import { listerCategories } from "@/server/services/catalogue";
+import { CATEGORIE_INGREDIENTS } from "@/server/seed";
 import { exigerDirection } from "../../acces";
 import { FormulaireNouveauProduit } from "./FormulaireNouveauProduit";
 
@@ -17,7 +18,10 @@ export default async function NouveauProduit() {
         Nouveau produit
       </Titre>
       <Carte>
-        <FormulaireNouveauProduit categories={categories.map((c) => ({ id: c.id, nom: c.nom }))} />
+        <FormulaireNouveauProduit
+          categories={categories.map((c) => ({ id: c.id, nom: c.nom }))}
+          categorieIngredients={categories.find((c) => c.nom === CATEGORIE_INGREDIENTS)?.id ?? null}
+        />
       </Carte>
     </>
   );
