@@ -46,6 +46,11 @@ export default async function PageConnexion({ searchParams }: { searchParams: Pr
           utilisateurs={await utilisateursDuSite(db, site.id)}
         />
       )}
+      <p className="mt-6 text-center text-sm">
+        <Link href="/aide" className="font-semibold text-marque-700 hover:underline">
+          Aide : guide d&apos;utilisation
+        </Link>
+      </p>
     </main>
   );
 }

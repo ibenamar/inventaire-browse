@@ -21,6 +21,9 @@ export function BarreHaut({ session, nomSite }: { session: Session; nomSite: str
               Administration
             </Link>
           )}
+          <Link href="/aide" className="rounded-lg px-3 py-2 font-semibold text-stone-600 hover:bg-stone-100">
+            Aide
+          </Link>
           <details className="relative">
             <summary className="cursor-pointer list-none rounded-lg px-3 py-2 font-semibold text-stone-600 hover:bg-stone-100">
               ⋯
