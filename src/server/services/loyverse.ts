@@ -53,9 +53,20 @@ interface ArticleApi {
 type Fetch = typeof fetch;
 
 async function appeler<T>(chemin: string, jeton: string, f: Fetch): Promise<T> {
-  const r = await f(`${URL_API_LOYVERSE}${chemin}`, { headers: { Authorization: `Bearer ${jeton}` } });
-  if (r.status === 401) throw new ErreurMetier("Jeton Loyverse refusé : vérifier le jeton d'accès.");
-  if (!r.ok) throw new ErreurMetier(`Loyverse a répondu ${r.status} sur ${chemin}`);
+  let r: Response;
+  try {
+    r = await f(`${URL_API_LOYVERSE}${chemin}`, {
+      headers: { Authorization: `Bearer ${jeton.trim()}`, Accept: "application/json", "User-Agent": "inventaire-browse" },
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (e) {
+    throw new ErreurMetier(`Loyverse injoignable (${chemin}) : ${e instanceof Error ? e.message : String(e)}`);
+  }
+  if (r.status === 401 || r.status === 403) throw new ErreurMetier(`Jeton Loyverse refusé (${r.status}) : vérifier le jeton d'accès.`);
+  if (!r.ok) {
+    const corps = (await r.text().catch(() => "")).slice(0, 200);
+    throw new ErreurMetier(`Loyverse a répondu ${r.status} sur ${chemin}${corps ? ` : ${corps}` : ""}`);
+  }
   return (await r.json()) as T;
 }
 

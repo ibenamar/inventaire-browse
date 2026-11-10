@@ -4,6 +4,7 @@ import { lireSession } from "@/lib/session";
 import { categoriesARattacher, compterArticlesRattaches, listerCanaux, magasinsConnus } from "@/server/services/caisse";
 import { listerProduits } from "@/server/services/catalogue";
 import { listerSites } from "@/server/services/sites";
+import { lireMagasinsLoyverse, URL_API_LOYVERSE } from "@/server/services/loyverse";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,20 @@ export async function GET() {
   const uneParUne = [];
   for (const [nom, f] of requetes) uneParUne.push(await mesurer(nom, f));
   const enParallele = await mesurer("les 6 en parallèle", () => Promise.all(requetes.map(([, f]) => f())));
+  // Loyverse : présence du jeton (jamais sa valeur) et appel de l'API depuis la production.
+  const jeton = process.env.LOYVERSE_TOKEN ?? "";
+  const loyverse = {
+    jetonConfigure: jeton.trim().length > 0,
+    longueurJeton: jeton.length,
+    espacesAutour: jeton !== jeton.trim(),
+    magasins: jeton.trim() ? await mesurer("GET /stores", () => lireMagasinsLoyverse(jeton)) : null,
+    articles: jeton.trim()
+      ? await mesurer("GET /items?limit=1", async () => {
+          const r = await fetch(`${URL_API_LOYVERSE}/items?limit=1`, { headers: { Authorization: `Bearer ${jeton.trim()}` } });
+          return [r.status];
+        })
+      : null,
+  };
   const corps = {
     version: process.env.NEXT_PUBLIC_VERSION ?? null,
     horodatage: new Date().toISOString(),
@@ -50,6 +65,7 @@ export async function GET() {
     connexion,
     uneParUne,
     enParallele,
+    loyverse,
   };
   return new Response(JSON.stringify(corps, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
 }
