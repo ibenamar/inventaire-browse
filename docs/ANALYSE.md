@@ -128,7 +128,7 @@ alerte_réappro        = stock_réel_fin < stock_minimum(site, produit)
 
 | Sujet | Décision | Conséquence pour l'app |
 |---|---|---|
-| **Sites** | 5 points de vente : 2 Mars, Anfa, Hay Hassani, Palmier, **Browse Sweets** | Voir §6 : un laboratoire de pâtisserie alimente ces points de vente |
+| **Sites** | 5 points de vente : Browse 2 Mars, Browse Sweets 2 Mars, Anfa, Hay Hassani, Palmier | Voir §6 : un laboratoire de pâtisserie alimente ces points de vente |
 | **Créneaux** | Browse Sweets : 3 shifts, horaires **différents selon le jour** (semaine / week-end) | Créneaux paramétrés **par site et par jour de la semaine** |
 | **Cakes** | **8 parts**, découpés sur place | `parts_par_gateau = 8` ; un gâteau entier non découpé compte pour 8 parts au comptage ; une entrée de 1 gâteau = 8 parts |
 | **Produits à la commande** | Hors inventaire pour l'instant | `suivi_stock = non` ; ventes seules |
@@ -166,9 +166,29 @@ POINT DE VENTE : réception pendant le shift ouvert ◀────────�
 - **Écart de livraison** = reçu − expédié : identifie les pertes pendant le transport ou les erreurs de préparation.
 - Les entrées manuelles restent possibles pour les boissons (fournisseur) et les dépannages.
 
-## 7. Questions restant ouvertes (non bloquantes pour démarrer)
+## 7. Décisions du 4ᵉ échange (10/11/2026)
 
-1. **Sites ouverts** : quels sont les 2 points de vente déjà ouverts (pour le pilote) ?
-2. **Horaires des créneaux** : grille par site et par jour de la semaine. Paramètre saisissable après la livraison.
-3. **Laboratoire** : travaille-t-il en shifts ? Combien de livraisons par jour et par point de vente ? Les boissons passent-elles par le labo ou sont-elles livrées directement par le fournisseur ?
-4. **Laboratoire** : faut-il y suivre aussi un stock de produits finis en attente de livraison (comptage quotidien) ?
+| Sujet | Décision | Conséquence pour l'app |
+|---|---|---|
+| **Sites ouverts** | **Browse 2 Mars** et **Browse Sweets 2 Mars** | Sites actifs au lancement ; Anfa, Hay Hassani et Palmier créés « en ouverture » ; pilote sur l'un des deux |
+| **Laboratoire** | **Un seul shift** par jour ; **1 à 2 livraisons** par jour et par point de vente | Le labo a un créneau unique ; plusieurs bons de livraison possibles par jour et par site |
+| **Boissons** | Livrées **directement par le fournisseur** aux points de vente | Entrée « réception fournisseur » saisie au point de vente, hors circuit labo |
+| **Stock labo** | **Comptage quotidien** des produits finis en attente de livraison | Le shift labo a une ouverture / clôture comme un point de vente : écart labo = compté − (ouverture + production − livraisons − pertes) |
+| **Horaires** | Saisis **dans l'application** | Écran de paramétrage des créneaux par site et par jour ; attention au **chevauchement sur deux jours** (§7.1) |
+
+### 7.1 Shifts à cheval sur deux jours — règles
+
+1. **Journée d'exploitation** = date de **début** du shift. Le shift du vendredi 20h → samedi 4h appartient au vendredi.
+2. **Horaires applicables** = ceux du jour de **début** : le shift de nuit du vendredi suit la grille du vendredi, même s'il se termine un samedi (grille week-end).
+3. **Saisie des créneaux** : une heure de fin inférieure à l'heure de début signifie « le lendemain » (20:00 → 04:00) ; l'écran l'affiche explicitement (« fin J+1 à 04:00 »).
+4. **Contrôle de chevauchement** : à l'enregistrement de la grille, l'app refuse deux créneaux d'un même site qui se recouvrent, **y compris d'un jour sur l'autre** (ex. nuit du vendredi jusqu'à 4h et matin du samedi commençant à 3h).
+5. **Trous** entre créneaux (ex. 4h → 7h) autorisés : aucune vente attendue ; une vente Loyverse dans un trou est rattachée au shift suivant et signalée.
+6. **Planning** : le shift de nuit s'affiche sur la journée de début, avec la mention « jusqu'au lendemain 04:00 ».
+7. **Import Loyverse** : fenêtre de reçus = horodatages réels d'ouverture et de clôture, quelle que soit la date calendaire.
+8. **Enchaînement** : le shift suivant est le prochain créneau **dans le temps**, pas dans la journée (nuit du vendredi → matin du samedi).
+9. **Clôture tardive** : un shift non clôturé à l'heure prévue reste ouvert et apparaît « en retard » dans le suivi des remontées ; le shift suivant ne peut pas s'ouvrir avant sa clôture (ou une clôture forcée par le manager, tracée).
+10. **Heure** : toutes les dates sont calculées en heure du Maroc (`Africa/Casablanca`), y compris lors des changements d'heure (ramadan).
+
+## 8. Questions restant ouvertes
+
+Aucune question bloquante. À fournir au fil du projet : jeton API Loyverse, horaires des créneaux (saisis dans l'app), coûts de revient, stocks minimum, photos.

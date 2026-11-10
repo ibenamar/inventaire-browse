@@ -10,4 +10,4 @@ Application d'inventaire inter-shifts pour les points de vente Browse : planning
 
 ## État
 
-Phase 0 — cadrage. Décisions validées le 10/11/2026 ; restent des paramètres non bloquants (voir ANALYSE.md §7).
+Phase 0 — cadrage. Cadrage terminé le 10/11/2026 ; restent des données à fournir (voir ANALYSE.md §8).

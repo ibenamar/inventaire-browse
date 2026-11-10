@@ -27,7 +27,8 @@ Remplacer le classeur Excel dupliqué chaque jour par une application qui :
 
 ### 3.1 Planning prévisionnel
 
-- Créneaux paramétrables **par site et par jour de la semaine** (2 ou 3 shifts ; horaires différents le week-end, ex. Browse Sweets ; fin de nuit 3h ou 4h).
+- Créneaux saisis dans l'app **par site et par jour de la semaine** (2 ou 3 shifts en point de vente, 1 au labo ; horaires différents le week-end, ex. Browse Sweets 2 Mars).
+- **Shifts à cheval sur deux jours** : rattachés au jour de début, contrôle des chevauchements entre jours consécutifs (règles détaillées dans [ANALYSE.md §7.1](ANALYSE.md)).
 - Planning préparé par le **manager** de site et la **direction**.
 - Vue **semaine** ou **mois** par site : pour chaque créneau, l'équipe (1 à 2 employés) et le **responsable d'inventaire**.
 - Duplication d'une semaine type ; réaffectation en cas d'absence (tracée).
@@ -51,7 +52,9 @@ Remplacer le classeur Excel dupliqué chaque jour par une application qui :
 - **Saisie de production** au labo : produit, quantité (cakes en gâteaux entiers), date, responsable.
 - **Bon de livraison** : point de vente destinataire, produits et quantités ; statut préparé → expédié → réceptionné.
 - **Réception** au point de vente pendant le shift ouvert : quantités pré-remplies, l'équipe confirme ou corrige ; les quantités reçues deviennent les **entrées** du shift (cakes convertis en 8 parts).
-- **Écart de livraison** (reçu − expédié) et **stock labo** (production − livraisons − pertes, comptage de contrôle).
+- **Écart de livraison** (reçu − expédié) et **stock labo** : shift labo unique par jour avec comptage quotidien des produits finis en attente de livraison.
+- 1 à 2 livraisons par jour et par point de vente.
+- Les **boissons** ne passent pas par le labo : réception fournisseur saisie au point de vente.
 - Rapports : production par produit / jour, livraisons par point de vente, écarts de livraison.
 
 ### 3.4 Intégration Loyverse
@@ -128,10 +131,9 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [x] Décisions : créneaux, cakes à la part, stock minimum par site, planning + responsable, motifs de perte, Loyverse, téléphone / tablette, 1–2 employés
 - [x] Décisions complémentaires : Browse Sweets point de vente, cakes 8 parts, produits à la commande hors inventaire, P057–P063 non retenus, prix et SKU dans Loyverse, Wi-Fi fiable, planning par manager et direction ([ANALYSE.md §5](ANALYSE.md))
 - [x] Catalogue enrichi : unité, parts par gâteau, produit inventorié ou non ([`data/catalogue.csv`](../data/catalogue.csv))
-- [ ] Grille des créneaux par site et par jour de la semaine
+- [x] Sites ouverts : Browse 2 Mars et Browse Sweets 2 Mars ; labo en shift unique, 1–2 livraisons / jour ; boissons en direct ; comptage labo quotidien ([ANALYSE.md §7](ANALYSE.md))
 - [x] Coût de revient saisi dans l'app ; Loyverse = compte unique ; 2 sites ouverts, 3 en ouverture ; planning semaine / mois ; laboratoire de pâtisserie ([ANALYSE.md §6](ANALYSE.md))
 - [ ] Obtenir le jeton API Loyverse (prix, SKU, magasins)
-- [ ] Préciser le fonctionnement du labo ([ANALYSE.md §7](ANALYSE.md))
 - [ ] Stock minimum par site
 - [ ] Photos : à prendre (carrées, ≥ 600×600 px) — possibles directement depuis l'admin
 - [ ] Maquettes des 4 écrans clés : planning, grille de comptage, clôture, tableau de bord
@@ -142,7 +144,8 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [ ] Initialisation du projet, CI, déploiement de recette
 - [ ] Schéma de base de données, import du catalogue CSV
 - [ ] Import des articles, SKU et prix de vente depuis Loyverse (si le jeton est disponible ; sinon saisie des prix dans le catalogue)
-- [ ] Sites, créneaux, utilisateurs, PIN, rôles
+- [ ] Sites, utilisateurs, PIN, rôles
+- [ ] **Paramétrage des créneaux** par site et par jour, avec fin le lendemain et contrôle des chevauchements
 - [ ] **Planning** : vue semaine et mois, équipe et responsable d'inventaire par shift, duplication de semaine
 - [ ] Suivi des remontées : statut de chaque shift planifié (à l'heure, en retard, manquant)
 - [ ] Ouverture du shift planifié, reprise automatique de la clôture précédente (y compris nuit → matin)
@@ -151,7 +154,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [ ] Ventes en saisie manuelle (en attendant Loyverse)
 - [ ] Clôture par le responsable d'inventaire : théorique, écart, valeur, récapitulatif
 - [ ] Recomptage d'ouverture et écart de passation (option par site)
-- [ ] Tests des règles de calcul et du rattachement des shifts de nuit à la journée d'exploitation
+- [ ] Tests des règles de calcul et des shifts à cheval sur deux jours (rattachement, chevauchement, enchaînement nuit → matin, passage semaine → week-end, changement d'heure)
 - [ ] Pilote sur **un des 2 points de vente ouverts** en parallèle du fichier Excel pendant 1 semaine
 
 **Critère de sortie** : un shift complet saisi en moins de 10 minutes sur téléphone ; résultats identiques au fichier Excel sur la semaine pilote.
@@ -174,7 +177,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [ ] Saisie de la production (cakes en gâteaux entiers)
 - [ ] Bons de livraison : préparation, expédition
 - [ ] Réception au point de vente pendant le shift, alimentation automatique des entrées (conversion en parts)
-- [ ] Écarts de livraison, stock labo et comptage de contrôle
+- [ ] Écarts de livraison, shift labo quotidien avec comptage du stock de produits finis
 - [ ] Rapports production / livraisons / écarts
 - [ ] Transferts entre points de vente (même mécanisme que les livraisons)
 
@@ -215,7 +218,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 | Photos à produire pour ~46 produits | Prise de photo intégrée à l'admin ; photo générique de catégorie en attendant |
 | Articles Loyverse sans SKU ou nommés différemment | Écran de correspondance manuelle, produits non associés signalés |
 | Ventes passées après l'heure de clôture (décalage caisse) | Import sur l'heure réelle de clôture ; ventes tardives rattachées au shift suivant et signalées |
-| Shift de nuit à cheval sur deux dates | Notion de journée d'exploitation, tests dédiés |
+| Shift de nuit à cheval sur deux dates | Journée d'exploitation = jour de début, contrôle des chevauchements, tests dédiés |
 | Responsable absent | Réaffectation par le manager, tracée |
 | Réception non saisie au point de vente | Livraison « expédiée » non réceptionnée signalée à la clôture du shift |
 | Coûts de revient non renseignés | Valorisation au prix de vente en attendant ; produits sans coût signalés |
