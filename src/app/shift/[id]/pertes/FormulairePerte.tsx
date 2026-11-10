@@ -16,11 +16,13 @@ interface P {
   photoId: string | null;
 }
 
-export function FormulairePerte({ shiftId, produits }: { shiftId: string; produits: P[] }) {
+export function FormulairePerte({ shiftId, produits, gateauxParDefaut = false }: { shiftId: string; produits: P[]; gateauxParDefaut?: boolean }) {
   const [choisi, setChoisi] = useState<P | null>(null);
   const [quantite, setQuantite] = useState(1);
   const [texte, setTexte] = useState("");
-  const [gateaux, setGateaux] = useState(false);
+  const [alerte, setAlerte] = useState<string | null>(null);
+  // Au laboratoire, les cakes se comptent en gâteaux entiers, comme dans les autres étapes.
+  const [gateaux, setGateaux] = useState(gateauxParDefaut);
   const [motif, setMotif] = useState<MotifPerte | null>(null);
   const [commentaire, setCommentaire] = useState("");
   const [recherche, setRecherche] = useState("");
@@ -31,7 +33,7 @@ export function FormulairePerte({ shiftId, produits }: { shiftId: string; produi
     setChoisi(null);
     setQuantite(1);
     setTexte("");
-    setGateaux(false);
+    setGateaux(gateauxParDefaut);
     setMotif(null);
     setCommentaire("");
   };
@@ -90,7 +92,7 @@ export function FormulairePerte({ shiftId, produits }: { shiftId: string; produi
       </div>
 
       {choisi && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/40 sm:items-center" onClick={fermer}>
+        <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/40 sm:items-center">
           <div
             role="dialog"
             aria-label={`Perte : ${choisi.nom}`}
@@ -142,7 +144,11 @@ export function FormulairePerte({ shiftId, produits }: { shiftId: string; produi
                 aria-label="Quantité perdue"
                 value={texte || formatQuantite(quantite)}
                 onChange={(e) => {
-                  if (!decimales) return setQuantite(Math.max(1, Number(e.target.value.replace(/\D/g, "") || 1)));
+                  if (!decimales) {
+                    if (/[.,]/.test(e.target.value)) return setAlerte("Nombre entier attendu (pas de virgule)");
+                    setAlerte(null);
+                    return setQuantite(Math.max(1, Number(e.target.value.replace(/\D/g, "") || 1)));
+                  }
                   const t = e.target.value.replace(/[^\d.,]/g, "");
                   setTexte(t);
                   const n = lireQuantite(t);
@@ -155,6 +161,11 @@ export function FormulairePerte({ shiftId, produits }: { shiftId: string; produi
                 +
               </button>
             </div>
+            {alerte && (
+              <p className="-mt-1 mb-3 text-sm font-semibold text-red-700" role="alert">
+                {alerte}
+              </p>
+            )}
             <input
               value={commentaire}
               onChange={(e) => setCommentaire(e.target.value)}

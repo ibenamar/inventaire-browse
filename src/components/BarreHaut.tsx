@@ -24,8 +24,12 @@ export function BarreHaut({ session, nomSite }: { session: Session; nomSite: str
           <Link href="/aide" className="rounded-lg px-3 py-2 font-semibold text-stone-600 hover:bg-stone-100">
             Aide
           </Link>
+          {/* Visible en permanence : sur une tablette partagée, chacun se déconnecte avant de passer la main. */}
+          <form action={deconnexion}>
+            <button className="rounded-lg px-3 py-2 font-semibold text-stone-600 hover:bg-stone-100">Quitter</button>
+          </form>
           <details className="relative">
-            <summary className="cursor-pointer list-none rounded-lg px-3 py-2 font-semibold text-stone-600 hover:bg-stone-100">
+            <summary aria-label="Plus d'options" className="cursor-pointer list-none rounded-lg px-3 py-2 font-semibold text-stone-600 hover:bg-stone-100">
               ⋯
             </summary>
             <div className="absolute right-0 mt-1 w-48 rounded-xl bg-white p-1 shadow-lg ring-1 ring-stone-200">

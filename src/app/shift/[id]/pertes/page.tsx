@@ -1,3 +1,4 @@
+import { pourSaisie, quantiteMouvement } from "../vues";
 import { redirect } from "next/navigation";
 import { formatLocal } from "@/domain/temps";
 import { estEncadrant } from "@/server/acteur";
@@ -15,7 +16,7 @@ export default async function Pertes({ params }: { params: Promise<{ id: string 
   return (
     <>
       <EnteteEtape id={id} titre="Pertes" aide="Touchez le produit concerné, puis indiquez le motif et la quantité." />
-      <FormulairePerte shiftId={id} produits={d.lignes.filter((l) => l.suiviStock)} />
+      <FormulairePerte shiftId={id} produits={d.lignes.filter((l) => l.suiviStock).map(pourSaisie)} gateauxParDefaut={d.shift.typeSite === "laboratoire"} />
       <ListeMouvements
         shiftId={id}
         titre="Pertes déclarées"
@@ -24,7 +25,7 @@ export default async function Pertes({ params }: { params: Promise<{ id: string 
           .map((m) => ({
             id: m.id,
             produit: m.produit,
-            quantite: m.quantite,
+            quantite: quantiteMouvement(d.lignes, m),
             detail: [m.motif === "peremption" ? "Péremption" : "Endommagé", m.commentaire].filter(Boolean).join(" · "),
             utilisateur: m.utilisateur,
             heure: formatLocal(m.horodatage, "HH:mm"),

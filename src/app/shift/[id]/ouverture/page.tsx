@@ -1,3 +1,4 @@
+import { pourSaisie } from "../vues";
 import { partsSiEnGateaux } from "@/domain/unites";
 import { redirect } from "next/navigation";
 import { GrilleQuantites } from "@/components/GrilleQuantites";
@@ -24,7 +25,7 @@ export default async function Ouverture({ params }: { params: Promise<{ id: stri
       <GrilleQuantites
         shiftId={id}
         champ="ouvertureComptee"
-        produits={lignes.map((l) => ({ ...l, valeur: l.ouvertureComptee, parGateau: partsSiEnGateaux(d.shift.typeSite, l) }))}
+        produits={lignes.map((l) => ({ ...pourSaisie(l), valeur: l.ouvertureComptee, parGateau: partsSiEnGateaux(d.shift.typeSite, l) }))}
       />
     </>
   );

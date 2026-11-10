@@ -1,3 +1,4 @@
+import { pourSaisie } from "../vues";
 import { partsSiEnGateaux } from "@/domain/unites";
 import { redirect } from "next/navigation";
 import { GrilleQuantites } from "@/components/GrilleQuantites";
@@ -14,7 +15,7 @@ export default async function Comptage({ params }: { params: Promise<{ id: strin
       <GrilleQuantites
         shiftId={id}
         champ="stockReelFin"
-        produits={d.lignes.filter((l) => l.suiviStock).map((l) => ({ ...l, valeur: l.stockReelFin, parGateau: partsSiEnGateaux(d.shift.typeSite, l) }))}
+        produits={d.lignes.filter((l) => l.suiviStock).map((l) => ({ ...pourSaisie(l), valeur: l.stockReelFin, parGateau: partsSiEnGateaux(d.shift.typeSite, l) }))}
       />
     </>
   );

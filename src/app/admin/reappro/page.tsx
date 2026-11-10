@@ -82,9 +82,10 @@ function Tableau({ lignes }: { lignes: Awaited<ReturnType<typeof besoinsReappro>
           <tr key={l.produitId} className="border-t border-stone-100">
             <td className="py-1.5">{l.produit}</td>
             <td className="text-right whitespace-nowrap tabular-nums">
-              <span className="font-bold text-red-700">{l.stock}</span> / {l.minimum}
+              <span className="font-bold text-red-700">{libelleQuantite(l.stock, l)}</span>
+              <span className="block text-xs text-stone-500">min. {libelleQuantite(l.minimum, l)}</span>
             </td>
-            <td className="text-right tabular-nums">{l.enRoute || ""}</td>
+            <td className="text-right whitespace-nowrap tabular-nums">{l.enRoute ? libelleQuantite(l.enRoute, l) : ""}</td>
             <td className="text-right font-semibold whitespace-nowrap tabular-nums">{libelleQuantite(l.aFournir, l)}</td>
           </tr>
         ))}

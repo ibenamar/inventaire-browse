@@ -72,7 +72,7 @@ export default async function Laboratoire({
           </div>
         </div>
         <p className="mb-2 text-sm text-stone-500">
-          Moyenne des ventes et pertes des {SEMAINES_HISTORIQUE} derniers {NOMS_JOURS[jourIso(jourPrevision)].toLowerCase()}s par point de vente, plus le stock
+          Quantités par point de vente : cakes en gâteaux entiers, autres produits en pièces. Moyenne des ventes et pertes des {SEMAINES_HISTORIQUE} derniers {NOMS_JOURS[jourIso(jourPrevision)].toLowerCase()}s par point de vente, plus le stock
           minimum, moins le stock au dernier comptage et ce qui est en route ; moins le stock du labo. Une aide à la décision, à ajuster.
         </p>
         {prev.lignes.some((x) => x.aProduire > 0) ? (
@@ -216,8 +216,8 @@ export default async function Laboratoire({
                       n° {e.numero} <span className="text-stone-500">· {e.destination}</span>
                     </td>
                     <td>{e.produit}</td>
-                    <td className="text-right tabular-nums">{formatQuantite(e.expedie)}</td>
-                    <td className="text-right font-bold text-red-700 tabular-nums">{formatQuantite(e.recu)}</td>
+                    <td className="text-right whitespace-nowrap tabular-nums">{libelleQuantite(e.expedie, e)}</td>
+                    <td className="text-right font-bold whitespace-nowrap text-red-700 tabular-nums">{libelleQuantite(e.recu, e)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -232,8 +232,8 @@ export default async function Laboratoire({
         <Carte>
           <h2 className="mb-1 font-semibold">Consommation des ingrédients</h2>
           <p className="mb-2 text-sm text-stone-500">
-            Stock d&apos;ouverture + réceptions − pertes − stock compté, cumulé sur les shifts clôturés. Valorisée au coût saisi sur la fiche de
-            l&apos;ingrédient.
+            Réelle : stock d&apos;ouverture + réceptions − pertes − stock compté, cumulé sur les shifts clôturés, valorisée au coût de
+            l&apos;ingrédient. Fiche : consommation attendue d&apos;après les fiches techniques (en rouge si la réelle la dépasse).
           </p>
           {r.consommation.length ? (
             <table className="w-full text-sm">

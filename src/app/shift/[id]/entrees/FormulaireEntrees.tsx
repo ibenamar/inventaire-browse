@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { actionAjouterEntrees, actionCreerBon } from "@/app/actions-shift";
 import { PhotoProduit } from "@/components/PhotoProduit";
 import { Bouton, classesChamp, cx, Message } from "@/components/ui";
@@ -58,6 +58,14 @@ export function FormulaireEntrees({
   const categories = useMemo(() => [...new Set(produits.map((p) => p.categorie))], [produits]);
   const visibles = produits.filter((p) => !categorie || p.categorie === categorie);
   const lignes = Object.entries(qtes).filter(([, q]) => q > 0);
+  // Une saisie non enregistrée serait perdue en quittant la page : on prévient.
+  useEffect(() => {
+    if (!lignes.length) return;
+    const avertir = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", avertir);
+    return () => window.removeEventListener("beforeunload", avertir);
+  }, [lignes.length]);
+  const saisisParCategorie = (c: string | null) => produits.filter((p) => (!c || p.categorie === c) && (qtes[p.produitId] ?? 0) > 0).length;
   const total = (p: P) => (qtes[p.produitId] ?? 0) * (enGateaux[p.produitId] && p.partsParGateau ? p.partsParGateau : 1);
 
   const valider = (expedier = false) =>
@@ -109,6 +117,7 @@ export function FormulaireEntrees({
             )}
           >
             {c ?? "Tout"}
+            {saisisParCategorie(c) > 0 && <span className="ml-1 rounded-full bg-marque-500 px-1.5 text-xs text-white">{saisisParCategorie(c)}</span>}
           </button>
         ))}
       </div>
@@ -172,7 +181,11 @@ export function FormulaireEntrees({
                     +
                   </button>
                 </div>
-                {gat && q > 0 && <div className="mt-1 text-center text-xs text-stone-600">= {total(p)} parts</div>}
+                {p.unite === "part" && p.partsParGateau && q > 0 && (
+                  <div className="mt-1 text-center text-xs font-semibold text-stone-700">
+                    = {total(p)} parts{gat ? "" : ` (${Math.round((total(p) / p.partsParGateau) * 100) / 100} gâteau)`}
+                  </div>
+                )}
                 {estQuantiteInhabituelle(total(p), p.unite) && (
                   <div className="mt-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-center text-xs font-semibold text-amber-900">Quantité inhabituelle : vérifiez</div>
                 )}
@@ -189,7 +202,14 @@ export function FormulaireEntrees({
               <Bouton variante="secondaire" grand disabled={!lignes.length || !destination || enCours} onClick={() => valider(false)}>
                 Préparer le bon
               </Bouton>
-              <Bouton grand disabled={!lignes.length || !destination || enCours} onClick={() => valider(true)}>
+              <Bouton
+                grand
+                disabled={!lignes.length || !destination || enCours}
+                onClick={() => {
+                  const dest = destinations.find((x) => x.id === destination)?.nom ?? "";
+                  if (window.confirm(`Expédier ${lignes.length} produit(s) à ${dest} ? Ils sortent de votre stock maintenant.`)) valider(true);
+                }}
+              >
                 {enCours ? "…" : `Expédier${lignes.length ? ` (${lignes.length})` : ""}`}
               </Bouton>
             </div>

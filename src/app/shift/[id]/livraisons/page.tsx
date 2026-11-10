@@ -1,3 +1,4 @@
+import { pourSaisie } from "../vues";
 import { redirect } from "next/navigation";
 import { formatLocal } from "@/domain/temps";
 import { getDb } from "@/lib/db";
@@ -46,7 +47,7 @@ export default async function Livraisons({ params }: { params: Promise<{ id: str
       <h2 className="mt-6 mb-2 text-lg font-semibold">Nouveau bon</h2>
       <FormulaireEntrees
         shiftId={id}
-        produits={d.lignes.filter((l) => l.suiviStock && l.nature === "produit")}
+        produits={d.lignes.filter((l) => l.suiviStock && l.nature === "produit").map(pourSaisie)}
         origines={[]}
         destinations={destinations}
         gateauxParDefaut={labo}

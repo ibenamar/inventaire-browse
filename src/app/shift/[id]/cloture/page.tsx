@@ -38,8 +38,16 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
   const syn = d.synthese;
   const labo = s.typeSite === "laboratoire";
   const q = formatQuantite;
-  const nbColonnes = (recompte_: boolean) => (recompte_ ? 9 : 8);
   const recompte = s.modeOuverture === "recomptage" || suivis.some((l) => l.ouvertureComptee !== null && l.ouvertureTheorique !== null);
+  // Comptage à l'aveugle : pendant le shift, le théorique et les écarts ne s'affichent qu'au responsable
+  // (ou à un manager), et seulement une fois tout compté.
+  const montrer = !ouvert || (estResponsable && !sansOuverture.length && !nonComptes.length);
+  const nbColonnes = (montrer ? (recompte ? 4 : 3) : 0) + 5;
+  // Au labo, les cakes se lisent en gâteaux entiers.
+  const enGateaux = (l: LigneDetail) => labo && l.unite === "part" && l.partsParGateau ? l.partsParGateau : null;
+  const aff = (v: number | null, l: LigneDetail) => (v === null ? "—" : enGateaux(l) ? q(Math.round((v / enGateaux(l)!) * 100) / 100) : q(v));
+  const nbPertes = d.mouvements.filter((m) => m.type === "perte").length;
+  const avecIngredients = suivis.some((l) => l.nature === "ingredient");
   const parCategorie = new Map<string, LigneDetail[]>();
   for (const l of suivis) parCategorie.set(l.categorie, [...(parCategorie.get(l.categorie) ?? []), l]);
 
@@ -101,10 +109,14 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
             <Kpi label="CA" valeur={formatMad(syn.ca)} />
           </>
         )}
-        <Kpi label="Pertes" valeur={`${q(syn.pertes)} · ${formatMad(syn.valeurPertesVente)}`} />
-        <Kpi label="Produits avec écart" valeur={syn.produitsAvecEcart} ton={syn.produitsAvecEcart ? "rouge" : "vert"} />
-        <Kpi label="Valeur des écarts" valeur={formatMad(syn.valeurEcartsVente)} ton={syn.valeurEcartsVente < 0 ? "rouge" : undefined} />
-        <Kpi label="Écarts de passation" valeur={syn.produitsAvecEcartPassation} ton={syn.produitsAvecEcartPassation ? "rouge" : undefined} />
+        <Kpi label="Pertes déclarées" valeur={`${nbPertes} · ${formatMad(syn.valeurPertesVente)}`} />
+        {montrer && (
+          <>
+            <Kpi label="Produits avec écart" valeur={syn.produitsAvecEcart} ton={syn.produitsAvecEcart ? "rouge" : "vert"} />
+            <Kpi label="Valeur des écarts" valeur={formatMad(syn.valeurEcartsVente)} ton={syn.valeurEcartsVente < 0 ? "rouge" : undefined} />
+            <Kpi label="Écarts de passation" valeur={syn.produitsAvecEcartPassation} ton={syn.produitsAvecEcartPassation ? "rouge" : undefined} />
+          </>
+        )}
       </div>
 
       {d.ventesParCanal.length > 0 && (
@@ -139,7 +151,14 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
         </Message>
       )}
 
-      {suivis.some((l) => l.calcul.ecart) && (
+      {ouvert && !montrer && (
+        <Message>
+          Comptage à l&apos;aveugle : le stock théorique et les écarts s&apos;affichent
+          {estResponsable ? " une fois tous les produits comptés." : ` au responsable (${s.responsable ?? "—"}) une fois tous les produits comptés.`}
+        </Message>
+      )}
+
+      {montrer && suivis.some((l) => l.calcul.ecart) && (
         <div className="rounded-2xl bg-red-50 p-4 ring-1 ring-red-200">
           <h2 className="mb-1 font-semibold text-red-900">Produits avec écart</h2>
           <ul className="text-sm text-red-900">
@@ -147,7 +166,8 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
               .filter((l) => l.calcul.ecart)
               .map((l) => (
                 <li key={l.produitId}>
-                  <strong>{formatSigne(l.calcul.ecart)}</strong> {l.nom} (théorique {q(l.calcul.theoriqueFin)}, compté {q(l.stockReelFin)})
+                  <strong>{formatSigne(l.calcul.ecart)}</strong> {l.nom} (théorique {q(l.calcul.theoriqueFin)}, compté {q(l.stockReelFin)}
+                  {l.unite === "part" ? " parts" : ""})
                 </li>
               ))}
           </ul>
@@ -159,11 +179,11 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           <thead className="bg-stone-50 text-xs text-stone-600">
             <tr>
               <th className="sticky left-0 bg-stone-50 px-2 py-2 text-left">Produit</th>
-              <th className="px-2 py-2 text-right">Écart</th>
+              {montrer && <th className="px-2 py-2 text-right">{avecIngredients ? "Écart / conso." : "Écart"}</th>}
               <th className="px-2 py-2 text-right">Compté</th>
-              <th className="px-2 py-2 text-right">Théorique</th>
-              <th className="px-2 py-2 text-right">Ouverture</th>
-              {recompte && <th className="px-2 py-2 text-right">Passation</th>}
+              {montrer && <th className="px-2 py-2 text-right">Théorique</th>}
+              {montrer && <th className="px-2 py-2 text-right">Ouverture</th>}
+              {montrer && recompte && <th className="px-2 py-2 text-right">Passation</th>}
               <th className="px-2 py-2 text-right">{labo ? "Entrées / prod." : "Entrées"}</th>
               <th className="px-2 py-2 text-right">{labo ? "Livré" : "Ventes"}</th>
               <th className="px-2 py-2 text-right">Pertes</th>
@@ -173,7 +193,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
             {[...parCategorie.entries()].map(([cat, lignes]) => (
               <Fragment key={cat}>
                 <tr className="bg-marque-50">
-                  <td colSpan={nbColonnes(recompte)} className="sticky left-0 px-2 py-1 text-xs font-bold text-marque-900 uppercase">
+                  <td colSpan={nbColonnes} className="sticky left-0 px-2 py-1 text-xs font-bold text-marque-900 uppercase">
                     {cat}
                   </td>
                 </tr>
@@ -181,10 +201,10 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
                   <tr key={l.produitId} className="border-t border-stone-100">
                     <td className="sticky left-0 max-w-40 bg-white px-2 py-1.5 font-medium">
                       {l.nom}
-                      {l.unite === "part" && <span className="text-xs text-stone-500"> (parts)</span>}
+                      {l.unite === "part" && <span className="text-xs text-stone-500">{enGateaux(l) ? " (gâteaux)" : " (parts)"}</span>}
                       {(l.unite === "kg" || l.unite === "litre") && <span className="text-xs text-stone-500"> ({l.unite})</span>}
                     </td>
-                    {l.nature === "ingredient" ? (
+                    {!montrer ? null : l.nature === "ingredient" ? (
                       <td className="px-2 py-1.5 text-right text-xs whitespace-nowrap text-stone-600 tabular-nums">
                         {l.calcul.consommation !== null ? `conso ${q(l.calcul.consommation)}` : "—"}
                         {l.calcul.ecartConsommation !== null && l.calcul.ecartConsommation !== 0 && (
@@ -197,13 +217,13 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
                     ) : (
                       <CelluleEcart v={l.calcul.ecart} />
                     )}
-                    <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{q(l.stockReelFin)}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{q(l.calcul.theoriqueFin)}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{q(l.calcul.ouverture)}</td>
-                    {recompte && <CelluleEcart v={l.calcul.ecartPassation} />}
-                    <td className="px-2 py-1.5 text-right tabular-nums">{l.entrees ? q(l.entrees) : ""}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{labo ? (l.sorties ? q(l.sorties) : "") : l.ventes || ""}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{l.pertes ? q(l.pertes) : ""}</td>
+                    <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{aff(l.stockReelFin, l)}</td>
+                    {montrer && <td className="px-2 py-1.5 text-right tabular-nums">{aff(l.calcul.theoriqueFin, l)}</td>}
+                    {montrer && <td className="px-2 py-1.5 text-right tabular-nums">{aff(l.calcul.ouverture, l)}</td>}
+                    {montrer && recompte && <CelluleEcart v={l.calcul.ecartPassation} />}
+                    <td className="px-2 py-1.5 text-right tabular-nums">{l.entrees ? aff(l.entrees, l) : ""}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{labo ? (l.sorties ? aff(l.sorties, l) : "") : l.ventes || ""}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{l.pertes ? aff(l.pertes, l) : ""}</td>
                   </tr>
                 ))}
               </Fragment>
@@ -227,6 +247,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           <FormulaireCloture
             shiftId={id}
             pret={!sansOuverture.length && !nonComptes.length}
+            confirmation={`Clôturer et signer le shift ?${syn.produitsAvecEcart ? ` ${syn.produitsAvecEcart} produit(s) en écart (${formatMad(syn.valeurEcartsVente)}).` : " Aucun écart."} L'équipe ne pourra plus rien saisir.`}
             ecartsAExpliquer={ecartsImportants(
               d.lignes.map((l) => ({ nom: l.nom, ecart: l.calcul.ecart })),
               syn.valeurEcartsVente,

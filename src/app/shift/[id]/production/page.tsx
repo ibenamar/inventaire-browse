@@ -1,3 +1,4 @@
+import { pourSaisie, quantiteMouvement } from "../vues";
 import { redirect } from "next/navigation";
 import { formatLocal } from "@/domain/temps";
 import { estEncadrant } from "@/server/acteur";
@@ -19,7 +20,7 @@ export default async function Production({ params }: { params: Promise<{ id: str
       <EnteteEtape id={id} titre="Production" aide="Saisissez ce qui sort du four ou de la préparation. Les cakes se saisissent en gâteaux entiers." />
       <FormulaireEntrees
         shiftId={id}
-        produits={d.lignes.filter((l) => l.suiviStock && l.nature === "produit")}
+        produits={d.lignes.filter((l) => l.suiviStock && l.nature === "produit").map(pourSaisie)}
         origines={[{ v: "production", l: "Production" }]}
         gateauxParDefaut
         libelleAction="Enregistrer la production"
@@ -33,7 +34,7 @@ export default async function Production({ params }: { params: Promise<{ id: str
           .map((m) => ({
             id: m.id,
             produit: m.produit,
-            quantite: m.quantite,
+            quantite: quantiteMouvement(d.lignes, m),
             detail: m.commentaire ?? "Production",
             utilisateur: m.utilisateur,
             heure: formatLocal(m.horodatage, "HH:mm"),

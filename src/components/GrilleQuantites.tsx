@@ -36,6 +36,7 @@ export function GrilleQuantites({
   produits,
   nullable = true,
   libelleProgression = "comptés",
+  lectureSeule = false,
 }: {
   shiftId: string;
   /** « ventes » : ventes du canal `canalId` (sur place, Glovo…). */
@@ -44,6 +45,8 @@ export function GrilleQuantites({
   produits: ProduitGrille[];
   nullable?: boolean;
   libelleProgression?: string;
+  /** Affichage seul (ex. ventes importées de Loyverse : une saisie serait écrasée au prochain import). */
+  lectureSeule?: boolean;
 }) {
   const [valeurs, setValeurs] = useState<Record<string, number | null>>(() =>
     Object.fromEntries(produits.map((p) => [p.produitId, p.valeur])),
@@ -55,9 +58,11 @@ export function GrilleQuantites({
   const [restants, setRestants] = useState(false);
   // Texte en cours de frappe (« 1, » avant « 1,5 ») : la valeur enregistrée est relue à chaque frappe.
   const [textes, setTextes] = useState<Record<string, string>>({});
+  const [alertes, setAlertes] = useState<Record<string, string | null>>({});
   const minuteurs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const enAttente = Object.values(etats).filter((e) => e === "en_cours").length;
+  const enErreur = Object.values(etats).filter((e) => e === "erreur").length;
   // Fermer ou recharger la page pendant un envoi ferait perdre la saisie : on prévient.
   useEffect(() => {
     if (!enAttente) return;
@@ -111,8 +116,16 @@ export function GrilleQuantites({
               <span>
                 {faits} / {produits.length} {libelleProgression}
               </span>
-              <span className={enAttente ? "text-stone-500" : "text-emerald-700"} aria-live="polite">
-                {enAttente ? "Enregistrement…" : faits === produits.length ? "Terminé ✓" : Object.keys(etats).length ? "Tout est enregistré" : ""}
+              <span className={enErreur ? "text-red-700" : enAttente ? "text-stone-500" : "text-emerald-700"} aria-live="polite">
+                {enErreur
+                  ? `${enErreur} valeur${enErreur > 1 ? "s" : ""} non enregistrée${enErreur > 1 ? "s" : ""}`
+                  : enAttente
+                    ? "Enregistrement…"
+                    : faits === produits.length
+                      ? "Terminé ✓"
+                      : Object.keys(etats).length
+                        ? "Tout est enregistré"
+                        : ""}
               </span>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-stone-200">
@@ -121,8 +134,8 @@ export function GrilleQuantites({
           </div>
         )}
         {!nullable && (
-          <div className="mb-1 h-5 text-right text-sm font-semibold text-stone-500" aria-live="polite">
-            {enAttente ? "Enregistrement…" : Object.keys(etats).length ? "Tout est enregistré" : ""}
+          <div className={cx("mb-1 h-5 text-right text-sm font-semibold", enErreur ? "text-red-700" : "text-stone-500")} aria-live="polite">
+            {enErreur ? `${enErreur} valeur(s) non enregistrée(s)` : enAttente ? "Enregistrement…" : Object.keys(etats).length ? "Tout est enregistré" : ""}
           </div>
         )}
         <div className="flex gap-2">
@@ -200,6 +213,11 @@ export function GrilleQuantites({
                   {g && v !== null ? ` · ${v} parts` : ""}
                   {p.aide ? ` · ${p.aide}` : ""}
                 </div>
+                {lectureSeule ? (
+                  <div className="mt-2 text-center text-2xl font-bold tabular-nums" aria-label={`Quantité ${p.nom}`}>
+                    {affiche ?? 0}
+                  </div>
+                ) : (
                 <div className="mt-2 flex items-center gap-1">
                   <button
                     aria-label={`Moins ${p.nom}`}
@@ -217,6 +235,12 @@ export function GrilleQuantites({
                     value={textes[p.produitId] || (affiche === null ? "" : decimales ? formatQuantite(affiche) : String(affiche))}
                     placeholder="–"
                     onChange={(ev) => {
+                      // Nombre entier attendu : une virgule n'est pas effacée en silence (« 2,5 » deviendrait 25).
+                      if (!decimales && /[.,]/.test(ev.target.value)) {
+                        setAlertes((x) => ({ ...x, [p.produitId]: "Nombre entier attendu" }));
+                        return;
+                      }
+                      setAlertes((x) => ({ ...x, [p.produitId]: null }));
                       const t = decimales ? ev.target.value.replace(/[^\d.,]/g, "") : ev.target.value.replace(/\D/g, "");
                       setTextes((x) => ({ ...x, [p.produitId]: t }));
                       if (t === "") return enregistrer(p.produitId, nullable ? null : 0);
@@ -238,12 +262,23 @@ export function GrilleQuantites({
                     +
                   </button>
                 </div>
+                )}
+                {alertes[p.produitId] && (
+                  <div className="mt-1 text-center text-xs font-semibold text-red-700" role="alert">
+                    {alertes[p.produitId]}
+                  </div>
+                )}
+                {e === "erreur" && (
+                  <div className="mt-1 text-center text-xs font-semibold text-red-700" role="alert">
+                    Non enregistré : ressaisir
+                  </div>
+                )}
                 {estQuantiteInhabituelle(v, p.unite) && (
                   <div className="mt-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-center text-xs font-semibold text-amber-900" role="status">
                     Quantité inhabituelle : vérifiez
                   </div>
                 )}
-                {p.unite === "part" && p.partsParGateau && !g && (
+                {!lectureSeule && p.unite === "part" && p.partsParGateau && !g && (
                   <button
                     onClick={() => enregistrer(p.produitId, (v ?? 0) + p.partsParGateau!)}
                     className="mt-1 w-full rounded-lg py-1 text-xs font-semibold text-marque-700 ring-1 ring-marque-200 active:bg-marque-50"

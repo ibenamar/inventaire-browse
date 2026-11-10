@@ -37,7 +37,7 @@ export function ReceptionBons({ shiftId, bons }: { shiftId: string; bons: BonARe
         const t = saisis[l.produitId];
         if (t === undefined) continue;
         const n = lireQuantite(t);
-        if (n === null) return setRetour({ ok: false, texte: `${l.nom} : quantité reçue illisible` });
+        if (n === null) return setRetour({ ok: false, texte: `${l.nom} : indiquez la quantité reçue (0 si rien n'est arrivé)` });
         valeurs[l.produitId] = n;
       }
       const r = await actionReceptionnerBon(shiftId, b.id, valeurs, commentaire || null);
@@ -59,7 +59,10 @@ export function ReceptionBons({ shiftId, bons }: { shiftId: string; bons: BonARe
       <div className="grid gap-3">
         {bons.map((b) => {
           const saisis = recus[b.id] ?? {};
-          const ecarts = b.lignes.filter((l) => saisis[l.produitId] !== undefined && lireQuantite(saisis[l.produitId]) !== l.quantiteExpediee).length;
+          const ecarts = b.lignes.filter((l) => {
+            const t = saisis[l.produitId];
+            return t !== undefined && t.trim() !== "" && lireQuantite(t) !== l.quantiteExpediee;
+          }).length;
           return (
             <div key={b.id} className="rounded-2xl bg-white ring-2 ring-amber-300">
               <button onClick={() => setOuvert(ouvert === b.id ? null : b.id)} className="flex w-full items-center gap-3 p-4 text-left">
@@ -103,7 +106,7 @@ export function ReceptionBons({ shiftId, bons }: { shiftId: string; bons: BonARe
                               onFocus={(e) => e.target.select()}
                               className={cx("h-11 w-20 rounded-xl text-center text-lg font-bold ring-1", diff ? "bg-amber-50 ring-amber-400" : "ring-stone-300")}
                             />
-                            <span className="w-12 text-stone-500">{UNITE_PLURIEL[l.unite]}</span>
+                            <span className="min-w-12 text-stone-500">{UNITE_PLURIEL[l.unite]}</span>
                           </label>
                         </li>
                       );

@@ -1,6 +1,21 @@
-import { and, asc, desc, eq, lte } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/db";
-import { categories, coutsProduit, NATURES_PRODUIT, photos, produits, produitsSites, recettes, sites, UNITES, UNITES_DECIMALES } from "@/db/schema";
+import {
+  bonsLivraison,
+  categories,
+  coutsProduit,
+  lignesBon,
+  lignesShift,
+  NATURES_PRODUIT,
+  photos,
+  produits,
+  produitsSites,
+  recettes,
+  shifts,
+  sites,
+  UNITES,
+  UNITES_DECIMALES,
+} from "@/db/schema";
 import { estQuantiteValide } from "@/domain/calculs";
 import type { Journee } from "@/domain/temps";
 import type { Acteur } from "../acteur";
@@ -92,6 +107,26 @@ export async function modifierProduit(db: Db, id: string, v: SaisieProduit, acte
     v.dureeConservationJours === undefined || v.dureeConservationJours === null || (Number.isInteger(v.dureeConservationJours) && v.dureeConservationJours > 0 && v.dureeConservationJours <= 365),
     "Durée de conservation invalide (nombre de jours entre 1 et 365)",
   );
+  // Changer l'unité ou le nombre de parts change le sens du stock déjà compté : interdit tant que le
+  // produit est dans un shift ouvert ou sur un bon de livraison en cours.
+  const [avant] = await db.select().from(produits).where(eq(produits.id, id));
+  exiger(avant, "Produit introuvable");
+  if (avant.unite !== v.unite || (avant.partsParGateau ?? null) !== (v.partsParGateau ?? null)) {
+    const [ouvert] = await db
+      .select({ id: lignesShift.shiftId })
+      .from(lignesShift)
+      .innerJoin(shifts, eq(shifts.id, lignesShift.shiftId))
+      .where(and(eq(lignesShift.produitId, id), eq(shifts.statut, "ouvert")))
+      .limit(1);
+    exiger(!ouvert, "Unité non modifiable pendant un shift ouvert qui compte ce produit : réessayez après sa clôture");
+    const [enCours] = await db
+      .select({ id: lignesBon.bonId })
+      .from(lignesBon)
+      .innerJoin(bonsLivraison, eq(bonsLivraison.id, lignesBon.bonId))
+      .where(and(eq(lignesBon.produitId, id), inArray(bonsLivraison.statut, ["prepare", "expedie"])))
+      .limit(1);
+    exiger(!enCours, "Unité non modifiable : un bon de livraison en cours contient ce produit");
+  }
   await db
     .update(produits)
     .set({ ...v, nom: v.nom.trim(), format: v.format?.trim() || null })

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ColonnesEmpilees, CourbesStock } from "@/components/Graphiques";
 import { Carte, classesBouton, cx, formatMad, formatSigne, Kpi, Message, Titre } from "@/components/ui";
 import { heureLocale, libelleJournee } from "@/domain/temps";
+import { formatQuantite } from "@/domain/unites";
 import { getDb } from "@/lib/db";
 import { listerProduits } from "@/server/services/catalogue";
 import { suiviRemontees } from "@/server/services/remontees";
@@ -76,7 +77,7 @@ export default async function TableauDeBord({
         {t.kpi.caParCanal.map((c) => (
           <Kpi key={c.canalId} label={`dont ${c.canal} (${c.quantite} vendus)`} valeur={formatMad(c.montant)} />
         ))}
-        <Kpi label={`Pertes (${t.kpi.pertes})`} valeur={formatMad(t.kpi.valeurPertes)} />
+        <Kpi label="Pertes (valeur)" valeur={formatMad(t.kpi.valeurPertes)} />
         <Kpi label="Écarts non expliqués" valeur={formatMad(t.kpi.valeurEcarts)} ton={t.kpi.valeurEcarts < 0 ? "rouge" : undefined} />
         <Kpi
           label="Remontées à l'heure"
@@ -190,15 +191,16 @@ export default async function TableauDeBord({
                 {t.pertes.slice(0, 12).map((x) => (
                   <tr key={x.produitId} className="border-t border-stone-100">
                     <td className="py-1.5">{x.produit}</td>
-                    <td className="text-right tabular-nums">{x.peremption || ""}</td>
-                    <td className="text-right tabular-nums">{x.endommage || ""}</td>
+                    <td className="text-right tabular-nums">{x.peremption ? formatQuantite(x.peremption) : ""}</td>
+                    <td className="text-right tabular-nums">{x.endommage ? formatQuantite(x.endommage) : ""}</td>
                     <td className="text-right whitespace-nowrap tabular-nums">{x.prixConnu ? formatMad(x.valeur) : <span className="text-stone-400">prix inconnu</span>}</td>
                   </tr>
                 ))}
                 <tr className="border-t border-stone-200 font-semibold">
                   <td className="py-1.5">Total</td>
-                  <td className="text-right tabular-nums">{t.kpi.pertesPeremption}</td>
-                  <td className="text-right tabular-nums">{t.kpi.pertesEndommage}</td>
+                  <td className="text-right text-xs text-stone-500" colSpan={2}>
+                    unités diverses
+                  </td>
                   <td className="text-right whitespace-nowrap tabular-nums">{formatMad(t.kpi.valeurPertes)}</td>
                 </tr>
               </tbody>

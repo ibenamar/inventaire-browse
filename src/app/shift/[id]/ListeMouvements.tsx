@@ -2,12 +2,12 @@
 
 import { useTransition } from "react";
 import { actionSupprimerMouvement } from "@/app/actions-shift";
-import { formatQuantite } from "@/domain/unites";
 
 export interface MouvementVue {
   id: string;
   produit: string;
-  quantite: number;
+  /** Quantité avec son unité, prête à afficher. */
+  quantite: string;
   detail: string;
   utilisateur: string;
   heure: string;
@@ -23,7 +23,7 @@ export function ListeMouvements({ shiftId, titre, mouvements }: { shiftId: strin
       <ul className="divide-y divide-stone-100 rounded-2xl bg-white ring-1 ring-stone-200">
         {mouvements.map((m) => (
           <li key={m.id} className="flex items-center gap-3 px-4 py-3">
-            <span className="w-14 shrink-0 text-right text-lg font-bold">{formatQuantite(m.quantite)}</span>
+            <span className="max-w-32 shrink-0 text-right font-bold">{m.quantite}</span>
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{m.produit}</span>
               <span className="block text-xs text-stone-500">
@@ -34,7 +34,7 @@ export function ListeMouvements({ shiftId, titre, mouvements }: { shiftId: strin
               <button
                 disabled={enCours}
                 onClick={() => {
-                  if (!window.confirm(`Supprimer « ${m.produit} : ${formatQuantite(m.quantite)} » ?`)) return;
+                  if (!window.confirm(`Supprimer « ${m.produit} : ${m.quantite} » ?`)) return;
                   demarrer(async () => {
                     const r = await actionSupprimerMouvement(shiftId, m.id);
                     if (!r.ok) window.alert(r.erreur);

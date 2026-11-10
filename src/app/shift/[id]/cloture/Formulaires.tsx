@@ -4,13 +4,29 @@ import { useActionState, useState } from "react";
 import { actionCloturer, actionForcerCloture } from "@/app/actions-shift";
 import { Bouton, classesChamp, Message } from "@/components/ui";
 
-export function FormulaireCloture({ shiftId, pret, ecartsAExpliquer = [] }: { shiftId: string; pret: boolean; ecartsAExpliquer?: string[] }) {
+export function FormulaireCloture({
+  shiftId,
+  pret,
+  ecartsAExpliquer = [],
+  confirmation,
+}: {
+  shiftId: string;
+  pret: boolean;
+  ecartsAExpliquer?: string[];
+  confirmation?: string;
+}) {
   const [etat, action, enCours] = useActionState(actionCloturer.bind(null, shiftId), null);
   // Champ contrôlé : le commentaire n'est pas effacé si la clôture est refusée.
   const [commentaire, setCommentaire] = useState("");
   const obligatoire = ecartsAExpliquer.length > 0;
   return (
-    <form action={action} className="grid gap-3">
+    <form
+      action={action}
+      onSubmit={(e) => {
+        if (confirmation && !window.confirm(confirmation)) e.preventDefault();
+      }}
+      className="grid gap-3"
+    >
       {obligatoire && (
         <Message ton="alerte">
           Écart important : {ecartsAExpliquer.join(", ")}. Recomptez ces produits ; si l&apos;écart se confirme, expliquez-le ci-dessous (commentaire

@@ -1,3 +1,4 @@
+import { pourSaisie, quantiteMouvement } from "../vues";
 import { redirect } from "next/navigation";
 import { formatLocal, journeeLocale, libelleJournee } from "@/domain/temps";
 import { LIBELLE_ORIGINE } from "@/domain/unites";
@@ -60,7 +61,7 @@ export default async function Entrees({ params }: { params: Promise<{ id: string
       {attendus.length > 0 && <h2 className="mb-2 text-lg font-semibold">Autres réceptions</h2>}
       <FormulaireEntrees
         shiftId={id}
-        produits={d.lignes.filter((l) => l.suiviStock)}
+        produits={d.lignes.filter((l) => l.suiviStock).map(pourSaisie)}
         origines={labo ? ORIGINES_LABO : ORIGINES_POINT_DE_VENTE}
       />
       <ListeMouvements
@@ -71,7 +72,7 @@ export default async function Entrees({ params }: { params: Promise<{ id: string
           .map((m) => ({
             id: m.id,
             produit: m.produit,
-            quantite: m.quantite,
+            quantite: quantiteMouvement(d.lignes, m),
             detail: [m.origine ? LIBELLE_ORIGINE[m.origine] : null, m.commentaire].filter(Boolean).join(" · "),
             utilisateur: m.utilisateur,
             heure: formatLocal(m.horodatage, "HH:mm"),

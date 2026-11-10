@@ -35,7 +35,8 @@ Contrôles :
 - après **5 codes faux**, le compte est **bloqué 5 minutes** ;
 - seules les personnes rattachées au site (et la direction) apparaissent ;
 - la connexion dure **12 heures** ; un compte désactivé perd l'accès immédiatement ;
-- chaque saisie est enregistrée **au nom de la personne connectée** : ne jamais utiliser le PIN d'un collègue.
+- chaque saisie est enregistrée **au nom de la personne connectée** : ne jamais utiliser le PIN d'un collègue ; sur une tablette partagée, toucher **« Quitter »** (en haut) avant de passer la main ;
+- managers et direction ont un PIN de **6 chiffres** ; les blocages successifs s'allongent (5, 10, 20, 40 min, puis 1 h).
 
 ## 4. L'écran d'accueil
 
@@ -68,7 +69,7 @@ Selon le réglage du site (fait par la direction) :
 L'écran du shift présente les étapes dans l'ordre. **Tous les membres de l'équipe connectés sur le site peuvent saisir** ; chaque saisie porte le nom de son auteur.
 
 ### 6.1 Comptage d'ouverture (si demandé)
-Grille de produits avec photo. Pour chaque produit : boutons **−** / **+** ou saisie directe ; pour les cakes, bouton **« + 1 gâteau entier »** (= 8 parts). Filtres par famille, recherche, bouton **« Restants »** pour ne voir que ce qui n'est pas encore compté, barre d'avancement.
+Grille de produits avec photo. Pour chaque produit : boutons **−** / **+** ou saisie directe ; pour les cakes, bouton **« + 1 gâteau entier »** (8 parts en général, selon le produit). Filtres par famille, recherche, bouton **« Restants »** pour ne voir que ce qui n'est pas encore compté, barre d'avancement.
 
 ### 6.2 Réceptions
 Ce qui arrive pendant le shift : livraison du laboratoire, boissons du fournisseur, dépannage d'un autre point de vente.
@@ -82,7 +83,7 @@ Un bon ne se réceptionne qu'une fois, même si deux équipiers valident en mêm
 
 **Autres réceptions** (boissons, livraison sans bon) :
 1. Choisir l'**origine** (et un commentaire, ex. n° de bon).
-2. Saisir les quantités reçues ; pour un cake, choisir **Gâteaux** ou **Parts** (1 gâteau = 8 parts, converti automatiquement).
+2. Saisir les quantités reçues ; pour un cake, choisir **Gâteaux** ou **Parts** (converti automatiquement selon le nombre de parts du produit ; l'équivalence en parts s'affiche sous la quantité).
 3. **« Enregistrer la réception »**.
 
 La liste des réceptions enregistrées s'affiche dessous ; une erreur se supprime (ses propres saisies, ou toutes pour le responsable / un manager).
@@ -94,14 +95,15 @@ La liste des réceptions enregistrées s'affiche dessous ; une erreur se supprim
 4. **« Déclarer la perte »**.
 
 ### 6.4 Ventes
-- Avec Loyverse branché, **les ventes s'importent seules** depuis les tickets de caisse : à l'ouverture de l'écran Ventes, à l'ouverture du récapitulatif, et juste avant la clôture. Toutes les ventes comptent — **sur place et Glovo** — avec leur prix réel. Un **gâteau entier** vendu compte pour 8 parts.
+- Avec Loyverse branché, **les ventes s'importent seules** depuis les tickets de caisse : à l'ouverture de l'écran Ventes, à l'ouverture du récapitulatif, et juste avant la clôture. Toutes les ventes comptent — **sur place et Glovo** — avec leur prix réel. Un **gâteau entier** vendu compte pour toutes ses parts.
 - Le bouton « Importer maintenant » relance l'import à tout moment.
 - Les **articles vendus non reconnus** (pas encore rattachés à un produit) sont signalés : à remonter au manager.
-- Saisie manuelle possible en secours (par canal : Sur place / Glovo) ; elle est **remplacée** au prochain import.
+- Avec Loyverse, l'équipe n'a **rien à saisir** : la grille est en lecture seule. Un manager peut corriger ; sa correction est **remplacée** au prochain import.
+- Sans Loyverse, saisie manuelle par canal (Sur place / Glovo).
 
 ### 6.5 Comptage de fin
 Compter **tout le stock réellement présent**, produit par produit. **Saisir 0** pour un produit épuisé (une case vide = « pas encore compté »).
-Le stock théorique **n'est pas affiché** pendant le comptage : on compte ce qu'on voit, sans être influencé.
+Le stock théorique **n'est pas affiché** pendant le comptage : on compte ce qu'on voit, sans être influencé. Le récapitulatif ne montre le théorique et les écarts **qu'au responsable, une fois tous les produits comptés**.
 
 ### 6.6 Transférer vers un autre point de vente
 Lien « Transférer des produits vers un autre point de vente » sous les étapes : choisir le site, saisir les quantités, puis **Préparer** (bon en attente) ou **Expédier** (les produits sortent de votre stock). Le site destinataire le réceptionne comme une livraison du labo. On ne peut pas expédier plus que le stock disponible.
@@ -115,7 +117,9 @@ Lien « Transférer des produits vers un autre point de vente » sous les étape
 Contrôles sur les saisies :
 - quantités entières, positives (0 accepté) ; décimales (virgule) pour les ingrédients au kg ou au litre ;
 - une quantité inhabituelle (ex. 1 000 pièces, un zéro de trop) est signalée en orange : **vérifier**, sans blocage ;
-- une perte doit avoir un motif et une quantité d'au moins 1 ;
+- une perte doit avoir un motif et une quantité positive ;
+- dans un champ en nombres entiers, une virgule est refusée (« 2,5 » ne devient pas 25) ;
+- si un enregistrement échoue, l'en-tête l'indique en rouge (« 1 valeur non enregistrée ») et la carte du produit dit « Non enregistré : ressaisir ».
 - les produits « préparés à la commande » (crêpes, pancakes, waffles, fettuccini) ne se comptent pas : seules leurs ventes sont suivies ;
 - plus aucune saisie possible par l'équipe une fois le shift clôturé.
 
@@ -129,7 +133,7 @@ Le bouton **« Vérifier et clôturer le shift »** ouvre le **récapitulatif** 
 
 Le calcul, pour chaque produit :
 
-> **Théorique** = ouverture + réceptions − ventes − pertes
+> **Théorique** = ouverture + réceptions (et production au labo) − ventes − pertes − livraisons ou transferts expédiés
 > **Écart** = compté − théorique (négatif = il manque des produits : vente non passée en caisse, perte non déclarée, erreur de comptage)
 
 Avant de clôturer, le responsable **vérifie les écarts** et recompte si besoin, puis ajoute un **commentaire de passation** et touche **« Clôturer et signer le shift »**. Le commentaire est **obligatoire en cas d'écart important** (au moins 3 unités sur un produit, ou 100 MAD au total) : le récapitulatif l'annonce et liste les produits concernés.
@@ -186,7 +190,7 @@ Le laboratoire fonctionne comme un point de vente : planning avec un responsable
 | **Production** | ce qui sort du four ou de la préparation ; les cakes se saisissent **en gâteaux entiers** (convertis en parts) |
 | **Réceptions** | ingrédients et fournitures reçus des fournisseurs (décimales acceptées : 2,5 kg) |
 | **Livraisons** | bons de livraison vers les points de vente : choisir le site, les quantités, puis **Préparer** ou **Expédier** au départ du livreur |
-| **Pertes** | comme au point de vente |
+| **Pertes** | comme au point de vente ; les cakes en gâteaux entiers |
 | **Comptage** | produits finis (cakes en gâteaux entiers) **et ingrédients** |
 
 Contrôles :

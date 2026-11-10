@@ -67,7 +67,13 @@ export function ListeBons({ shiftId, titre, bons }: { shiftId: string; titre: st
             {(b.statut === "prepare" || b.annulable) && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {b.statut === "prepare" && (
-                  <Bouton disabled={enCours} onClick={() => agir(() => actionExpedierBon(shiftId, b.id))}>
+                  <Bouton
+                    disabled={enCours}
+                    onClick={() => {
+                      if (window.confirm(`Expédier le bon n° ${b.numero} à ${b.destination} ? Les produits sortent de votre stock maintenant.`))
+                        agir(() => actionExpedierBon(shiftId, b.id));
+                    }}
+                  >
                     Expédier maintenant
                   </Bouton>
                 )}

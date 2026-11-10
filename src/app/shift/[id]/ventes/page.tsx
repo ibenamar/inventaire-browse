@@ -1,3 +1,4 @@
+import { pourSaisie } from "../vues";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GrilleQuantites } from "@/components/GrilleQuantites";
@@ -66,8 +67,8 @@ export default async function Ventes({
               lienAdmin={session.acteur.role === "direction"}
             />
             <Message>
-              Les ventes viennent des tickets Loyverse du shift (tous canaux, même stock). Une correction manuelle ci-dessous sera remplacée au
-              prochain import.
+              Les ventes viennent des tickets Loyverse du shift (tous canaux, même stock) : rien à saisir.
+              {estEncadrant(session.acteur) && " En tant que manager, vous pouvez corriger ci-dessous ; la correction sera remplacée au prochain import."}
             </Message>
           </>
         ) : (
@@ -76,12 +77,13 @@ export default async function Ventes({
       </div>
       <GrilleQuantites
         key={`${canal.id}-${synchro?.horodatage ?? ""}`}
+        lectureSeule={loyverseConfigure && !estEncadrant(session.acteur)}
         shiftId={id}
         champ="ventes"
         canalId={canal.id}
         nullable={false}
         produits={d.lignes.map((l) => ({
-          ...l,
+          ...pourSaisie(l),
           valeur: l.ventesParCanal[canal.id] ?? 0,
           aide: [l.suiviStock ? null : "vente seule", autres(l)].filter(Boolean).join(" · ") || null,
         }))}

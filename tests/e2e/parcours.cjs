@@ -15,9 +15,10 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   const erreurs = [];
+  page.on("dialog", (d) => d.accept()); // confirmation de clôture
   page.on("pageerror", (e) => erreurs.push("pageerror " + e.message));
   page.on("console", (m) => m.type() === "error" && erreurs.push("console " + m.text()));
-  const shot = (n) => page.screenshot({ path: `${OUT}/${n}.png`, fullPage: false });
+  const shot = (n) => page.screenshot({ path: `${OUT}/${n}.png`, fullPage: false, caret: "initial" });
 
   await page.goto(B + "/");
   await page.getByRole("link", { name: "Browse 2 Mars" }).click();
@@ -89,7 +90,7 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
   await shot("07-comptage");
 
   await page.goto(shiftUrl + "/cloture");
-  await page.screenshot({ path: `${OUT}/08-recap.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/08-recap.png`, fullPage: true, caret: "initial" });
   await page.getByRole("button", { name: "Clôturer et signer le shift" }).click();
   await page.getByText(/Clôturé le/).waitFor();
   const ecartMango = await page.locator("tr", { hasText: "Mango Can" }).locator("td").nth(1).innerText();
@@ -99,26 +100,26 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(B + "/admin");
-  await page.screenshot({ path: `${OUT}/09-remontees.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/09-remontees.png`, fullPage: true, caret: "initial" });
   await page.goto(B + "/admin/planning");
-  await page.screenshot({ path: `${OUT}/10-planning.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/10-planning.png`, fullPage: true, caret: "initial" });
   await page.getByRole("button", { name: "Planifier" }).first().click();
   await page.getByLabel("Responsable d'inventaire").selectOption({ label: "Direction" });
   await page.getByRole("button", { name: "Enregistrer" }).click();
   await page.waitForTimeout(1500);
   await page.goto(B + "/admin/planning?vue=mois");
-  await page.screenshot({ path: `${OUT}/11-planning-mois.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/11-planning-mois.png`, fullPage: true, caret: "initial" });
   await page.goto(B + "/admin/sites");
   await page.getByRole("link", { name: /Browse Sweets 2 Mars/ }).click();
   await page.getByLabel("Nom du créneau").first().fill("Matin semaine");
   await page.locator('input[type="time"]').nth(5).fill("03:00"); // nuit finit à 03:00
-  await page.screenshot({ path: `${OUT}/12-creneaux.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/12-creneaux.png`, fullPage: true, caret: "initial" });
   await page.goto(B + "/admin/catalogue");
-  await page.screenshot({ path: `${OUT}/13-catalogue.png` });
+  await page.screenshot({ path: `${OUT}/13-catalogue.png`, caret: "initial" });
   await page.getByRole("link", { name: /Mango Can/ }).click();
   await page.setInputFiles('input[type="file"]', { name: "mango.png", mimeType: "image/png", buffer: require("fs").readFileSync(require("node:path").join(__dirname, "../../public/icon-512.png")) });
   await page.getByText("Photo enregistrée").waitFor({ timeout: 10000 });
-  await page.screenshot({ path: `${OUT}/14-produit.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/14-produit.png`, fullPage: true, caret: "initial" });
 
   if (erreurs.length) throw new Error("Erreurs navigateur : " + erreurs.join("\n"));
   console.log("Parcours OK");

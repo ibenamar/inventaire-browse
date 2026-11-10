@@ -7,7 +7,7 @@
  *   BASE=http://localhost:3000 OUT=./captures node tests/e2e/laboratoire.cjs
  *
  * Prérequis : base neuve où le laboratoire est actif avec un créneau en cours, Browse 2 Mars a un
- * créneau en cours et un manager « Karim » (PIN 4567), et des ingrédients existent dont « Farine T55 » (kg).
+ * créneau en cours et un manager « Karim » (PIN 456789), et des ingrédients existent dont « Farine T55 » (kg).
  */
 const { chromium } = require("playwright");
 const B = process.env.BASE || "http://localhost:3200";
@@ -16,6 +16,7 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
 async function connecter(browser, site, erreurs, nom = "Direction", pin = process.env.PIN || "123456") {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
+  page.on("dialog", (d) => d.accept()); // confirmations (expédition, clôture)
   page.on("pageerror", (e) => erreurs.push("pageerror " + e.message));
   page.on("console", (m) => m.type() === "error" && erreurs.push("console " + m.text()));
   await page.goto(B + "/");
@@ -106,7 +107,7 @@ async function toutCompter(page, valeur) {
 
   // --- Point de vente ----------------------------------------------------------
   // Une autre personne : la Direction est déjà planifiée sur le shift du labo qui chevauche celui-ci.
-  const pdv = await connecter(browser, "Browse 2 Mars", erreurs, "Karim", "4567");
+  const pdv = await connecter(browser, "Browse 2 Mars", erreurs, "Karim", "456789");
   await pdv.getByRole("button", { name: "Créer et ouvrir ce shift" }).click();
   await pdv.waitForURL(/\/shift\/[0-9a-f-]+$/);
   const shiftPdv = pdv.url();
