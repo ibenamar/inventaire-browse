@@ -184,7 +184,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [x] Alertes de réapprovisionnement
 - [x] Tableau de responsabilisation : remontées et écarts par responsable d'inventaire, sur la semaine / le mois
 - [x] Correction / validation des shifts par un manager (correction tracée, comptage de fin répercuté sur l'ouverture du shift suivant, shift validé verrouillé), journal d'audit consultable
-- [ ] Exports Excel / CSV
+- [x] Exports Excel (CSV français) : détail par shift et produit, synthèse par produit, sur la période et le site du tableau de bord
 - [ ] Déploiement sur les **2 points de vente ouverts**, arrêt du fichier Excel ; activation des 3 autres à leur ouverture
 
 ### Phase 3 — Laboratoire : production et livraisons

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ColonnesEmpilees, CourbesStock } from "@/components/Graphiques";
-import { Carte, cx, formatMad, formatSigne, Kpi, Message, Titre } from "@/components/ui";
+import { Carte, classesBouton, cx, formatMad, formatSigne, Kpi, Message, Titre } from "@/components/ui";
 import { heureLocale, libelleJournee } from "@/domain/temps";
 import { getDb } from "@/lib/db";
 import { listerProduits } from "@/server/services/catalogue";
@@ -42,7 +42,21 @@ export default async function TableauDeBord({
 
   return (
     <>
-      <Titre sousTitre="Ventes, pertes, écarts et réapprovisionnement sur les shifts clôturés de la période.">Tableau de bord</Titre>
+      <Titre
+        sousTitre="Ventes, pertes, écarts et réapprovisionnement sur les shifts clôturés de la période."
+        actions={
+          <>
+            <a className={classesBouton("secondaire")} href={`/api/export/detail?${new URLSearchParams({ ...(site ? { site: site.id } : {}), vue, date: p.du })}`}>
+              Export détaillé (Excel)
+            </a>
+            <a className={classesBouton("secondaire")} href={`/api/export/produits?${new URLSearchParams({ ...(site ? { site: site.id } : {}), vue, date: p.du })}`}>
+              Synthèse par produit (Excel)
+            </a>
+          </>
+        }
+      >
+        Tableau de bord
+      </Titre>
       <Filtres sites={sites} siteId={site?.id ?? (tous ? null : (siteIds[0] ?? null))} tousLesSites={tous} vue={vue} {...p} />
       {t.kpi.shiftsClos === 0 && <Message>Aucun shift clôturé sur la période.</Message>}
 

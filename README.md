@@ -11,17 +11,20 @@ Application d'inventaire inter-shifts pour les points de vente Browse : planning
 
 ## État
 
-**Phase 1 développée** (saisie inter-shifts et planning). Prochaine étape : mise en ligne, puis pilote d'une semaine sur Browse 2 Mars ou Browse Sweets 2 Mars, puis phase 2 (ventes Loyverse automatiques, tableaux de bord).
+**Phases 1 et 2 développées et en ligne** sur https://inventaire.browse.ma : saisie inter-shifts, planning, ventes multi-canaux importées de Loyverse, tableau de bord, corrections et validation, exports. Prochaine étape : pilote sur les deux points de vente ouverts, puis phase 3 (laboratoire).
 
 | Écran | Rôle | Contenu |
 |---|---|---|
 | Connexion | Tous | Choix du site (mémorisé sur l'appareil), de la personne, code PIN (blocage 5 min après 5 erreurs) |
 | Accueil | Tous | Shift en cours ou à ouvrir d'après le planning ; création du shift du créneau en cours (manager) |
-| Shift | Équipe | Comptage d'ouverture, réceptions (gâteaux → parts), pertes (péremption / endommagé), ventes, comptage de fin |
+| Shift | Équipe | Comptage d'ouverture, réceptions (gâteaux → parts), pertes (péremption / endommagé), ventes par canal importées de Loyverse (saisie manuelle en secours), comptage de fin |
 | Clôture | Responsable d'inventaire | Récapitulatif, écarts, écarts de passation, signature ; clôture forcée motivée (manager) |
+| Tableau de bord | Manager, direction | CA par canal, pertes, écarts, remontées ; ventes par jour, évolution du stock, alertes de réapprovisionnement ; exports Excel |
 | Remontées | Manager, direction | Shifts à l'heure / en retard / manquants et écarts par responsable, semaine ou mois |
+| Correction / validation | Manager, direction | Corriger un shift clôturé (tracé), puis le valider (verrouillé) |
+| Journal | Direction | Toutes les opérations : ouvertures, clôtures, corrections, validations, réglages |
 | Planning | Manager, direction | Semaine ou mois, responsable + coéquipier, copie d'une semaine sur les suivantes |
-| Catalogue | Direction | Photo prise au téléphone, prix, unité, parts par gâteau, coût de revient historisé |
+| Catalogue | Direction | Création de produits, photo prise au téléphone, prix, unité, parts par gâteau, coût de revient historisé, stock minimum par site |
 | Utilisateurs | Direction | Rôles, sites, codes PIN |
 | Sites & créneaux | Direction | Statut, mode d'ouverture, créneaux par jour avec fin le lendemain et contrôle des chevauchements |
 | Loyverse | Direction | Import des articles (API ou export CSV) : un produit, plusieurs articles de caisse (sur place, Glovo, gâteau entier…), prix par magasin ; articles à rattacher ou à ignorer |
