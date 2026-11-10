@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db";
-import { articlesCaisse, canauxVente, categories, creneaux, produits, sites, utilisateurs } from "@/db/schema";
+import { articlesCaisse, canauxVente, categories, creneaux, produits, sites, utilisateurs, type Unite } from "@/db/schema";
 import { lireCsv } from "@/lib/csv";
 import { creerUtilisateur } from "./services/utilisateurs";
 
@@ -16,6 +16,9 @@ export const SITES_INITIAUX = [
   { nom: "Laboratoire", type: "laboratoire", statut: "en_ouverture", ordre: 9 },
 ] as const;
 
+/** Catégorie des matières premières comptées au laboratoire (créée aussi par la migration 0005). */
+export const CATEGORIE_INGREDIENTS = "Ingrédients";
+
 /** Grille d'exemple, à ajuster dans l'écran Sites & créneaux. */
 export const CRENEAUX_EXEMPLE = [
   { nom: "Matin", heureDebut: "07:00", heureFin: "15:00" },
@@ -23,7 +26,7 @@ export const CRENEAUX_EXEMPLE = [
   { nom: "Nuit", heureDebut: "20:00", heureFin: "04:00" },
 ];
 
-const UNITES_CSV: Record<string, "piece" | "part" | "bouteille"> = { pièce: "piece", piece: "piece", part: "part", bouteille: "bouteille" };
+const UNITES_CSV: Record<string, Unite> = { pièce: "piece", piece: "piece", part: "part", bouteille: "bouteille", kg: "kg", litre: "litre" };
 
 /**
  * Données initiales (idempotent) : sites, catalogue issu du fichier Excel,
@@ -43,6 +46,7 @@ export async function initialiser(
   for (const [i, nom] of nomsCategories.entries()) {
     await db.insert(categories).values({ nom, ordre: i + 1 }).onConflictDoNothing({ target: categories.nom });
   }
+  await db.insert(categories).values({ nom: CATEGORIE_INGREDIENTS, ordre: 100 }).onConflictDoNothing({ target: categories.nom });
   const cats = new Map((await db.select().from(categories)).map((c) => [c.nom, c.id]));
   for (const [i, r] of rows.entries()) {
     await db
@@ -55,6 +59,7 @@ export async function initialiser(
         format: r.format || null,
         partsParGateau: r.parts_par_gateau ? Number(r.parts_par_gateau) : null,
         suiviStock: r.suivi_stock !== "non",
+        fabriqueLabo: r.suivi_stock !== "non" && !/^boissons/i.test(r.categorie),
         prixVente: r.prix_vente_mad ? Number(r.prix_vente_mad) : null,
         ordre: i + 1,
       })

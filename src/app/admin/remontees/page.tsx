@@ -12,7 +12,7 @@ export default async function Remontees({ searchParams }: { searchParams: Promis
   const { acteur } = await exigerEncadrant();
   const db = await getDb();
   const sp = await searchParams;
-  const sites = await sitesPilotables(db, acteur);
+  const sites = await sitesPilotables(db, acteur, { avecLabo: true });
   const tous = acteur.role === "direction";
   const siteId = sites.find((s) => s.id === sp.site)?.id ?? (tous ? null : (sites[0]?.id ?? null));
   const vue: Vue = sp.vue === "mois" ? "mois" : "semaine";

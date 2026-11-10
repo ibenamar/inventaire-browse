@@ -1,3 +1,4 @@
+import { UNITE_SINGULIER } from "@/domain/unites";
 import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/db";
 import { produits, shifts, sites, utilisateurs, ventesShift } from "@/db/schema";
@@ -8,7 +9,7 @@ import { lignesCalculees } from "./shifts";
 import { tableauDeBord } from "./tableau-de-bord";
 
 const STATUTS = { planifie: "Planifié", ouvert: "Ouvert", cloture: "Clôturé", valide: "Validé" };
-const UNITES = { piece: "pièce", part: "part", bouteille: "bouteille" };
+const UNITES = UNITE_SINGULIER;
 
 /** Une ligne par shift et par produit, sur la période : l'équivalent de l'ancien fichier Excel, consolidé. */
 export async function exportDetailShifts(db: Db, filtre: { siteIds: string[]; du: Journee; au: Journee }): Promise<string> {

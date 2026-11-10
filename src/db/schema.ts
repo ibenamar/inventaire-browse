@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  serial,
   jsonb,
   numeric,
   pgTable,
@@ -25,13 +26,22 @@ export const TYPES_SITE = ["point_de_vente", "laboratoire"] as const;
 export const STATUTS_SITE = ["actif", "en_ouverture"] as const;
 export const MODES_OUVERTURE = ["reprise", "recomptage"] as const;
 export const ROLES = ["employe", "manager", "direction", "labo"] as const;
-export const UNITES = ["piece", "part", "bouteille"] as const;
+export const UNITES = ["piece", "part", "bouteille", "kg", "litre", "sachet", "boite"] as const;
+/** Unités dont le comptage accepte des décimales (ingrédients au poids ou au volume). */
+export const UNITES_DECIMALES: readonly Unite[] = ["kg", "litre"];
+export const NATURES_PRODUIT = ["produit", "ingredient"] as const;
+export const STATUTS_BON = ["prepare", "expedie", "recu", "annule"] as const;
 export const STATUTS_SHIFT = ["planifie", "ouvert", "cloture", "valide"] as const;
-export const TYPES_MOUVEMENT = ["entree", "perte", "ajustement"] as const;
+/** « sortie » : expédition d'un bon de livraison (labo → point de vente, ou transfert). */
+export const TYPES_MOUVEMENT = ["entree", "perte", "ajustement", "sortie"] as const;
 export const MOTIFS_PERTE = ["peremption", "endommage"] as const;
-export const ORIGINES_ENTREE = ["labo", "fournisseur", "autre_site", "autre"] as const;
+export const ORIGINES_ENTREE = ["labo", "fournisseur", "autre_site", "autre", "production"] as const;
 
 export type Role = (typeof ROLES)[number];
+export type Unite = (typeof UNITES)[number];
+export type NatureProduit = (typeof NATURES_PRODUIT)[number];
+export type StatutBon = (typeof STATUTS_BON)[number];
+export type TypeMouvement = (typeof TYPES_MOUVEMENT)[number];
 export type StatutShift = (typeof STATUTS_SHIFT)[number];
 export type MotifPerte = (typeof MOTIFS_PERTE)[number];
 export type OrigineEntree = (typeof ORIGINES_ENTREE)[number];
@@ -76,6 +86,10 @@ export const produits = pgTable(
     /** Prix de référence (canal « sur place ») : sert à valoriser les pertes et les écarts. */
     prixVente: numeric("prix_vente", { precision: 10, scale: 2, mode: "number" }),
     suiviStock: boolean("suivi_stock").notNull().default(true),
+    /** « ingredient » : matière première comptée au laboratoire (non vendue). */
+    nature: text("nature", { enum: NATURES_PRODUIT }).notNull().default("produit"),
+    /** Produit fabriqué par le laboratoire : compté dans le stock du labo et livré aux points de vente. */
+    fabriqueLabo: boolean("fabrique_labo").notNull().default(false),
     photoId: uuid("photo_id").references(() => photos.id, { onDelete: "set null" }),
     actif: boolean("actif").notNull().default(true),
     ordre: integer("ordre").notNull().default(0),
@@ -157,7 +171,7 @@ export const produitsSites = pgTable(
     siteId: uuid("site_id")
       .notNull()
       .references(() => sites.id, { onDelete: "cascade" }),
-    stockMinimum: integer("stock_minimum"),
+    stockMinimum: numeric("stock_minimum", { precision: 12, scale: 3, mode: "number" }),
     actif: boolean("actif").notNull().default(true),
   },
   (t) => [primaryKey({ columns: [t.produitId, t.siteId] })],
@@ -258,13 +272,13 @@ export const lignesShift = pgTable(
       .notNull()
       .references(() => produits.id),
     suiviStock: boolean("suivi_stock").notNull(),
-    ouvertureTheorique: integer("ouverture_theorique"),
-    ouvertureComptee: integer("ouverture_comptee"),
+    ouvertureTheorique: numeric("ouverture_theorique", { precision: 12, scale: 3, mode: "number" }),
+    ouvertureComptee: numeric("ouverture_comptee", { precision: 12, scale: 3, mode: "number" }),
     ventes: integer("ventes").notNull().default(0),
-    stockReelFin: integer("stock_reel_fin"),
+    stockReelFin: numeric("stock_reel_fin", { precision: 12, scale: 3, mode: "number" }),
     prixVente: numeric("prix_vente", { precision: 10, scale: 2, mode: "number" }),
     cout: numeric("cout", { precision: 10, scale: 2, mode: "number" }),
-    stockMinimum: integer("stock_minimum"),
+    stockMinimum: numeric("stock_minimum", { precision: 12, scale: 3, mode: "number" }),
     modifieLe: horodatage("modifie_le"),
     modifiePar: uuid("modifie_par"),
   },
@@ -327,16 +341,66 @@ export const mouvements = pgTable(
       .notNull()
       .references(() => produits.id),
     type: text("type", { enum: TYPES_MOUVEMENT }).notNull(),
-    quantite: integer("quantite").notNull(),
+    quantite: numeric("quantite", { precision: 12, scale: 3, mode: "number" }).notNull(),
     motif: text("motif", { enum: MOTIFS_PERTE }),
     origine: text("origine", { enum: ORIGINES_ENTREE }),
     commentaire: text("commentaire"),
+    /** Bon de livraison à l'origine du mouvement (sortie à l'expédition, entrée à la réception). */
+    bonId: uuid("bon_id").references(() => bonsLivraison.id, { onDelete: "set null" }),
     utilisateurId: uuid("utilisateur_id")
       .notNull()
       .references(() => utilisateurs.id),
     horodatage: horodatage("horodatage").notNull().defaultNow(),
   },
-  (t) => [index("mouvements_shift_idx").on(t.shiftId)],
+  (t) => [index("mouvements_shift_idx").on(t.shiftId), index("mouvements_bon_idx").on(t.bonId)],
+);
+
+/**
+ * Bon de livraison : du laboratoire vers un point de vente (ou transfert entre points de vente).
+ * Préparé → expédié (sortie du stock d'origine) → reçu (entrée au stock du destinataire).
+ * Les quantités sont dans l'unité de stock du produit (les cakes en parts).
+ */
+export const bonsLivraison = pgTable(
+  "bons_livraison",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    numero: serial("numero").notNull().unique(),
+    siteOrigineId: uuid("site_origine_id")
+      .notNull()
+      .references(() => sites.id),
+    siteDestinationId: uuid("site_destination_id")
+      .notNull()
+      .references(() => sites.id),
+    statut: text("statut", { enum: STATUTS_BON }).notNull().default("prepare"),
+    commentaire: text("commentaire"),
+    creePar: uuid("cree_par")
+      .notNull()
+      .references(() => utilisateurs.id),
+    creeLe: horodatage("cree_le").notNull().defaultNow(),
+    shiftExpeditionId: uuid("shift_expedition_id").references(() => shifts.id, { onDelete: "set null" }),
+    expediePar: uuid("expedie_par").references(() => utilisateurs.id),
+    expedieLe: horodatage("expedie_le"),
+    shiftReceptionId: uuid("shift_reception_id").references(() => shifts.id, { onDelete: "set null" }),
+    recuPar: uuid("recu_par").references(() => utilisateurs.id),
+    recuLe: horodatage("recu_le"),
+    commentaireReception: text("commentaire_reception"),
+  },
+  (t) => [index("bons_destination_idx").on(t.siteDestinationId, t.statut), index("bons_origine_idx").on(t.siteOrigineId, t.creeLe)],
+);
+
+export const lignesBon = pgTable(
+  "lignes_bon",
+  {
+    bonId: uuid("bon_id")
+      .notNull()
+      .references(() => bonsLivraison.id, { onDelete: "cascade" }),
+    produitId: uuid("produit_id")
+      .notNull()
+      .references(() => produits.id),
+    quantiteExpediee: numeric("quantite_expediee", { precision: 12, scale: 3, mode: "number" }).notNull(),
+    quantiteRecue: numeric("quantite_recue", { precision: 12, scale: 3, mode: "number" }),
+  },
+  (t) => [primaryKey({ columns: [t.bonId, t.produitId] })],
 );
 
 export const journalAudit = pgTable("journal_audit", {

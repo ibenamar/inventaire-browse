@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function PageConnexion({ searchParams }: { searchParams: Promise<{ site?: string }> }) {
   if (await lireSession()) redirect("/");
   const db = await getDb();
-  const sites = (await listerSites(db, { actifsSeulement: true })).filter((s) => s.type === "point_de_vente");
+  const sites = await listerSites(db, { actifsSeulement: true });
   const sp = await searchParams;
   const siteId = sp.site ?? (await siteAppareil());
   const site = sites.find((s) => s.id === siteId);

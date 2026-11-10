@@ -15,7 +15,7 @@ export default async function Planning({ searchParams }: { searchParams: Promise
   const { acteur } = await exigerEncadrant();
   const db = await getDb();
   const sp = await searchParams;
-  const sites = (await sitesPilotables(db, acteur)).filter((s) => s.statut === "actif");
+  const sites = (await sitesPilotables(db, acteur, { avecLabo: true })).filter((s) => s.statut === "actif");
   if (!sites.length) return <Message ton="alerte">Aucun site actif à planifier.</Message>;
   const site = sites.find((s) => s.id === sp.site) ?? sites[0];
   const vue: Vue = sp.vue === "mois" ? "mois" : "semaine";

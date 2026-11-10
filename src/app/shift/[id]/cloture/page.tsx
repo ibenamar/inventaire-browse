@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db";
 import { utilisateurs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { formatLocal } from "@/domain/temps";
+import { formatQuantite } from "@/domain/unites";
 import { estEncadrant } from "@/server/acteur";
 import { ouvertureACompter, type LigneDetail } from "@/server/services/shifts";
 import { chargerShift } from "../donnees";
@@ -16,7 +17,7 @@ import { VentesLoyverse } from "@/components/VentesLoyverse";
 function CelluleEcart({ v }: { v: number | null }) {
   return (
     <td className={cx("px-2 py-1.5 text-right font-bold tabular-nums", v !== null && v < 0 && "text-red-700", v !== null && v > 0 && "text-amber-700")}>
-      {formatSigne(v)}
+      {v === null ? "—" : v > 0 ? `+${formatQuantite(v)}` : formatQuantite(v)}
     </td>
   );
 }
@@ -34,6 +35,9 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
   const nonComptes = suivis.filter((l) => l.stockReelFin === null);
   const venteSeule = d.lignes.filter((l) => !l.suiviStock && l.ventes > 0);
   const syn = d.synthese;
+  const labo = s.typeSite === "laboratoire";
+  const q = formatQuantite;
+  const nbColonnes = (recompte_: boolean) => (recompte_ ? 9 : 8);
   const recompte = s.modeOuverture === "recomptage" || suivis.some((l) => l.ouvertureComptee !== null && l.ouvertureTheorique !== null);
   const parCategorie = new Map<string, LigneDetail[]>();
   for (const l of suivis) parCategorie.set(l.categorie, [...(parCategorie.get(l.categorie) ?? []), l]);
@@ -72,7 +76,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
         </div>
       )}
 
-      {loyverseConfigure && (
+      {loyverseConfigure && !labo && (
         <VentesLoyverse
           shiftId={id}
           ouvert={ouvert}
@@ -84,9 +88,19 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Kpi label="Articles vendus" valeur={syn.articlesVendus} />
-        <Kpi label="CA" valeur={formatMad(syn.ca)} />
-        <Kpi label="Pertes" valeur={`${syn.pertes} · ${formatMad(syn.valeurPertesVente)}`} />
+        {labo ? (
+          <>
+            <Kpi label="Produits fabriqués" valeur={d.lignes.filter((l) => l.production > 0).length} />
+            <Kpi label="Lignes livrées" valeur={d.mouvements.filter((m) => m.type === "sortie").length} />
+            <Kpi label="Ingrédients consommés (coût)" valeur={formatMad(syn.valeurConsommation)} />
+          </>
+        ) : (
+          <>
+            <Kpi label="Articles vendus" valeur={syn.articlesVendus} />
+            <Kpi label="CA" valeur={formatMad(syn.ca)} />
+          </>
+        )}
+        <Kpi label="Pertes" valeur={`${q(syn.pertes)} · ${formatMad(syn.valeurPertesVente)}`} />
         <Kpi label="Produits avec écart" valeur={syn.produitsAvecEcart} ton={syn.produitsAvecEcart ? "rouge" : "vert"} />
         <Kpi label="Valeur des écarts" valeur={formatMad(syn.valeurEcartsVente)} ton={syn.valeurEcartsVente < 0 ? "rouge" : undefined} />
         <Kpi label="Écarts de passation" valeur={syn.produitsAvecEcartPassation} ton={syn.produitsAvecEcartPassation ? "rouge" : undefined} />
@@ -132,7 +146,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
               .filter((l) => l.calcul.ecart)
               .map((l) => (
                 <li key={l.produitId}>
-                  <strong>{formatSigne(l.calcul.ecart)}</strong> {l.nom} (théorique {l.calcul.theoriqueFin}, compté {l.stockReelFin})
+                  <strong>{formatSigne(l.calcul.ecart)}</strong> {l.nom} (théorique {q(l.calcul.theoriqueFin)}, compté {q(l.stockReelFin)})
                 </li>
               ))}
           </ul>
@@ -149,8 +163,8 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
               <th className="px-2 py-2 text-right">Théorique</th>
               <th className="px-2 py-2 text-right">Ouverture</th>
               {recompte && <th className="px-2 py-2 text-right">Passation</th>}
-              <th className="px-2 py-2 text-right">Entrées</th>
-              <th className="px-2 py-2 text-right">Ventes</th>
+              <th className="px-2 py-2 text-right">{labo ? "Entrées / prod." : "Entrées"}</th>
+              <th className="px-2 py-2 text-right">{labo ? "Livré" : "Ventes"}</th>
               <th className="px-2 py-2 text-right">Pertes</th>
             </tr>
           </thead>
@@ -158,7 +172,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
             {[...parCategorie.entries()].map(([cat, lignes]) => (
               <Fragment key={cat}>
                 <tr className="bg-marque-50">
-                  <td colSpan={recompte ? 9 : 8} className="sticky left-0 px-2 py-1 text-xs font-bold text-marque-900 uppercase">
+                  <td colSpan={nbColonnes(recompte)} className="sticky left-0 px-2 py-1 text-xs font-bold text-marque-900 uppercase">
                     {cat}
                   </td>
                 </tr>
@@ -167,15 +181,22 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
                     <td className="sticky left-0 max-w-40 bg-white px-2 py-1.5 font-medium">
                       {l.nom}
                       {l.unite === "part" && <span className="text-xs text-stone-500"> (parts)</span>}
+                      {(l.unite === "kg" || l.unite === "litre") && <span className="text-xs text-stone-500"> ({l.unite})</span>}
                     </td>
-                    <CelluleEcart v={l.calcul.ecart} />
-                    <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{l.stockReelFin ?? "—"}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{l.calcul.theoriqueFin ?? "—"}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{l.calcul.ouverture ?? "—"}</td>
+                    {l.nature === "ingredient" ? (
+                      <td className="px-2 py-1.5 text-right text-xs whitespace-nowrap text-stone-600 tabular-nums">
+                        {l.calcul.consommation !== null ? `conso ${q(l.calcul.consommation)}` : "—"}
+                      </td>
+                    ) : (
+                      <CelluleEcart v={l.calcul.ecart} />
+                    )}
+                    <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{q(l.stockReelFin)}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{q(l.calcul.theoriqueFin)}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{q(l.calcul.ouverture)}</td>
                     {recompte && <CelluleEcart v={l.calcul.ecartPassation} />}
-                    <td className="px-2 py-1.5 text-right tabular-nums">{l.entrees || ""}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{l.ventes || ""}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{l.pertes || ""}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{l.entrees ? q(l.entrees) : ""}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{labo ? (l.sorties ? q(l.sorties) : "") : l.ventes || ""}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{l.pertes ? q(l.pertes) : ""}</td>
                   </tr>
                 ))}
               </Fragment>

@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, lte } from "drizzle-orm";
 import type { Db } from "@/db";
-import { categories, coutsProduit, photos, produits, produitsSites, sites, UNITES } from "@/db/schema";
+import { categories, coutsProduit, NATURES_PRODUIT, photos, produits, produitsSites, sites, UNITES, UNITES_DECIMALES } from "@/db/schema";
+import { estQuantiteValide } from "@/domain/calculs";
 import type { Journee } from "@/domain/temps";
 import type { Acteur } from "../acteur";
 import { tracer } from "../audit";
@@ -18,6 +19,8 @@ export interface ProduitVue {
   partsParGateau: number | null;
   prixVente: number | null;
   suiviStock: boolean;
+  nature: (typeof NATURES_PRODUIT)[number];
+  fabriqueLabo: boolean;
   photoId: string | null;
   actif: boolean;
   ordre: number;
@@ -37,6 +40,8 @@ export async function listerProduits(db: Db, opts: { actifsSeulement?: boolean }
       partsParGateau: produits.partsParGateau,
       prixVente: produits.prixVente,
       suiviStock: produits.suiviStock,
+      nature: produits.nature,
+      fabriqueLabo: produits.fabriqueLabo,
       photoId: produits.photoId,
       actif: produits.actif,
       ordre: produits.ordre,
@@ -62,6 +67,8 @@ export interface SaisieProduit {
   partsParGateau: number | null;
   prixVente: number | null;
   suiviStock: boolean;
+  /** Fabriqué par le laboratoire (compté au labo, livré aux points de vente). */
+  fabriqueLabo?: boolean;
   actif: boolean;
 }
 
@@ -137,6 +144,9 @@ export interface SaisieNouveauProduit {
   partsParGateau: number | null;
   format: string | null;
   suiviStock: boolean;
+  /** « ingredient » : matière première du laboratoire, toujours suivie en stock, jamais vendue. */
+  nature?: (typeof NATURES_PRODUIT)[number];
+  fabriqueLabo?: boolean;
 }
 
 /** Crée un produit (référence suivante automatique, ex. P074), dans une catégorie existante ou nouvelle. */
@@ -144,6 +154,7 @@ export async function creerProduit(db: Db, v: SaisieNouveauProduit, acteur: Acte
   const nom = v.nom.trim();
   exiger(nom, "Le nom est obligatoire");
   exiger(UNITES.includes(v.unite), "Unité invalide");
+  exiger(!v.nature || NATURES_PRODUIT.includes(v.nature), "Nature invalide");
   exiger(v.unite !== "part" || (v.partsParGateau && Number.isInteger(v.partsParGateau) && v.partsParGateau > 0), "Indiquer le nombre de parts par gâteau");
   const tous = await db.select({ ref: produits.ref, nom: produits.nom, ordre: produits.ordre }).from(produits);
   exiger(!tous.some((p) => p.nom.trim().toLowerCase() === nom.toLowerCase()), `Un produit « ${nom} » existe déjà`);
@@ -167,7 +178,9 @@ export async function creerProduit(db: Db, v: SaisieNouveauProduit, acteur: Acte
       unite: v.unite,
       partsParGateau: v.unite === "part" ? v.partsParGateau : null,
       format: v.format?.trim() || null,
-      suiviStock: v.suiviStock,
+      suiviStock: v.nature === "ingredient" ? true : v.suiviStock,
+      nature: v.nature ?? "produit",
+      fabriqueLabo: v.nature !== "ingredient" && (v.fabriqueLabo ?? false),
       ordre: Math.max(0, ...tous.map((x) => x.ordre)) + 1,
     })
     .returning({ id: produits.id });
@@ -175,17 +188,26 @@ export async function creerProduit(db: Db, v: SaisieNouveauProduit, acteur: Acte
   return p.id;
 }
 
-/** Stock minimum d'un produit sur chaque point de vente (null = pas d'alerte). */
+/**
+ * Stock minimum d'un produit sur chaque site qui le stocke (null = pas d'alerte) : les points de vente
+ * pour un produit, le laboratoire pour un ingrédient ou un produit qu'il fabrique.
+ */
 export async function stocksMinimum(db: Db, produitId: string) {
-  const ss = (await db.select().from(sites).orderBy(asc(sites.ordre))).filter((s) => s.type === "point_de_vente");
+  const [p] = await db.select({ nature: produits.nature, fabriqueLabo: produits.fabriqueLabo }).from(produits).where(eq(produits.id, produitId));
+  exiger(p, "Produit introuvable");
+  const ss = (await db.select().from(sites).orderBy(asc(sites.ordre))).filter((s) =>
+    s.type === "laboratoire" ? p.nature === "ingredient" || p.fabriqueLabo : p.nature === "produit",
+  );
   const vals = await db.select().from(produitsSites).where(eq(produitsSites.produitId, produitId));
   return ss.map((s) => ({ siteId: s.id, site: s.nom, statut: s.statut, stockMinimum: vals.find((v) => v.siteId === s.id)?.stockMinimum ?? null }));
 }
 
 /** Définit le stock minimum par site ; il déclenche l'alerte de réapprovisionnement à la clôture. */
 export async function definirStocksMinimum(db: Db, produitId: string, valeurs: { siteId: string; stockMinimum: number | null }[], acteur: Acteur) {
+  const [p] = await db.select({ unite: produits.unite }).from(produits).where(eq(produits.id, produitId));
+  exiger(p, "Produit introuvable");
   for (const v of valeurs) {
-    exiger(v.stockMinimum === null || (Number.isInteger(v.stockMinimum) && v.stockMinimum >= 0), "Stock minimum invalide (nombre entier positif)");
+    exiger(v.stockMinimum === null || estQuantiteValide(v.stockMinimum, UNITES_DECIMALES.includes(p.unite)), "Stock minimum invalide");
     await db
       .insert(produitsSites)
       .values({ produitId, siteId: v.siteId, stockMinimum: v.stockMinimum })

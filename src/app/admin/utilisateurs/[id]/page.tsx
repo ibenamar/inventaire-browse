@@ -14,7 +14,7 @@ export default async function Utilisateur({ params }: { params: Promise<{ id: st
   const db = await getDb();
   const u = (await listerUtilisateurs(db)).find((x) => x.id === id);
   if (!u) notFound();
-  const sites = (await listerSites(db)).filter((s) => s.type === "point_de_vente");
+  const sites = await listerSites(db);
   return (
     <>
       <Link href="/admin/utilisateurs" className="text-sm font-semibold text-marque-700">
