@@ -196,6 +196,22 @@ Le laboratoire fonctionne comme un point de vente : planning avec un responsable
 | **Pertes** | comme au point de vente ; les cakes en gâteaux entiers |
 | **Comptage** | produits finis (cakes en gâteaux entiers) **et ingrédients** |
 
+### Préparer et expédier un bon de livraison
+
+1. Étape **Livraisons** › « Nouveau bon » : choisir le **point de vente** destinataire.
+2. Saisir les quantités (cakes en **gâteaux entiers**) et, si besoin, un commentaire (livreur, tournée…).
+3. **« Préparer le bon »** pour le mettre de côté (rien ne sort encore du stock), ou **« Expédier »** directement au départ du livreur.
+4. Un bon préparé — par l'équipe ou par un manager depuis le réapprovisionnement — apparaît en haut de l'écran : le vérifier, **« Modifier »** les quantités si besoin (0 retire une ligne), puis **« Expédier maintenant »**.
+
+À l'expédition, les produits **sortent du stock du labo** ; le point de vente voit « livraison à réceptionner » et la réceptionne à l'arrivée (voir 6.2).
+
+| Statut du bon | Signification |
+|---|---|
+| **Préparé** | en attente, modifiable ; le stock du labo n'a pas bougé |
+| **Expédié** | parti : sorti du stock du labo, pas encore réceptionné |
+| **Reçu** | réceptionné par le point de vente ; un écart éventuel est signalé (« reçu … » en rouge) |
+| **Annulé** | annulé avant réception |
+
 Contrôles :
 - on ne peut pas **expédier plus que le stock** : saisir d'abord la production ;
 - un bon préparé s'annule par l'équipe du labo ; un bon expédié non reçu, par un manager seulement (la sortie de stock est retirée) ; un bon reçu ne s'annule plus.
@@ -204,6 +220,17 @@ Contrôles :
 
 L'onglet **Laboratoire** (managers, direction) présente : la **prévision de production** du jour choisi (moyenne des ventes des 4 mêmes jours de semaine, stock minimum, stocks et livraisons en route), la production par jour, les livraisons par point de vente, les écarts de livraison, la consommation des ingrédients et les pertes du labo.
 
+### Journée type au laboratoire
+
+| Moment | Qui | Action |
+|---|---|---|
+| Avant le début | Responsable | Se connecte sur le site « Laboratoire », **ouvre le shift** |
+| Début | Manager / équipe | Consulte la **prévision de production** et les bons préparés (réapprovisionnement) |
+| Pendant | Équipe | **Production** à chaque fournée, **réceptions** d'ingrédients, **pertes** au fil de l'eau |
+| Départ du livreur | Équipe | **Livraisons** : ajuste puis **expédie** les bons vers les points de vente |
+| Fin | Équipe | **Comptage** des produits finis et des ingrédients |
+| Fin | Responsable | **Récapitulatif** (écarts produits, consommation d'ingrédients), **clôture** |
+
 ## 12. Catalogue : ingrédients, fiches techniques, conservation (direction)
 
 - **Ingrédient** : Catalogue › Nouveau produit › « Ingrédient du laboratoire », en kg, litre, pièce, sachet, boîte ou bouteille. Coché « aussi compté dans les points de vente », il est compté dans les points de vente pour suivre les préparations à la commande (crêpes, pancakes…).
@@ -211,7 +238,10 @@ L'onglet **Laboratoire** (managers, direction) présente : la **prévision de pr
 - **Fiche technique** : ingrédients et quantités pour un gâteau entier (ou une unité). Elle donne le coût de la recette et par part ; « Appliquer comme coût de revient » l'enregistre. Elle sert aussi à calculer la consommation théorique d'ingrédients.
 - **Durée de conservation** (jours) : alimente l'alerte « DLC dépassée ? ».
 
-## 13. Résumé : la journée type
+## 13. Résumé : la journée type (point de vente)
+
+Pour le laboratoire, voir « Journée type au laboratoire » en section 11.
+
 
 | Moment | Qui | Action |
 |---|---|---|
