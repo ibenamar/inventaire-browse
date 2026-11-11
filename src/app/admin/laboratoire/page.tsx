@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Carte, cx, formatMad, Kpi, Message, Pastille, Titre } from "@/components/ui";
 import Link from "next/link";
 import { ajouterJours, estJournee, formatLocal, jourIso, journeeLocale, libelleJournee, NOMS_JOURS } from "@/domain/temps";
@@ -64,22 +65,22 @@ export default async function Laboratoire({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">Prévision de production · {libelleJournee(jourPrevision)}</h2>
           <div className="flex gap-1 text-sm">
-            <Link href={lienPrevision(ajouterJours(jourPrevision, -1))} scroll={false} className="rounded-lg px-2 py-1 ring-1 ring-stone-300" aria-label="Jour précédent">
-              ‹
+            <Link href={lienPrevision(ajouterJours(jourPrevision, -1))} scroll={false} className="inline-flex size-11 items-center justify-center rounded-lg ring-1 ring-input hover:bg-muted" aria-label="Jour précédent">
+              <ChevronLeft aria-hidden className="size-5" />
             </Link>
-            <Link href={lienPrevision(ajouterJours(jourPrevision, 1))} scroll={false} className="rounded-lg px-2 py-1 ring-1 ring-stone-300" aria-label="Jour suivant">
-              ›
+            <Link href={lienPrevision(ajouterJours(jourPrevision, 1))} scroll={false} className="inline-flex size-11 items-center justify-center rounded-lg ring-1 ring-input hover:bg-muted" aria-label="Jour suivant">
+              <ChevronRight aria-hidden className="size-5" />
             </Link>
           </div>
         </div>
-        <p className="mb-2 text-sm text-stone-500">
+        <p className="mb-2 text-sm text-muted-foreground">
           Quantités par point de vente : cakes en gâteaux entiers, autres produits en pièces. Moyenne des ventes et pertes des {SEMAINES_HISTORIQUE} derniers {NOMS_JOURS[jourIso(jourPrevision)].toLowerCase()}s par point de vente, plus le stock
           minimum, moins le stock au dernier comptage et ce qui est en route ; moins le stock du labo. Une aide à la décision, à ajuster.
         </p>
         {prev.lignes.some((x) => x.aProduire > 0) ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)">
             <table className="w-full min-w-[480px] text-sm">
-              <thead className="text-xs text-stone-500">
+              <thead className="text-xs text-muted-foreground">
                 <tr>
                   <th className="py-1 text-left">Produit</th>
                   {prev.sites.map((n) => (
@@ -95,14 +96,14 @@ export default async function Laboratoire({
                 {prev.lignes
                   .filter((x) => x.aProduire > 0)
                   .map((x) => (
-                    <tr key={x.produitId} className="border-t border-stone-100">
+                    <tr key={x.produitId} className="border-t border-border">
                       <td className="py-1.5">{x.produit}</td>
                       {prev.sites.map((n) => (
                         <td key={n} className="px-1 text-right align-top tabular-nums">
                           {x.parSite[n]?.aLivrer ? enGateaux(x.parSite[n].aLivrer, x) : ""}
                           {x.parSite[n] && (
                             // Détail visible aussi sur téléphone (pas d'infobulle au toucher).
-                            <span className="block text-[11px] leading-tight whitespace-nowrap text-stone-500">
+                            <span className="block text-xs leading-tight whitespace-nowrap text-muted-foreground">
                               besoin {enGateaux(x.parSite[n].besoin, x)} · stock {enGateaux(x.parSite[n].stock, x)}
                               {x.parSite[n].enRoute ? ` · en route ${enGateaux(x.parSite[n].enRoute, x)}` : ""}
                             </span>
@@ -117,17 +118,17 @@ export default async function Laboratoire({
             </table>
           </div>
         ) : (
-          <p className="text-sm text-stone-500">Rien à produire d&apos;après l&apos;historique (ou pas encore assez de shifts clôturés).</p>
+          <p className="text-sm text-muted-foreground">Rien à produire d&apos;après l&apos;historique (ou pas encore assez de shifts clôturés).</p>
         )}
       </Carte>
 
       <Carte>
         <h2 className="font-semibold">Production par jour</h2>
-        <p className="mb-2 text-sm text-stone-500">Cakes en gâteaux entiers, autres produits en pièces.</p>
+        <p className="mb-2 text-sm text-muted-foreground">Cakes en gâteaux entiers, autres produits en pièces.</p>
         {r.production.length ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)">
             <table className="w-full min-w-[480px] text-sm">
-              <thead className="text-xs text-stone-500">
+              <thead className="text-xs text-muted-foreground">
                 <tr>
                   <th className="py-1 text-left">Produit</th>
                   {r.jours.map((j) => (
@@ -140,7 +141,7 @@ export default async function Laboratoire({
               </thead>
               <tbody>
                 {r.production.map((x) => (
-                  <tr key={x.produitId} className="border-t border-stone-100">
+                  <tr key={x.produitId} className="border-t border-border">
                     <td className="py-1.5">{x.produit}</td>
                     {r.jours.map((j) => (
                       <td key={j} className="px-1 text-right tabular-nums">
@@ -154,7 +155,7 @@ export default async function Laboratoire({
             </table>
           </div>
         ) : (
-          <p className="text-sm text-stone-500">Aucune production saisie sur la période.</p>
+          <p className="text-sm text-muted-foreground">Aucune production saisie sur la période.</p>
         )}
       </Carte>
 
@@ -162,8 +163,8 @@ export default async function Laboratoire({
         <Carte>
           <h2 className="mb-2 font-semibold">Livraisons par point de vente</h2>
           {r.livraisons.length ? (
-            <div className="overflow-x-auto"><table className="w-full text-sm">
-              <thead className="text-xs text-stone-500">
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)"><table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground">
                 <tr>
                   <th className="py-1 text-left">Point de vente</th>
                   <th className="text-right">Bons</th>
@@ -174,21 +175,21 @@ export default async function Laboratoire({
               </thead>
               <tbody>
                 {r.livraisons.map((l) => (
-                  <tr key={l.destination} className="border-t border-stone-100">
+                  <tr key={l.destination} className="border-t border-border">
                     <td className="py-1.5">{l.destination}</td>
                     <td className="text-right tabular-nums">{l.bons}</td>
                     <td className="text-right tabular-nums">{l.recus}</td>
                     <td className="text-right tabular-nums">{l.enAttente || ""}</td>
-                    <td className={cx("text-right tabular-nums", l.avecEcart > 0 && "font-bold text-red-700")}>{l.avecEcart || ""}</td>
+                    <td className={cx("text-right tabular-nums", l.avecEcart > 0 && "font-bold text-destructive")}>{l.avecEcart || ""}</td>
                   </tr>
                 ))}
               </tbody>
             </table></div>
           ) : (
-            <p className="text-sm text-stone-500">Aucun bon expédié sur la période.</p>
+            <p className="text-sm text-muted-foreground">Aucun bon expédié sur la période.</p>
           )}
           {r.enAttente.length > 0 && (
-            <div className="mt-3 border-t border-stone-100 pt-3">
+            <div className="mt-3 border-t border-border pt-3">
               <h3 className="mb-1 text-sm font-semibold">Expédiés, pas encore réceptionnés</h3>
               <ul className="text-sm">
                 {r.enAttente.map((b) => (
@@ -196,7 +197,7 @@ export default async function Laboratoire({
                     <span>
                       Bon n° {b.numero} → {b.destination}
                     </span>
-                    <span className="text-stone-500">{b.expedieLe ? formatLocal(b.expedieLe, "dd/MM HH:mm") : ""}</span>
+                    <span className="text-muted-foreground">{b.expedieLe ? formatLocal(b.expedieLe, "dd/MM HH:mm") : ""}</span>
                   </li>
                 ))}
               </ul>
@@ -206,10 +207,10 @@ export default async function Laboratoire({
 
         <Carte>
           <h2 className="mb-1 font-semibold">Écarts de livraison</h2>
-          <p className="mb-2 text-sm text-stone-500">Reçu au point de vente différent de l&apos;expédié (produit manquant, abîmé, erreur de saisie).</p>
+          <p className="mb-2 text-sm text-muted-foreground">Reçu au point de vente différent de l&apos;expédié (produit manquant, abîmé, erreur de saisie).</p>
           {r.ecartsLivraison.length ? (
-            <div className="overflow-x-auto"><table className="w-full text-sm">
-              <thead className="text-xs text-stone-500">
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)"><table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground">
                 <tr>
                   <th className="py-1 text-left">Bon</th>
                   <th className="text-left">Produit</th>
@@ -219,19 +220,19 @@ export default async function Laboratoire({
               </thead>
               <tbody>
                 {r.ecartsLivraison.map((e) => (
-                  <tr key={`${e.bonId}-${e.produit}`} className="border-t border-stone-100">
+                  <tr key={`${e.bonId}-${e.produit}`} className="border-t border-border">
                     <td className="py-1.5 whitespace-nowrap">
-                      n° {e.numero} <span className="text-stone-500">· {e.destination}</span>
+                      n° {e.numero} <span className="text-muted-foreground">· {e.destination}</span>
                     </td>
                     <td>{e.produit}</td>
                     <td className="text-right whitespace-nowrap tabular-nums">{libelleQuantite(e.expedie, e)}</td>
-                    <td className="text-right font-bold whitespace-nowrap text-red-700 tabular-nums">{libelleQuantite(e.recu, e)}</td>
+                    <td className="text-right font-bold whitespace-nowrap text-destructive tabular-nums">{libelleQuantite(e.recu, e)}</td>
                   </tr>
                 ))}
               </tbody>
             </table></div>
           ) : (
-            <p className="text-sm text-stone-500">Aucun écart de livraison sur la période.</p>
+            <p className="text-sm text-muted-foreground">Aucun écart de livraison sur la période.</p>
           )}
         </Carte>
       </div>
@@ -239,13 +240,13 @@ export default async function Laboratoire({
       <div className="mt-4 grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Carte>
           <h2 className="mb-1 font-semibold">Consommation des ingrédients</h2>
-          <p className="mb-2 text-sm text-stone-500">
+          <p className="mb-2 text-sm text-muted-foreground">
             Réelle : stock d&apos;ouverture + réceptions − pertes − stock compté, cumulé sur les shifts clôturés, valorisée au coût de
             l&apos;ingrédient. Fiche : consommation attendue d&apos;après les fiches techniques (en rouge si la réelle la dépasse).
           </p>
           {r.consommation.length ? (
-            <div className="overflow-x-auto"><table className="w-full text-sm">
-              <thead className="text-xs text-stone-500">
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)"><table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground">
                 <tr>
                   <th className="py-1 text-left">Ingrédient</th>
                   <th className="text-right">Réelle</th>
@@ -255,24 +256,24 @@ export default async function Laboratoire({
               </thead>
               <tbody>
                 {r.consommation.map((c) => (
-                  <tr key={c.produitId} className="border-t border-stone-100">
+                  <tr key={c.produitId} className="border-t border-border">
                     <td className="py-1.5">{c.produit}</td>
-                    <td className={cx("text-right whitespace-nowrap tabular-nums", c.quantite < 0 && "text-amber-700")}>
+                    <td className={cx("text-right whitespace-nowrap tabular-nums", c.quantite < 0 && "text-warning")}>
                       {formatQuantite(c.quantite)} {UNITE_PLURIEL[c.unite]}
                     </td>
-                    <td className={cx("text-right whitespace-nowrap tabular-nums", c.theorique !== null && c.quantite > c.theorique && "font-semibold text-red-700")}>
+                    <td className={cx("text-right whitespace-nowrap tabular-nums", c.theorique !== null && c.quantite > c.theorique && "font-semibold text-destructive")}>
                       {c.theorique === null ? "—" : formatQuantite(c.theorique)}
                     </td>
-                    <td className="text-right whitespace-nowrap tabular-nums">{c.coutConnu ? formatMad(c.valeur) : <span className="text-stone-400">coût inconnu</span>}</td>
+                    <td className="text-right whitespace-nowrap tabular-nums">{c.coutConnu ? formatMad(c.valeur) : <span className="text-muted-foreground">coût inconnu</span>}</td>
                   </tr>
                 ))}
               </tbody>
             </table></div>
           ) : (
-            <p className="text-sm text-stone-500">Pas de consommation calculée sur la période (shifts clôturés nécessaires).</p>
+            <p className="text-sm text-muted-foreground">Pas de consommation calculée sur la période (shifts clôturés nécessaires).</p>
           )}
           {r.consommation.some((c) => c.quantite < 0) && (
-            <p className="mt-2 text-xs text-amber-800">
+            <p className="mt-2 text-xs text-warning">
               Une consommation négative signale plus de stock compté que prévu : réception non saisie ou erreur de comptage.
             </p>
           )}
@@ -281,7 +282,7 @@ export default async function Laboratoire({
         <Carte>
           <h2 className="mb-2 font-semibold">Pertes au laboratoire</h2>
           {r.pertes.length ? (
-            <ul className="divide-y divide-stone-100 text-sm">
+            <ul className="divide-y divide-border text-sm">
               {r.pertes.map((x) => (
                 <li key={x.produitId} className="flex justify-between gap-2 py-1.5">
                   <span>{x.produit}</span>
@@ -290,11 +291,11 @@ export default async function Laboratoire({
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-stone-500">Aucune perte déclarée sur la période.</p>
+            <p className="text-sm text-muted-foreground">Aucune perte déclarée sur la période.</p>
           )}
         </Carte>
       </div>
-      <p className="mt-4 text-xs text-stone-500">
+      <p className="mt-4 text-xs text-muted-foreground">
         <Pastille>Période</Pastille> {libelleJournee(p.du)} → {libelleJournee(p.au)}
       </p>
     </>

@@ -38,20 +38,20 @@ export default async function Accueil() {
   return (
     <>
       <BarreHaut session={session} nomSite={site.nom} />
-      <main className="mx-auto grid max-w-2xl gap-4 px-4 py-5">
+      <main id="contenu" tabIndex={-1} className="focus:outline-none mx-auto grid max-w-2xl gap-4 px-4 py-5">
         <h1 className="text-2xl font-bold">Bonjour {acteur.nom}</h1>
         {alertes.length > 0 && <ListeAlertes alertes={alertes} max={3} afficherSite={false} />}
 
         {etat.ouvert ? (
-          <Carte className="ring-2 ring-marque-500">
+          <Carte className="ring-2 ring-primary">
             <div className="mb-1 flex items-center gap-2">
               <Pastille ton="vert">Shift en cours</Pastille>
             </div>
-            <h2 className="text-xl font-bold">{etat.ouvert.nomCreneau}</h2>
-            <p className="text-stone-600">
+            <h2 className="text-lg font-bold">{etat.ouvert.nomCreneau}</h2>
+            <p className="text-muted-foreground">
               <Horaire s={etat.ouvert} />
             </p>
-            <p className="mb-4 text-stone-600">Responsable d&apos;inventaire : {etat.ouvert.responsable ?? "—"}</p>
+            <p className="mb-4 text-muted-foreground">Responsable d&apos;inventaire : {etat.ouvert.responsable ?? "—"}</p>
             {etat.ouvert.finPrevue.getTime() + TOLERANCE_CLOTURE_MIN * 60_000 < maintenant.getTime() && (
               <div className="mb-4">
                 <Message ton="erreur">
@@ -67,13 +67,13 @@ export default async function Accueil() {
             </LienBouton>
           </Carte>
         ) : etat.aOuvrir ? (
-          <Carte className="ring-2 ring-marque-500">
+          <Carte className="ring-2 ring-primary">
             <Pastille ton="orange">À ouvrir</Pastille>
-            <h2 className="mt-1 text-xl font-bold">{etat.aOuvrir.nomCreneau}</h2>
-            <p className="text-stone-600">
+            <h2 className="mt-1 text-lg font-bold">{etat.aOuvrir.nomCreneau}</h2>
+            <p className="text-muted-foreground">
               <Horaire s={etat.aOuvrir} />
             </p>
-            <p className="mb-4 text-stone-600">Responsable d&apos;inventaire : {etat.aOuvrir.responsable ?? "—"}</p>
+            <p className="mb-4 text-muted-foreground">Responsable d&apos;inventaire : {etat.aOuvrir.responsable ?? "—"}</p>
             {peutOuvrir(etat.aOuvrir) ? (
               <BoutonAction action={actionOuvrirShift.bind(null, etat.aOuvrir.id)} grand className="w-full">
                 Ouvrir le shift
@@ -87,7 +87,7 @@ export default async function Accueil() {
             <h2 className="text-lg font-semibold">Aucun shift à ouvrir pour le moment</h2>
             {etat.creneauSansShift ? (
               <>
-                <p className="mb-3 text-stone-600">
+                <p className="mb-3 text-muted-foreground">
                   Le créneau « {etat.creneauSansShift.creneau.nom} » ({libelleJournee(etat.creneauSansShift.journee)},{" "}
                   {libelleHoraire(etat.creneauSansShift.creneau)}) n&apos;a pas été planifié.
                 </p>
@@ -100,7 +100,7 @@ export default async function Accueil() {
                 )}
               </>
             ) : (
-              <p className="text-stone-600">Le prochain shift apparaîtra ici une heure avant son début.</p>
+              <p className="text-muted-foreground">Le prochain shift apparaîtra ici une heure avant son début.</p>
             )}
           </Carte>
         )}
@@ -108,13 +108,13 @@ export default async function Accueil() {
         {etat.prochains.length > 0 && (
           <Carte>
             <h2 className="mb-2 font-semibold">Prochains shifts</h2>
-            <ul className="divide-y divide-stone-100">
+            <ul className="divide-y divide-border">
               {etat.prochains.map((s) => (
                 <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span>
                     <span className="font-semibold">{s.nomCreneau}</span> · <Horaire s={s} />
                   </span>
-                  <span className="text-sm text-stone-600">{s.responsable ?? "Responsable non désigné"}</span>
+                  <span className="text-sm text-muted-foreground">{s.responsable ?? "Responsable non désigné"}</span>
                 </li>
               ))}
             </ul>
@@ -123,9 +123,9 @@ export default async function Accueil() {
 
         {/* Le récapitulatif précédent (compté de clôture) est réservé aux encadrants : il fausserait le recomptage à l'aveugle. */}
         {etat.dernierClos && estEncadrant(acteur) && (
-          <p className="text-sm text-stone-600">
+          <p className="text-sm text-muted-foreground">
             Dernier shift clôturé :{" "}
-            <Link className="font-semibold text-marque-700 underline" href={`/shift/${etat.dernierClos.id}/cloture`}>
+            <Link className="font-semibold text-primary underline" href={`/shift/${etat.dernierClos.id}/cloture`}>
               {etat.dernierClos.nomCreneau} du {libelleJournee(etat.dernierClos.journee)}
             </Link>{" "}
             (fin prévue {formatLocal(etat.dernierClos.finPrevue, "HH:mm")})

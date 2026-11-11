@@ -46,7 +46,7 @@ export default async function Ventes({
               href={`/shift/${id}/ventes?canal=${c.code}`}
               className={cx(
                 "rounded-xl px-4 py-2.5 font-semibold ring-1",
-                c.id === canal.id ? "bg-marque-700 text-white ring-marque-700" : "bg-white text-stone-700 ring-stone-300",
+                c.id === canal.id ? "bg-primary text-primary-foreground ring-primary" : "bg-card text-foreground ring-input",
               )}
             >
               {c.nom}

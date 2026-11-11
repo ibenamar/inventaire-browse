@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { FilAriane } from "@/components/FilAriane";
 import { notFound } from "next/navigation";
 import { Carte, Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
@@ -17,9 +17,7 @@ export default async function Utilisateur({ params }: { params: Promise<{ id: st
   const sites = await listerSites(db);
   return (
     <>
-      <Link href="/admin/utilisateurs" className="text-sm font-semibold text-marque-700">
-        ← Utilisateurs
-      </Link>
+      <FilAriane etapes={[{ libelle: "Administration", href: "/admin" }, { libelle: "Utilisateurs", href: "/admin/utilisateurs" }, { libelle: u.nom }]} />
       <Titre>{u.nom}</Titre>
       <Carte>
         <FormulaireUtilisateur action={actionModifierUtilisateur.bind(null, id)} sites={sites} initial={u} />

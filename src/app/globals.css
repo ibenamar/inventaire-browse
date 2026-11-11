@@ -1,23 +1,270 @@
 @import "tailwindcss";
 
+/*
+ * Design system — Inventaire Browse
+ * Un seul jeu de tokens pour toute l'application : les composants n'utilisent que ces noms
+ * (bg-card, text-muted-foreground, ring-border, bg-primary…), jamais de couleur en dur.
+ * Palette issue de la charte Browse : crème, brique, terracotta, olive. Contrastes texte ≥ 4.5:1
+ * vérifiés en clair et en sombre (tests/e2e/accessibilite.cjs).
+ */
+
+:root {
+  color-scheme: light;
+  --background: #fcfcf4; /* crème */
+  --foreground: #231f20; /* encre */
+  --card: #ffffff;
+  --card-foreground: #231f20;
+  --muted: #f3efe6; /* surfaces discrètes */
+  --muted-strong: #e6dfd0;
+  --muted-foreground: #5e5a47; /* olive foncé : 6.4:1 sur crème */
+  --border: #e2dbc7; /* sable */
+  --input: #b9b09a; /* bord des champs : 3:1 (élément non textuel) */
+  --primary: #753b36; /* brique */
+  --primary-hover: #5f2f2b;
+  --primary-foreground: #ffffff;
+  --primary-soft: #f6ebe4;
+  --primary-soft-foreground: #5f2f2b;
+  --secondary: #ffffff;
+  --secondary-foreground: #753b36;
+  --accent: #e06e41; /* terracotta : accents non textuels uniquement */
+  --destructive: #b42318;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #fdecea;
+  --success: #17703f;
+  --success-foreground: #ffffff;
+  --success-soft: #e6f4ea;
+  --warning: #8a5300;
+  --warning-soft: #fdf1d8;
+  --info: #1d5f99;
+  --info-soft: #e6f0fa;
+  --ring: #c4541f;
+  --overlay: rgb(35 31 32 / 0.45);
+  /* Graphiques (séries), tuiles de photo par défaut */
+  --chart-1: #2a78d6;
+  --chart-2: #c4541f;
+  --chart-3: #17803f;
+  --chart-4: #a36b00;
+  --chart-grille: #e2dbc7;
+  --chart-repere: #8c8572;
+  --tuile-0: #f1cda9;
+  --tuile-1: #d9e7c5;
+  --tuile-2: #c9dcef;
+  --tuile-3: #f3c7cf;
+  --tuile-4: #e6d4f0;
+  --tuile-5: #f7e2a8;
+  --tuile-6: #cfe8e3;
+  --tuile-7: #ead1bd;
+  --tuile-8: #ddd8cf;
+  --tuile-9: #fde2c4;
+  --tuile-texte: #3f3a2c;
+}
+
+/* Mode sombre : tons désaturés, contrastes re-vérifiés. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #1b1918;
+    --foreground: #efe9df;
+    --card: #252220;
+    --card-foreground: #efe9df;
+    --muted: #2e2a27;
+    --muted-strong: #3a3531;
+    --muted-foreground: #bab29f;
+    --border: #3d3833;
+    --input: #6f685c;
+    --primary: #e3a59b;
+    --primary-hover: #efbcb3;
+    --primary-foreground: #2a1513;
+    --primary-soft: #3a2724;
+    --primary-soft-foreground: #f0c4bc;
+    --secondary: #252220;
+    --secondary-foreground: #e3a59b;
+    --accent: #e8875f;
+    --destructive: #f1a097;
+    --destructive-foreground: #2a1210;
+    --destructive-soft: #3d201d;
+    --success: #8fd3a8;
+    --success-foreground: #10261a;
+    --success-soft: #1a3022;
+    --warning: #efc46f;
+    --warning-soft: #362b13;
+    --info: #9cc7f0;
+    --info-soft: #182a3b;
+    --ring: #f0a27f;
+    --overlay: rgb(0 0 0 / 0.6);
+    --chart-1: #7fb2ee;
+    --chart-2: #f0a27f;
+    --chart-3: #8fd3a8;
+    --chart-4: #efc46f;
+    --chart-grille: #3d3833;
+    --chart-repere: #8f8879;
+    --tuile-0: #5a4330;
+    --tuile-1: #3f4a33;
+    --tuile-2: #33445a;
+    --tuile-3: #573a40;
+    --tuile-4: #4a3d57;
+    --tuile-5: #574b2c;
+    --tuile-6: #2f4a45;
+    --tuile-7: #554235;
+    --tuile-8: #45403a;
+    --tuile-9: #5a4632;
+    --tuile-texte: #efe9df;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+}
+
 @theme {
-  --color-marque-50: #fdf6ef;
-  --color-marque-100: #f9e8d6;
-  --color-marque-200: #f1cda9;
-  --color-marque-500: #b8662b;
-  --color-marque-600: #9c5222;
-  --color-marque-700: #7d401d;
-  --color-marque-900: #3f2210;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Échelle typographique : 12 / 14 / 16 / 18 / 24 / 32 */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  /* Rayons */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  /* Élévations */
+  --shadow-sm: 0 1px 2px rgb(35 31 32 / 0.06);
+  --shadow-md: 0 4px 12px rgb(35 31 32 / 0.08);
+  --shadow-lg: 0 12px 32px rgb(35 31 32 / 0.14);
+  /* Points de rupture : 375 (base mobile) / 768 / 1024 / 1440 */
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 90rem;
+  /* Animations : durées et courbe partagées (la sortie ≈ 65 % de l'entrée) */
+  --duree-entree: 200ms;
+  --duree-sortie: 130ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Plans (z-index) : contenu 0, collant 10, en-tête 20, menus 40, modales 100, notifications 1000 */
+:root {
+  --z-contenu: 0;
+  --z-collant: 10;
+  --z-entete: 20;
+  --z-menu: 40;
+  --z-modale: 100;
+  --z-notification: 1000;
 }
 
 html {
   -webkit-tap-highlight-color: transparent;
+  /* L'en-tête collant ne masque jamais l'élément qui reçoit le focus. */
+  scroll-padding-top: 7rem;
 }
 
 body {
-  background: #faf8f6;
-  color: #1c1917;
+  background: var(--background);
+  color: var(--foreground);
+  line-height: 1.5;
+  font-variant-numeric: normal;
+}
+
+/* Tout ce qui est cliquable l'indique. */
+button:not(:disabled),
+[role="button"],
+[role="tab"],
+summary,
+select,
+label[for],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"] {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Focus toujours visible au clavier, sur tous les éléments interactifs. */
+:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+}
+
+/* Chiffres alignés dans les tableaux et montants. */
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lien d'évitement : premier élément focusable de chaque page. */
+.lien-evitement {
+  position: absolute;
+  left: 0.5rem;
+  top: -4rem;
+  z-index: var(--z-notification);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.lien-evitement:focus {
+  top: 0.5rem;
+}
+
+/* Apparition partagée (transform + opacité uniquement). */
+@keyframes apparition {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.apparition {
+  animation: apparition var(--duree-entree) var(--ease-standard);
+}
+
+/* Réduction des animations demandée par l'utilisateur : rien ne bouge. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -30,18 +277,19 @@ input[type="number"] {
 }
 
 /* Guide d'utilisation (/aide), rendu depuis docs/GUIDE_UTILISATEUR.md */
-.guide { line-height: 1.6; }
-.guide h2 { margin: 2rem 0 0.75rem; font-size: 1.35rem; font-weight: 700; scroll-margin-top: 4rem; }
-.guide h3 { margin: 1.5rem 0 0.5rem; font-size: 1.1rem; font-weight: 700; scroll-margin-top: 4rem; }
+.guide { line-height: 1.65; max-width: 72ch; }
+.guide h2 { margin: 2rem 0 0.75rem; font-size: var(--text-2xl); font-weight: 700; scroll-margin-top: 4rem; }
+.guide h3 { margin: 1.5rem 0 0.5rem; font-size: var(--text-lg); font-weight: 700; scroll-margin-top: 4rem; }
 .guide p { margin: 0.6rem 0; }
 .guide ul, .guide ol { margin: 0.6rem 0; padding-left: 1.4rem; }
 .guide ul { list-style: disc; }
 .guide ol { list-style: decimal; }
 .guide li { margin: 0.2rem 0; }
 .guide strong { font-weight: 700; }
-.guide blockquote { margin: 0.8rem 0; padding: 0.5rem 1rem; border-left: 4px solid var(--color-marque-500); background: var(--color-marque-50); border-radius: 0.5rem; }
-.guide .defilement { margin: 0.8rem 0; overflow-x: auto; border-radius: 0.75rem; box-shadow: 0 0 0 1px #e7e5e4; background: #fff; }
-.guide table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.guide th, .guide td { padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; border-bottom: 1px solid #e7e5e4; }
-.guide th { background: #f5f5f4; font-weight: 600; }
+.guide a { color: var(--primary); text-decoration: underline; }
+.guide blockquote { margin: 0.8rem 0; padding: 0.5rem 1rem; border-left: 4px solid var(--accent); background: var(--primary-soft); border-radius: 0.5rem; }
+.guide .defilement { margin: 0.8rem 0; overflow-x: auto; border-radius: 0.75rem; box-shadow: 0 0 0 1px var(--border); background: var(--card); max-width: none; }
+.guide table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.guide th, .guide td { padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.guide th { background: var(--muted); font-weight: 600; }
 .guide tr:last-child td { border-bottom: 0; }

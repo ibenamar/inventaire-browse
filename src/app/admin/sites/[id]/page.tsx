@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { FilAriane } from "@/components/FilAriane";
 import { notFound } from "next/navigation";
 import { Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
@@ -15,9 +15,7 @@ export default async function Site({ params }: { params: Promise<{ id: string }>
   const creneaux = await listerCreneaux(db, id);
   return (
     <>
-      <Link href="/admin/sites" className="text-sm font-semibold text-marque-700">
-        ← Sites
-      </Link>
+      <FilAriane etapes={[{ libelle: "Administration", href: "/admin" }, { libelle: "Sites & créneaux", href: "/admin/sites" }, { libelle: site.nom }]} />
       <Titre>{site.nom}</Titre>
       <div className="grid gap-6">
         <FormulaireSite site={{ id: site.id, statut: site.statut, modeOuverture: site.modeOuverture }} />

@@ -56,11 +56,11 @@ export function CasePlanning({
     });
 
   return (
-    <div className="rounded-xl bg-stone-50 p-3 ring-1 ring-stone-200">
+    <div className="rounded-xl bg-muted p-3 ring-1 ring-border">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="font-semibold">{nom}</div>
-          <div className="text-xs text-stone-500">{horaire}</div>
+          <div className="text-xs text-muted-foreground">{horaire}</div>
         </div>
         {remontee}
       </div>
@@ -70,20 +70,20 @@ export function CasePlanning({
             {shift ? (
               <>
                 <div>
-                  <span className="text-stone-500">Responsable :</span> <span className="font-semibold">{shift.responsable ?? "—"}</span>
+                  <span className="text-muted-foreground">Responsable :</span> <span className="font-semibold">{shift.responsable ?? "—"}</span>
                 </div>
                 {shift.equipier && (
                   <div>
-                    <span className="text-stone-500">Coéquipier :</span> {shift.equipier}
+                    <span className="text-muted-foreground">Coéquipier :</span> {shift.equipier}
                   </div>
                 )}
               </>
             ) : (
-              <span className="text-stone-400">Non planifié</span>
+              <span className="text-muted-foreground">Non planifié</span>
             )}
           </div>
           {modifiable && (
-            <button onClick={() => setEdition(true)} className="shrink-0 rounded-lg px-2 py-1 text-sm font-semibold text-marque-700 hover:bg-marque-50">
+            <button onClick={() => setEdition(true)} className="shrink-0 rounded-lg px-2 py-1 text-sm font-semibold text-primary hover:bg-primary-soft">
               {shift ? "Modifier" : "Planifier"}
             </button>
           )}
@@ -92,7 +92,7 @@ export function CasePlanning({
             <button
               onClick={() => lancer(() => actionRetirer(siteId, shift.id))}
               disabled={enCours}
-              className="shrink-0 rounded-lg px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-50"
+              className="shrink-0 rounded-lg px-2 py-1 text-sm font-semibold text-destructive hover:bg-destructive-soft"
             >
               Retirer
             </button>
@@ -151,7 +151,7 @@ export function DupliquerSemaine({ siteId, lundi }: { siteId: string; lundi: str
   return (
     <div className="grid gap-2">
       <div className="flex items-center gap-2">
-        <select aria-label="Nombre de semaines" value={semaines} onChange={(e) => setSemaines(Number(e.target.value))} className="rounded-xl bg-white px-3 py-2.5 ring-1 ring-stone-300">
+        <select aria-label="Nombre de semaines" value={semaines} onChange={(e) => setSemaines(Number(e.target.value))} className="rounded-xl bg-card px-3 py-2.5 ring-1 ring-input">
           {[1, 2, 3, 4].map((n) => (
             <option key={n} value={n}>
               sur {n} semaine{n > 1 ? "s" : ""} suivante{n > 1 ? "s" : ""}

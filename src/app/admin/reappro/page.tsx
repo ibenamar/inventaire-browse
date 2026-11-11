@@ -38,10 +38,10 @@ export default async function Reappro() {
             return (
               <Carte key={b.siteId}>
                 <h2 className="font-semibold">{b.site}</h2>
-                <p className="mb-2 text-sm text-stone-500">Dernier comptage : {b.journee ? libelleJournee(b.journee) : "—"}</p>
+                <p className="mb-2 text-sm text-muted-foreground">Dernier comptage : {b.journee ? libelleJournee(b.journee) : "—"}</p>
                 {labo.length > 0 && (
                   <>
-                    <h3 className="mt-2 text-sm font-semibold text-marque-900">À livrer par le laboratoire</h3>
+                    <h3 className="mt-2 text-sm font-semibold text-primary-soft-foreground">À livrer par le laboratoire</h3>
                     <Tableau lignes={labo} />
                     <div className="mt-2">
                       <BoutonAction action={actionPreparerReappro.bind(null, b.siteId)} confirmation={`Préparer au laboratoire le bon de ${b.site} ?`}>
@@ -52,7 +52,7 @@ export default async function Reappro() {
                 )}
                 {fournisseur.length > 0 && (
                   <>
-                    <h3 className="mt-4 text-sm font-semibold text-marque-900">
+                    <h3 className="mt-4 text-sm font-semibold text-primary-soft-foreground">
                       {b.typeSite === "laboratoire" ? "Ingrédients à commander" : "À commander au fournisseur"}
                     </h3>
                     <Tableau lignes={fournisseur} />
@@ -68,8 +68,8 @@ export default async function Reappro() {
 
 function Tableau({ lignes }: { lignes: Awaited<ReturnType<typeof besoinsReappro>>[number]["besoins"] }) {
   return (
-    <div className="overflow-x-auto"><table className="w-full text-sm">
-      <thead className="text-xs text-stone-500">
+    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)"><table className="w-full text-sm">
+      <thead className="text-xs text-muted-foreground">
         <tr>
           <th className="py-1 text-left">Produit</th>
           <th className="text-right">Stock / min.</th>
@@ -79,11 +79,11 @@ function Tableau({ lignes }: { lignes: Awaited<ReturnType<typeof besoinsReappro>
       </thead>
       <tbody>
         {lignes.map((l) => (
-          <tr key={l.produitId} className="border-t border-stone-100">
+          <tr key={l.produitId} className="border-t border-border">
             <td className="py-1.5">{l.produit}</td>
             <td className="text-right whitespace-nowrap tabular-nums">
-              <span className="font-bold text-red-700">{libelleQuantite(l.stock, l)}</span>
-              <span className="block text-xs text-stone-500">min. {libelleQuantite(l.minimum, l)}</span>
+              <span className="font-bold text-destructive">{libelleQuantite(l.stock, l)}</span>
+              <span className="block text-xs text-muted-foreground">min. {libelleQuantite(l.minimum, l)}</span>
             </td>
             <td className="text-right whitespace-nowrap tabular-nums">{l.enRoute ? libelleQuantite(l.enRoute, l) : ""}</td>
             <td className="text-right font-semibold whitespace-nowrap tabular-nums">{libelleQuantite(l.aFournir, l)}</td>

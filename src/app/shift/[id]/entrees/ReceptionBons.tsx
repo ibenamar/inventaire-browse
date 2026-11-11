@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useTransition } from "react";
 import { actionReceptionnerBon } from "@/app/actions-shift";
 import { Bouton, classesChamp, cx, Message } from "@/components/ui";
@@ -64,26 +65,26 @@ export function ReceptionBons({ shiftId, bons }: { shiftId: string; bons: BonARe
             return t !== undefined && t.trim() !== "" && lireQuantite(t) !== l.quantiteExpediee;
           }).length;
           return (
-            <div key={b.id} className="rounded-2xl bg-white ring-2 ring-amber-300">
+            <div key={b.id} className="rounded-2xl bg-card ring-2 ring-warning/40">
               <button onClick={() => setOuvert(ouvert === b.id ? null : b.id)} className="flex w-full items-center gap-3 p-4 text-left">
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold">
                     Bon n° {b.numero} · {b.origine}
                   </span>
-                  <span className="block text-sm text-stone-600">
+                  <span className="block text-sm text-muted-foreground">
                     Expédié {b.expedie}
                     {b.expediePar ? ` par ${b.expediePar}` : ""} · {b.lignes.length} produit(s)
                     {b.commentaire ? ` · ${b.commentaire}` : ""}
                   </span>
                 </span>
-                <span className="text-2xl text-stone-400">{ouvert === b.id ? "˄" : "˅"}</span>
+                {ouvert === b.id ? <ChevronUp aria-hidden className="size-6 text-muted-foreground" /> : <ChevronDown aria-hidden className="size-6 text-muted-foreground" />}
               </button>
               {ouvert === b.id && (
-                <div className="border-t border-stone-100 p-4">
-                  <p className="mb-3 text-sm text-stone-600">
+                <div className="border-t border-border p-4">
+                  <p className="mb-3 text-sm text-muted-foreground">
                     Vérifiez chaque produit. Les quantités sont celles expédiées : corrigez seulement ce qui manque ou ce qui est arrivé abîmé.
                   </p>
-                  <ul className="divide-y divide-stone-100">
+                  <ul className="divide-y divide-border">
                     {b.lignes.map((l) => {
                       const t = saisis[l.produitId];
                       const n = t === undefined ? l.quantiteExpediee : lireQuantite(t);
@@ -92,7 +93,7 @@ export function ReceptionBons({ shiftId, bons }: { shiftId: string; bons: BonARe
                         <li key={l.produitId} className="flex flex-wrap items-center gap-2 py-2">
                           <span className="min-w-0 flex-1">
                             <span className="block font-semibold">{l.nom}</span>
-                            <span className="block text-xs text-stone-500">Expédié : {libelleQuantite(l.quantiteExpediee, l)}</span>
+                            <span className="block text-xs text-muted-foreground">Expédié : {libelleQuantite(l.quantiteExpediee, l)}</span>
                           </span>
                           <label className="flex items-center gap-2 text-sm">
                             Reçu
@@ -104,19 +105,24 @@ export function ReceptionBons({ shiftId, bons }: { shiftId: string; bons: BonARe
                                 setRecus((x) => ({ ...x, [b.id]: { ...(x[b.id] ?? {}), [l.produitId]: e.target.value.replace(/[^\d.,]/g, "") } }))
                               }
                               onFocus={(e) => e.target.select()}
-                              className={cx("h-11 w-20 rounded-xl text-center text-lg font-bold ring-1", diff ? "bg-amber-50 ring-amber-400" : "ring-stone-300")}
+                              className={cx("h-11 w-20 rounded-xl text-center text-lg font-bold ring-1", diff ? "bg-warning-soft ring-warning/60" : "ring-input")}
                             />
-                            <span className="min-w-12 text-stone-500">{UNITE_PLURIEL[l.unite]}</span>
+                            <span className="min-w-12 text-muted-foreground">{UNITE_PLURIEL[l.unite]}</span>
                           </label>
                         </li>
                       );
                     })}
                   </ul>
+                  <label htmlFor={`commentaire-${b.id}`} className="mt-3 block text-sm font-medium">
+                    {ecarts ? "Explication de l'écart (obligatoire)" : "Commentaire (facultatif)"}
+                  </label>
                   <input
+                    id={`commentaire-${b.id}`}
                     value={commentaire}
                     onChange={(e) => setCommentaire(e.target.value)}
-                    placeholder={ecarts ? "Expliquer l'écart (produit manquant, abîmé…)" : "Commentaire (facultatif)"}
-                    className={cx(classesChamp, "my-3")}
+                    aria-required={ecarts > 0}
+                    placeholder={ecarts ? "Produit manquant, abîmé…" : ""}
+                    className={cx(classesChamp, "mt-1 mb-3")}
                   />
                   <Bouton grand disabled={enCours} onClick={() => valider(b)} className="w-full">
                     {enCours ? "Enregistrement…" : ecarts ? `Réceptionner avec ${ecarts} écart(s)` : "Tout est conforme : réceptionner"}

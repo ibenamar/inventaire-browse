@@ -25,14 +25,14 @@ export function FormulaireNouveauProduit({
   return (
     <form onSubmit={soumettre(action)} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="nature" value={nature} />
-      <div className="grid grid-cols-2 rounded-xl bg-stone-100 p-1 text-sm font-semibold sm:col-span-2">
+      <div className="grid grid-cols-2 rounded-xl bg-muted p-1 text-sm font-semibold sm:col-span-2">
         {(
           [
             ["produit", "Produit vendu"],
             ["ingredient", "Ingrédient du laboratoire"],
           ] as const
         ).map(([v, l]) => (
-          <button key={v} type="button" onClick={() => choisirNature(v)} className={cx("rounded-lg py-2", nature === v ? "bg-white shadow-sm" : "text-stone-500")}>
+          <button key={v} type="button" onClick={() => choisirNature(v)} className={cx("rounded-lg py-2", nature === v ? "bg-card shadow-sm" : "text-muted-foreground")}>
             {l}
           </button>
         ))}

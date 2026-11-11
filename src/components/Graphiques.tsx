@@ -7,10 +7,12 @@ import { useEffect, useRef, useState } from "react";
  * Couleurs catégorielles dans un ordre fixe (validées : daltonisme et contraste sur fond clair) ;
  * le texte reste en encre neutre ; grille en filet ; infobulle au survol.
  */
-export const COULEURS_SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"];
-const SURFACE = "#ffffff";
-const GRILLE = "#e7e5e4";
-const TEXTE = "#57534e";
+// Tokens du design system (globals.css) : adaptés au mode sombre, jamais de couleur en dur ici.
+export const COULEURS_SERIES = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
+const SURFACE = "var(--card)";
+const GRILLE = "var(--chart-grille)";
+const TEXTE = "var(--muted-foreground)";
+const REPERE = "var(--chart-repere)";
 
 function useLargeur() {
   const ref = useRef<HTMLDivElement>(null);
@@ -43,7 +45,7 @@ const compact = (n: number) => (n >= 10000 ? `${nombre(n / 1000)} k` : nombre(n)
 function Legende({ series }: { series: { nom: string; couleur: string }[] }) {
   if (series.length < 2) return null;
   return (
-    <div className="mb-2 flex flex-wrap gap-4 text-sm text-stone-700">
+    <div className="mb-2 flex flex-wrap gap-4 text-sm text-foreground">
       {series.map((s) => (
         <span key={s.nom} className="flex items-center gap-1.5">
           <span className="inline-block size-3 rounded-sm" style={{ background: s.couleur }} />
@@ -58,7 +60,7 @@ function Infobulle({ x, y, largeur, children }: { x: number; y: number; largeur:
   const gauche = Math.min(Math.max(8, x + 12), largeur - 188);
   return (
     <div
-      className="pointer-events-none absolute z-10 w-44 rounded-lg bg-white px-3 py-2 text-xs text-stone-800 shadow-lg ring-1 ring-stone-200"
+      className="pointer-events-none absolute z-10 w-44 rounded-lg bg-card px-3 py-2 text-xs text-foreground shadow-lg ring-1 ring-border"
       style={{ left: gauche, top: Math.max(0, y - 10) }}
     >
       {children}
@@ -151,7 +153,7 @@ export function ColonnesEmpilees({
               </span>
             </div>
           ))}
-          <div className="mt-1 flex justify-between border-t border-stone-100 pt-1 font-semibold">
+          <div className="mt-1 flex justify-between border-t border-border pt-1 font-semibold">
             <span>Total</span>
             <span className="tabular-nums">
               {nombre(totaux[survol])} {unite}
@@ -178,7 +180,7 @@ export function CourbesStock({
   const H = 220;
   const m = { haut: 12, droite: 12, bas: 26, gauche: 36 };
   const tous = series.flatMap((s) => s.points);
-  if (!tous.length) return <p className="py-6 text-center text-sm text-stone-500">Aucun comptage de clôture sur la période.</p>;
+  if (!tous.length) return <p className="py-6 text-center text-sm text-muted-foreground">Aucun comptage de clôture sur la période.</p>;
   const ticks = graduations(Math.max(...tous.map((p) => p.valeur), minimum ?? 0, 1));
   const max = ticks[ticks.length - 1];
   const t0 = Math.min(...tous.map((p) => p.t));
@@ -220,7 +222,7 @@ export function CourbesStock({
         ))}
         {minimum !== null && (
           <g>
-            <line x1={m.gauche} x2={largeur - m.droite} y1={y(minimum)} y2={y(minimum)} stroke="#a8a29e" strokeWidth={1} />
+            <line x1={m.gauche} x2={largeur - m.droite} y1={y(minimum)} y2={y(minimum)} stroke={REPERE} strokeWidth={1} />
             <text x={largeur - m.droite} y={y(minimum) - 4} textAnchor="end" fontSize={11} fill={TEXTE}>
               minimum {minimum}
             </text>
@@ -233,7 +235,7 @@ export function CourbesStock({
             </text>
           ) : null,
         )}
-        {pt && <line x1={x(pt.t)} x2={x(pt.t)} y1={m.haut} y2={m.haut + h} stroke="#a8a29e" strokeWidth={1} />}
+        {pt && <line x1={x(pt.t)} x2={x(pt.t)} y1={m.haut} y2={m.haut + h} stroke={REPERE} strokeWidth={1} />}
         {couleurs.map((s) => (
           <g key={s.nom}>
             <polyline
@@ -253,7 +255,7 @@ export function CourbesStock({
       {pt && survol && (
         <Infobulle x={x(pt.t)} y={y(pt.valeur)} largeur={largeur}>
           <div className="font-semibold">{pt.libelle}</div>
-          {couleurs.length > 1 && <div className="text-stone-500">{couleurs[survol.s].nom}</div>}
+          {couleurs.length > 1 && <div className="text-muted-foreground">{couleurs[survol.s].nom}</div>}
           <div className="tabular-nums">
             Stock compté : {nombre(pt.valeur)} {unite}
           </div>

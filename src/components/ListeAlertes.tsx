@@ -17,18 +17,18 @@ export function ListeAlertes({ alertes, max, afficherSite = true }: { alertes: A
   if (!alertes.length) return null;
   const visibles = max ? alertes.slice(0, max) : alertes;
   return (
-    <section className="rounded-2xl bg-white p-4 ring-2 ring-amber-300" aria-label="Alertes à traiter">
+    <section className="rounded-2xl bg-card p-4 ring-2 ring-warning/40" aria-label="Alertes à traiter">
       <h2 className="mb-2 font-semibold">
-        À traiter <span className="text-stone-500">({alertes.length})</span>
+        À traiter <span className="text-muted-foreground">({alertes.length})</span>
       </h2>
-      <ul className="divide-y divide-stone-100 text-sm">
+      <ul className="divide-y divide-border text-sm">
         {visibles.map((a, i) => {
           const contenu = (
             <>
               <span
                 className={cx(
                   "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold",
-                  a.gravite === "haute" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-900",
+                  a.gravite === "haute" ? "bg-destructive-soft text-destructive" : "bg-warning-soft text-warning",
                 )}
               >
                 {LIBELLES[a.type]}
@@ -53,7 +53,7 @@ export function ListeAlertes({ alertes, max, afficherSite = true }: { alertes: A
         })}
       </ul>
       {max && alertes.length > max && (
-        <Link href="/admin" className="mt-1 inline-block text-sm font-semibold text-marque-700">
+        <Link href="/admin" className="mt-1 inline-block text-sm font-semibold text-primary">
           Voir les {alertes.length} alertes
         </Link>
       )}

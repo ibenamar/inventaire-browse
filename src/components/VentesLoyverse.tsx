@@ -61,20 +61,20 @@ export function VentesLoyverse({
 
   const peutImporter = ouvert || peutReimporter;
   return (
-    <div className="grid gap-2 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+    <div className="grid gap-2 rounded-2xl bg-card p-4 ring-1 ring-border">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1 text-sm">
           <div className="font-semibold">Ventes Loyverse</div>
           {enCours ? (
-            <div className="text-stone-600">Import des tickets de caisse en cours…</div>
+            <div className="text-muted-foreground">Import des tickets de caisse en cours…</div>
           ) : derniere?.statut === "ok" ? (
-            <div className="text-stone-600">
+            <div className="text-muted-foreground">
               Importées à {derniere.heure} : {derniere.nbRecus} ticket(s), {formatMad(derniere.montant)} encaissés.
             </div>
           ) : derniere?.statut === "erreur" ? (
-            <div className="text-red-700">Dernier import en échec à {derniere.heure} : {derniere.erreur}</div>
+            <div className="text-destructive">Dernier import en échec à {derniere.heure} : {derniere.erreur}</div>
           ) : (
-            <div className="text-stone-600">Pas encore importées.</div>
+            <div className="text-muted-foreground">Pas encore importées.</div>
           )}
         </div>
         {peutImporter && (
@@ -86,14 +86,14 @@ export function VentesLoyverse({
       {erreur && <Message ton="erreur">{erreur}</Message>}
       {derniere?.statut === "ok" && derniere.nonReconnus.length > 0 && (
         <details className="text-sm">
-          <summary className="cursor-pointer text-amber-800">
+          <summary className="cursor-pointer text-warning">
             {derniere.nonReconnus.length} article(s) vendu(s) non rattaché(s) à un produit : leurs ventes ne sont pas comptées
           </summary>
-          <p className="mt-1 text-stone-600">
+          <p className="mt-1 text-muted-foreground">
             {derniere.nonReconnus.map((x) => `${x.nom} ×${x.quantite}`).join(" · ")}
           </p>
           {lienAdmin && (
-            <Link href="/admin/loyverse" className="mt-1 inline-block font-semibold text-marque-700 underline">
+            <Link href="/admin/loyverse" className="mt-1 inline-block font-semibold text-primary underline">
               Rattacher ou ignorer ces articles
             </Link>
           )}

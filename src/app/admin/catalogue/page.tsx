@@ -36,12 +36,12 @@ export default async function Catalogue() {
               <Link
                 key={p.id}
                 href={`/admin/catalogue/${p.id}`}
-                className={cx("overflow-hidden rounded-2xl bg-white ring-1 ring-stone-200 hover:ring-marque-500", !p.actif && "opacity-50")}
+                className={cx("overflow-hidden rounded-2xl bg-card ring-1 ring-border hover:ring-primary", !p.actif && "opacity-50")}
               >
                 <PhotoProduit photoId={p.photoId} nom={p.nom} categorie={p.categorie} />
                 <div className="p-2">
                   <div className="line-clamp-2 min-h-10 text-sm leading-tight font-semibold">{p.nom}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-stone-600">
+                  <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                     {p.nature !== "ingredient" && <span>{formatMad(p.prixVente)} ·</span>}
                     <span>{UNITES[p.unite]}</span>
                     {p.nature === "ingredient" && <Pastille ton="marque">ingrédient</Pastille>}

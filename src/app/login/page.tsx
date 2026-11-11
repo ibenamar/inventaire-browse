@@ -18,7 +18,7 @@ export default async function PageConnexion({ searchParams }: { searchParams: Pr
   const site = sites.find((s) => s.id === siteId);
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-8">
+    <main id="contenu" tabIndex={-1} className="focus:outline-none mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-8">
       <div className="mb-6 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icon.svg" alt="" className="mx-auto mb-3 size-16" />
@@ -32,13 +32,13 @@ export default async function PageConnexion({ searchParams }: { searchParams: Pr
               <Link
                 key={s.id}
                 href={`/login?site=${s.id}`}
-                className="rounded-xl bg-marque-50 px-4 py-4 text-lg font-semibold text-marque-900 ring-1 ring-marque-200 hover:bg-marque-100"
+                className="rounded-xl bg-primary-soft px-4 py-4 text-lg font-semibold text-primary-soft-foreground ring-1 ring-primary/30 hover:bg-primary-soft"
               >
                 {s.nom}
               </Link>
             ))}
           </div>
-          <p className="mt-3 text-xs text-stone-500">Ce choix est mémorisé sur cet appareil.</p>
+          <p className="mt-3 text-xs text-muted-foreground">Ce choix est mémorisé sur cet appareil.</p>
         </Carte>
       ) : (
         <FormulaireConnexion
@@ -47,7 +47,7 @@ export default async function PageConnexion({ searchParams }: { searchParams: Pr
         />
       )}
       <p className="mt-6 text-center text-sm">
-        <Link href="/aide" className="font-semibold text-marque-700 hover:underline">
+        <Link href="/aide" className="font-semibold text-primary hover:underline">
           Aide : guide d&apos;utilisation
         </Link>
       </p>

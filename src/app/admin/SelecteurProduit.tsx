@@ -16,7 +16,7 @@ export function SelecteurProduit({ produits, valeur }: { produits: { id: string;
         p.set("produit", e.target.value);
         router.push(`${chemin}?${p}`, { scroll: false });
       }}
-      className="max-w-full rounded-xl bg-white px-3 py-2 ring-1 ring-stone-300"
+      className="max-w-full rounded-xl bg-card px-3 py-2 ring-1 ring-input"
     >
       {cats.map((c) => (
         <optgroup key={c} label={c}>

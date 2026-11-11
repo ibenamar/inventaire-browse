@@ -1,5 +1,6 @@
 "use client";
 
+import { Minus, Plus } from "lucide-react";
 import { useState, useTransition } from "react";
 import { actionAjouterPerte } from "@/app/actions-shift";
 import { PhotoProduit } from "@/components/PhotoProduit";
@@ -68,9 +69,14 @@ export function FormulairePerte({ shiftId, produits, gateauxParDefaut = false }:
           <Message ton={retour.ok ? "succes" : "erreur"}>{retour.texte}</Message>
         </div>
       )}
+      <label htmlFor="recherche-perte" className="mb-1 block text-xs font-medium text-muted-foreground">
+        Rechercher le produit perdu
+      </label>
       <input
+        id="recherche-perte"
         type="search"
-        placeholder="Rechercher le produit perdu"
+        autoComplete="off"
+        placeholder="Nom ou famille"
         value={recherche}
         onChange={(e) => setRecherche(e.target.value)}
         className={cx(classesChamp, "mb-3")}
@@ -83,7 +89,7 @@ export function FormulairePerte({ shiftId, produits, gateauxParDefaut = false }:
               setRetour(null);
               setChoisi(p);
             }}
-            className="overflow-hidden rounded-xl bg-white text-left ring-1 ring-stone-200 hover:ring-marque-500"
+            className="overflow-hidden rounded-xl bg-card text-left ring-1 ring-border hover:ring-primary"
           >
             <PhotoProduit photoId={p.photoId} nom={p.nom} categorie={p.categorie} />
             <span className="line-clamp-2 block p-1.5 text-xs leading-tight font-semibold">{p.nom}</span>
@@ -92,11 +98,11 @@ export function FormulairePerte({ shiftId, produits, gateauxParDefaut = false }:
       </div>
 
       {choisi && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/40 sm:items-center">
+        <div className="fixed inset-0 z-30 flex items-end justify-center bg-overlay sm:items-center">
           <div
             role="dialog"
             aria-label={`Perte : ${choisi.nom}`}
-            className="w-full max-w-md rounded-t-3xl bg-white p-5 sm:rounded-3xl"
+            className="w-full max-w-md rounded-t-3xl bg-card p-5 sm:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center gap-3">
@@ -105,7 +111,7 @@ export function FormulairePerte({ shiftId, produits, gateauxParDefaut = false }:
               </div>
               <h2 className="text-lg font-bold">{choisi.nom}</h2>
             </div>
-            <div className="mb-3 text-sm font-semibold text-stone-700">Motif</div>
+            <div className="mb-3 text-sm font-semibold text-foreground">Motif</div>
             <div className="mb-4 grid grid-cols-2 gap-2">
               {(
                 [
@@ -118,26 +124,26 @@ export function FormulairePerte({ shiftId, produits, gateauxParDefaut = false }:
                   onClick={() => setMotif(v)}
                   className={cx(
                     "min-h-14 rounded-xl text-lg font-semibold ring-1",
-                    motif === v ? "bg-marque-700 text-white ring-marque-700" : "bg-white ring-stone-300",
+                    motif === v ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-input",
                   )}
                 >
                   {l}
                 </button>
               ))}
             </div>
-            {decimales && <div className="mb-1 text-sm text-stone-600">Quantité en {UNITE_PLURIEL[choisi.unite]}</div>}
+            {decimales && <div className="mb-1 text-sm text-muted-foreground">Quantité en {UNITE_PLURIEL[choisi.unite]}</div>}
             {choisi.unite === "part" && choisi.partsParGateau && (
-              <div className="mb-3 grid grid-cols-2 rounded-xl bg-stone-100 p-1 text-sm font-semibold">
+              <div className="mb-3 grid grid-cols-2 rounded-xl bg-muted p-1 text-sm font-semibold">
                 {[false, true].map((g) => (
-                  <button key={String(g)} onClick={() => setGateaux(g)} className={cx("rounded-lg py-2", gateaux === g ? "bg-white shadow-sm" : "text-stone-500")}>
+                  <button key={String(g)} onClick={() => setGateaux(g)} className={cx("rounded-lg py-2", gateaux === g ? "bg-card shadow-sm" : "text-muted-foreground")}>
                     {g ? `Gâteaux entiers (×${choisi.partsParGateau})` : "Parts"}
                   </button>
                 ))}
               </div>
             )}
             <div className="mb-3 flex items-center gap-2">
-              <button onClick={() => setQuantite((q) => Math.max(decimales ? 0.1 : 1, Math.round((q - 1) * 1000) / 1000))} className="size-14 rounded-xl bg-stone-100 text-3xl font-bold" aria-label="Moins">
-                −
+              <button onClick={() => setQuantite((q) => Math.max(decimales ? 0.1 : 1, Math.round((q - 1) * 1000) / 1000))} className="size-14 rounded-xl bg-muted text-3xl font-bold" aria-label="Moins">
+                <Minus aria-hidden className="mx-auto size-6" strokeWidth={2.25} />
               </button>
               <input
                 inputMode={decimales ? "decimal" : "numeric"}
@@ -155,21 +161,25 @@ export function FormulairePerte({ shiftId, produits, gateauxParDefaut = false }:
                   if (n !== null && n > 0) setQuantite(Math.round(n * 1000) / 1000);
                 }}
                 onBlur={() => setTexte("")}
-                className="h-14 w-full rounded-xl text-center text-2xl font-bold ring-1 ring-stone-300"
+                className="h-14 w-full rounded-xl text-center text-2xl font-bold ring-1 ring-input"
               />
-              <button onClick={() => setQuantite((q) => q + 1)} className="size-14 rounded-xl bg-stone-100 text-3xl font-bold" aria-label="Plus">
-                +
+              <button onClick={() => setQuantite((q) => q + 1)} className="size-14 rounded-xl bg-muted text-3xl font-bold" aria-label="Plus">
+                <Plus aria-hidden className="mx-auto size-6" strokeWidth={2.25} />
               </button>
             </div>
             {alerte && (
-              <p className="-mt-1 mb-3 text-sm font-semibold text-red-700" role="alert">
+              <p className="-mt-1 mb-3 text-sm font-semibold text-destructive" role="alert">
                 {alerte}
               </p>
             )}
+            <label htmlFor="commentaire-perte" className="mb-1 block text-sm font-medium">
+              Commentaire (facultatif)
+            </label>
             <input
+              id="commentaire-perte"
               value={commentaire}
               onChange={(e) => setCommentaire(e.target.value)}
-              placeholder="Commentaire (facultatif)"
+              placeholder="Ex. tombé au sol"
               className={cx(classesChamp, "mb-4")}
             />
             <div className="grid grid-cols-2 gap-2">

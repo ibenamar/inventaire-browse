@@ -49,7 +49,7 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
   const n = await ins.count();
   console.log("produits à compter à l'ouverture:", n);
   for (let i = 0; i < n; i++) await ins.nth(i).fill("10");
-  await page.getByText("Terminé ✓").waitFor({ timeout: 60000 });
+  await page.getByText("Terminé", { exact: true }).waitFor({ timeout: 60000 });
   await shot("04-ouverture");
   await page.reload();
   console.log("après rechargement, valeur 1er produit:", await page.getByLabel(/^Quantité /).first().inputValue());
@@ -90,7 +90,7 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
   for (let i = 0; i < m; i++) await c.nth(i).fill("10");
   await page.getByLabel("Quantité Mango Can").fill("5");
   await page.getByLabel("Quantité Matilda Cake").fill("26");
-  await page.getByText("Terminé ✓").waitFor({ timeout: 60000 });
+  await page.getByText("Terminé", { exact: true }).waitFor({ timeout: 60000 });
   await shot("07-comptage");
 
   await page.goto(shiftUrl + "/cloture");

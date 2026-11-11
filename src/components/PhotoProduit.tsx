@@ -1,6 +1,7 @@
 import { cx } from "./ui";
 
-const COULEURS = ["#f1cda9", "#d9e7c5", "#c9dcef", "#f3c7cf", "#e6d4f0", "#f7e2a8", "#cfe8e3", "#ead1bd", "#d6d3d1", "#fde2c4"];
+// Tuiles de couleur par défaut (tokens --tuile-0 à --tuile-9, adaptés au mode sombre).
+const COULEURS = Array.from({ length: 10 }, (_, i) => `var(--tuile-${i})`);
 
 function couleur(cle: string) {
   let h = 0;
@@ -37,7 +38,7 @@ export function PhotoProduit({
       aria-label={`${nom} (pas encore de photo)`}
       role="img"
     >
-      <span className="text-3xl font-bold text-stone-700/70">{initiales}</span>
+      <span className="text-3xl font-bold text-foreground">{initiales}</span>
     </div>
   );
 }

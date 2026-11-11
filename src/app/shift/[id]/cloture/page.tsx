@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Fragment } from "react";
 import { cx, formatMad, formatSigne, Kpi, LienBouton, Message } from "@/components/ui";
@@ -17,7 +18,7 @@ import { VentesLoyverse } from "@/components/VentesLoyverse";
 
 function CelluleEcart({ v }: { v: number | null }) {
   return (
-    <td className={cx("px-2 py-1.5 text-right font-bold tabular-nums", v !== null && v < 0 && "text-red-700", v !== null && v > 0 && "text-amber-700")}>
+    <td className={cx("px-2 py-1.5 text-right font-bold tabular-nums", v !== null && v < 0 && "text-destructive", v !== null && v > 0 && "text-warning")}>
       {v === null ? "—" : v > 0 ? `+${formatQuantite(v)}` : formatQuantite(v)}
     </td>
   );
@@ -61,8 +62,8 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
   return (
     <div className="grid gap-4">
       {ouvert && (
-        <Link href={`/shift/${id}`} className="text-sm font-semibold text-marque-700">
-          ← Retour au shift
+        <Link href={`/shift/${id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+          <ArrowLeft aria-hidden className="size-4" /> Retour au shift
         </Link>
       )}
       <h1 className="text-2xl font-bold">{ouvert ? "Récapitulatif avant clôture" : "Récapitulatif du shift"}</h1>
@@ -129,7 +130,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
       {d.ventesParCanal.length > 0 && (
         <div className="flex flex-wrap gap-2 text-sm">
           {d.ventesParCanal.map((c) => (
-            <span key={c.canalId} className="rounded-xl bg-white px-3 py-2 ring-1 ring-stone-200">
+            <span key={c.canalId} className="rounded-xl bg-card px-3 py-2 ring-1 ring-border">
               <strong>{c.canal}</strong> : {c.quantite} vendu{c.quantite > 1 ? "s" : ""} · {formatMad(c.montant)}
             </span>
           ))}
@@ -166,9 +167,9 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
       )}
 
       {montrer && suivis.some((l) => l.calcul.ecart) && (
-        <div className="rounded-2xl bg-red-50 p-4 ring-1 ring-red-200">
-          <h2 className="mb-1 font-semibold text-red-900">Produits avec écart</h2>
-          <ul className="text-sm text-red-900">
+        <div className="rounded-2xl bg-destructive-soft p-4 ring-1 ring-destructive/30">
+          <h2 className="mb-1 font-semibold text-destructive">Produits avec écart</h2>
+          <ul className="text-sm text-destructive">
             {suivis
               .filter((l) => l.calcul.ecart)
               .map((l) => (
@@ -183,11 +184,11 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
 
       {masquerDetail && <Message>Détail des quantités masqué pendant le shift en cours (comptage à l&apos;aveugle).</Message>}
       {!masquerDetail && (
-      <div className="overflow-x-auto rounded-2xl bg-white ring-1 ring-stone-200">
+      <div className="overflow-x-auto rounded-2xl bg-card ring-1 ring-border" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)">
         <table className="w-full min-w-[560px] text-sm">
-          <thead className="bg-stone-50 text-xs text-stone-600">
+          <thead className="bg-muted text-xs text-muted-foreground">
             <tr>
-              <th className="sticky left-0 bg-stone-50 px-2 py-2 text-left">Produit</th>
+              <th className="sticky left-0 bg-muted px-2 py-2 text-left">Produit</th>
               {montrer && <th className="px-2 py-2 text-right">{avecIngredients ? "Écart / conso." : "Écart"}</th>}
               <th className="px-2 py-2 text-right">Compté</th>
               {montrer && <th className="px-2 py-2 text-right">Théorique</th>}
@@ -201,23 +202,23 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           <tbody>
             {[...parCategorie.entries()].map(([cat, lignes]) => (
               <Fragment key={cat}>
-                <tr className="bg-marque-50">
-                  <td colSpan={nbColonnes} className="sticky left-0 px-2 py-1 text-xs font-bold text-marque-900 uppercase">
+                <tr className="bg-primary-soft">
+                  <td colSpan={nbColonnes} className="sticky left-0 px-2 py-1 text-xs font-bold text-primary-soft-foreground uppercase">
                     {cat}
                   </td>
                 </tr>
                 {lignes.map((l) => (
-                  <tr key={l.produitId} className="border-t border-stone-100">
-                    <td className="sticky left-0 max-w-40 bg-white px-2 py-1.5 font-medium">
+                  <tr key={l.produitId} className="border-t border-border">
+                    <td className="sticky left-0 max-w-40 bg-card px-2 py-1.5 font-medium">
                       {l.nom}
-                      {l.unite === "part" && <span className="text-xs text-stone-500">{enGateaux(l) ? " (gâteaux)" : " (parts)"}</span>}
-                      {(l.unite === "kg" || l.unite === "litre") && <span className="text-xs text-stone-500"> ({l.unite})</span>}
+                      {l.unite === "part" && <span className="text-xs text-muted-foreground">{enGateaux(l) ? " (gâteaux)" : " (parts)"}</span>}
+                      {(l.unite === "kg" || l.unite === "litre") && <span className="text-xs text-muted-foreground"> ({l.unite})</span>}
                     </td>
                     {!montrer ? null : l.nature === "ingredient" ? (
-                      <td className="px-2 py-1.5 text-right text-xs whitespace-nowrap text-stone-600 tabular-nums">
+                      <td className="px-2 py-1.5 text-right text-xs whitespace-nowrap text-muted-foreground tabular-nums">
                         {l.calcul.consommation !== null ? `conso ${q(l.calcul.consommation)}` : "—"}
                         {l.calcul.ecartConsommation !== null && l.calcul.ecartConsommation !== 0 && (
-                          <span className={cx("block font-semibold", l.calcul.ecartConsommation > 0 ? "text-red-700" : "text-amber-700")}>
+                          <span className={cx("block font-semibold", l.calcul.ecartConsommation > 0 ? "text-destructive" : "text-warning")}>
                             {l.calcul.ecartConsommation > 0 ? "+" : ""}
                             {q(l.calcul.ecartConsommation)} vs fiche
                           </span>
@@ -243,14 +244,14 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
       )}
 
       {venteSeule.length > 0 && (
-        <p className="text-sm text-stone-600">
+        <p className="text-sm text-muted-foreground">
           Ventes hors inventaire : {venteSeule.map((l) => `${l.nom} (${l.ventes})`).join(", ")}
         </p>
       )}
 
       {ouvert && estResponsable && (
-        <div className="grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
-          <p className="text-sm text-stone-600">
+        <div className="grid gap-3 rounded-2xl bg-card p-4 ring-1 ring-border">
+          <p className="text-sm text-muted-foreground">
             En clôturant, vous ({session.acteur.nom}) validez ce comptage en tant que responsable d&apos;inventaire. Le stock compté deviendra
             l&apos;ouverture du shift suivant.
           </p>
@@ -277,7 +278,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
       {ouvert && !estResponsable && <Message>Seul le responsable d&apos;inventaire ({s.responsable}) ou un manager peut clôturer ce shift.</Message>}
       {ouvert && estEncadrant(session.acteur) && <FormulaireForcer shiftId={id} />}
       {!ouvert && (
-        <Link href="/" className="text-center font-semibold text-marque-700 underline">
+        <Link href="/" className="text-center font-semibold text-primary underline">
           Retour à l&apos;accueil
         </Link>
       )}

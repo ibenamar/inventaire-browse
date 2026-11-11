@@ -66,35 +66,35 @@ export default async function Journal({ searchParams }: { searchParams: Promise<
           <Link
             key={k}
             href={k ? `/admin/journal?type=${k}` : "/admin/journal"}
-            className={cx("rounded-full px-3 py-1.5 font-semibold ring-1", (type ?? "") === k ? "bg-marque-700 text-white ring-marque-700" : "bg-white ring-stone-300")}
+            className={cx("rounded-full px-3 py-1.5 font-semibold ring-1", (type ?? "") === k ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-input")}
           >
             {l}
           </Link>
         ))}
       </div>
-      <ul className="divide-y divide-stone-100 rounded-2xl bg-white ring-1 ring-stone-200">
+      <ul className="divide-y divide-border rounded-2xl bg-card ring-1 ring-border">
         {lignes.map(({ j, auteur }) => {
           const href = lien(j.entite, j.entiteId);
           return (
             <li key={j.id} className="grid gap-1 px-4 py-2.5 text-sm sm:grid-cols-[8.5rem_9rem_1fr]">
-              <span className="text-stone-500 tabular-nums">{formatLocal(j.horodatage, "dd/MM/yy HH:mm")}</span>
+              <span className="text-muted-foreground tabular-nums">{formatLocal(j.horodatage, "dd/MM/yy HH:mm")}</span>
               <span className="font-semibold">{auteur ?? "Système"}</span>
               <span className="min-w-0">
                 {ACTIONS[j.action] ?? j.action}
                 {" · "}
                 {href ? (
-                  <Link href={href} className="text-marque-700 underline">
+                  <Link href={href} className="text-primary underline">
                     {ENTITES[j.entite] ?? j.entite}
                   </Link>
                 ) : (
                   (ENTITES[j.entite] ?? j.entite)
                 )}
-                {resume(j.details) && <span className="block truncate text-xs text-stone-500">{resume(j.details)}</span>}
+                {resume(j.details) && <span className="block truncate text-xs text-muted-foreground">{resume(j.details)}</span>}
               </span>
             </li>
           );
         })}
-        {lignes.length === 0 && <li className="px-4 py-6 text-center text-stone-500">Aucune opération.</li>}
+        {lignes.length === 0 && <li className="px-4 py-6 text-center text-muted-foreground">Aucune opération.</li>}
       </ul>
     </>
   );

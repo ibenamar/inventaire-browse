@@ -54,6 +54,14 @@ npm run typecheck
 npm test
 ```
 
+Accessibilité et mise en page des écrans clés (WCAG 2.1 AA avec axe-core, contrastes compris, 375 / 768 / 1024 / 1440 px, thèmes clair et sombre, sans défilement horizontal), après le parcours laboratoire sur une base neuve :
+
+```bash
+BASE=http://localhost:3000 node tests/e2e/accessibilite.cjs
+```
+
+Design system : tokens dans `src/app/globals.css` (couleurs sémantiques claires et sombres, typographie, rayons, ombres, plans, durées d'animation) ; les composants n'emploient que ces noms (`bg-card`, `text-muted-foreground`, `bg-primary`…), jamais de couleur en dur ; icônes Lucide.
+
 Nombre de requêtes SQL par page (mesure de performance) : lancer le serveur avec `PERF_REQUETES=1 npm run dev`, chaque requête est écrite dans la console.
 
 Parcours complet dans un navigateur (application démarrée sur une base neuve) :

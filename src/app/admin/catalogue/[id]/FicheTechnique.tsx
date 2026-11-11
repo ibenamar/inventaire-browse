@@ -43,11 +43,11 @@ export function FicheTechnique({
     });
 
   if (!ingredients.length)
-    return <p className="text-sm text-stone-500">Créez d&apos;abord les ingrédients (Catalogue › Nouveau produit › Ingrédient du laboratoire).</p>;
+    return <p className="text-sm text-muted-foreground">Créez d&apos;abord les ingrédients (Catalogue › Nouveau produit › Ingrédient du laboratoire).</p>;
 
   return (
     <div className="grid gap-2">
-      <p className="text-sm text-stone-600">Quantités pour {pour}.</p>
+      <p className="text-sm text-muted-foreground">Quantités pour {pour}.</p>
       {lignes.map((l, i) => {
         const ing = ingredients.find((x) => x.id === l.ingredientId);
         return (
@@ -71,8 +71,8 @@ export function FicheTechnique({
               onChange={(e) => setLignes((x) => x.map((y, j) => (j === i ? { ...y, texte: e.target.value.replace(/[^\d.,]/g, "") } : y)))}
               className={`${classesChamp} w-24 text-center`}
             />
-            <span className="w-14 text-sm text-stone-500">{ing ? UNITE_PLURIEL[ing.unite] : ""}</span>
-            <button type="button" onClick={() => setLignes((x) => x.filter((_, j) => j !== i))} className="rounded-lg px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-50">
+            <span className="w-14 text-sm text-muted-foreground">{ing ? UNITE_PLURIEL[ing.unite] : ""}</span>
+            <button type="button" onClick={() => setLignes((x) => x.filter((_, j) => j !== i))} className="rounded-lg px-2 py-1 text-sm font-semibold text-destructive hover:bg-destructive-soft">
               Retirer
             </button>
           </div>
@@ -99,9 +99,9 @@ export function FicheTechnique({
           Enregistrer la fiche
         </Bouton>
       </div>
-      {modifiee && <p className="text-sm font-semibold text-amber-800">Fiche modifiée : enregistrez-la pour mettre à jour le coût.</p>}
+      {modifiee && <p className="text-sm font-semibold text-warning">Fiche modifiée : enregistrez-la pour mettre à jour le coût.</p>}
       {cout && (
-        <p className={modifiee ? "text-sm text-stone-400" : "text-sm"}>
+        <p className={modifiee ? "text-sm text-muted-foreground" : "text-sm"}>
           Coût de la recette : <strong>{formatMad(cout.recette)}</strong>
           {cout.parUnite !== cout.recette && (
             <>
@@ -109,7 +109,7 @@ export function FicheTechnique({
               soit <strong>{formatMad(cout.parUnite)}</strong> par {cout.libelleUnite}
             </>
           )}
-          {!cout.complet && <span className="text-amber-800"> — coût d&apos;un ingrédient inconnu : saisissez-le sur sa fiche</span>}
+          {!cout.complet && <span className="text-warning"> — coût d&apos;un ingrédient inconnu : saisissez-le sur sa fiche</span>}
         </p>
       )}
       {cout?.complet && !modifiee && (

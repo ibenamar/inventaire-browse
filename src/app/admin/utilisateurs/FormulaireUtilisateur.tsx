@@ -47,10 +47,10 @@ export function FormulaireUtilisateur({
         </Champ>
       </div>
       <fieldset>
-        <legend className="mb-1 text-sm font-semibold text-stone-700">Sites (la direction a accès à tous)</legend>
+        <legend className="mb-1 text-sm font-semibold text-foreground">Sites (la direction a accès à tous)</legend>
         <div className="flex flex-wrap gap-2">
           {sites.map((s) => (
-            <label key={s.id} className="flex items-center gap-2 rounded-lg bg-stone-50 px-3 py-2 ring-1 ring-stone-200">
+            <label key={s.id} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 ring-1 ring-border">
               <input type="checkbox" name="siteIds" value={s.id} defaultChecked={initial?.siteIds.includes(s.id)} className="size-5" />
               {s.nom}
             </label>

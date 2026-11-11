@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Loader2, Minus, Plus, X, XCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { actionSaisirQuantite, actionSaisirVentes } from "@/app/actions-shift";
 import type { Unite } from "@/db/schema";
@@ -114,47 +115,70 @@ export function GrilleQuantites({
 
   return (
     <div>
-      <div className="sticky top-[57px] z-10 -mx-4 mb-3 border-b border-stone-200 bg-[#faf8f6]/95 px-4 pt-1 pb-2 backdrop-blur">
+      <div className="sticky top-[57px] z-10 -mx-4 mb-3 border-b border-border bg-background px-4 pt-1 pb-2">
         {nullable && (
           <div className="mb-2">
             <div className="flex justify-between text-sm font-semibold">
               <span>
                 {faits} / {produits.length} {libelleProgression}
               </span>
-              <span className={enErreur ? "text-red-700" : enAttente ? "text-stone-500" : "text-emerald-700"} aria-live="polite">
+              <span className={cx("inline-flex items-center gap-1", enErreur ? "text-destructive" : enAttente ? "text-muted-foreground" : "text-success")} aria-live="polite">
+                {enErreur ? (
+                  <XCircle aria-hidden className="size-4" />
+                ) : enAttente ? (
+                  <Loader2 aria-hidden className="size-4 animate-spin" />
+                ) : faits === produits.length || Object.keys(etats).length ? (
+                  <Check aria-hidden className="size-4" strokeWidth={2.5} />
+                ) : null}
                 {enErreur
                   ? `${enErreur} valeur${enErreur > 1 ? "s" : ""} non enregistrée${enErreur > 1 ? "s" : ""}`
                   : enAttente
                     ? "Enregistrement…"
                     : faits === produits.length
-                      ? "Terminé ✓"
+                      ? "Terminé"
                       : Object.keys(etats).length
                         ? "Tout est enregistré"
                         : ""}
               </span>
             </div>
-            <div className="mt-1 h-2 overflow-hidden rounded-full bg-stone-200">
-              <div className="h-full bg-marque-500 transition-all" style={{ width: `${(faits / Math.max(1, produits.length)) * 100}%` }} />
+            <div
+              className="mt-1 h-2 overflow-hidden rounded-full bg-muted-strong"
+              role="progressbar"
+              aria-label={`Produits ${libelleProgression}`}
+              aria-valuemin={0}
+              aria-valuemax={produits.length}
+              aria-valuenow={faits}
+            >
+              {/* Animation par transform uniquement (pas de largeur animée). */}
+              <div
+                className="h-full w-full origin-left bg-primary transition-transform duration-200 ease-out"
+                style={{ transform: `scaleX(${faits / Math.max(1, produits.length)})` }}
+              />
             </div>
           </div>
         )}
         {!nullable && (
-          <div className={cx("mb-1 h-5 text-right text-sm font-semibold", enErreur ? "text-red-700" : "text-stone-500")} aria-live="polite">
+          <div className={cx("mb-1 h-5 text-right text-sm font-semibold", enErreur ? "text-destructive" : "text-muted-foreground")} aria-live="polite">
             {enErreur ? `${enErreur} valeur(s) non enregistrée(s)` : enAttente ? "Enregistrement…" : Object.keys(etats).length ? "Tout est enregistré" : ""}
           </div>
         )}
+        <label htmlFor={`recherche-${champ}`} className="mb-1 block text-xs font-medium text-muted-foreground">
+          Rechercher un produit
+        </label>
         <div className="flex gap-2">
           <input
+            id={`recherche-${champ}`}
             type="search"
-            placeholder="Rechercher un produit"
+            autoComplete="off"
+            placeholder="Nom du produit"
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
-            className="min-w-0 flex-1 rounded-xl bg-white px-3 py-2 ring-1 ring-stone-300"
+            className="min-w-0 flex-1 rounded-xl bg-card px-3 py-2 ring-1 ring-input"
           />
           {nullable && (
             <button
               onClick={() => setRestants((r) => !r)}
-              className={cx("shrink-0 rounded-xl px-3 text-sm font-semibold ring-1", restants ? "bg-marque-700 text-white ring-marque-700" : "bg-white ring-stone-300")}
+              className={cx("shrink-0 rounded-xl px-3 text-sm font-semibold ring-1", restants ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-input")}
             >
               Restants
             </button>
@@ -167,7 +191,7 @@ export function GrilleQuantites({
               onClick={() => setCategorie(c)}
               className={cx(
                 "shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold ring-1",
-                categorie === c ? "bg-marque-700 text-white ring-marque-700" : "bg-white text-stone-700 ring-stone-300",
+                categorie === c ? "bg-primary text-primary-foreground ring-primary" : "bg-card text-foreground ring-input",
               )}
             >
               {c ?? "Tout"}
@@ -177,10 +201,10 @@ export function GrilleQuantites({
       </div>
 
       {erreur && (
-        <div className="mb-3 flex items-start justify-between gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900 ring-1 ring-red-200" role="alert">
+        <div className="mb-3 flex items-start justify-between gap-2 rounded-xl bg-destructive-soft px-4 py-3 text-sm text-destructive ring-1 ring-destructive/30" role="alert">
           <span>{erreur}</span>
-          <button onClick={() => setErreur(null)} className="font-bold" aria-label="Fermer">
-            ×
+          <button onClick={() => setErreur(null)} className="inline-flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-destructive/10" aria-label="Fermer le message">
+            <X aria-hidden className="size-4" />
           </button>
         </div>
       )}
@@ -199,21 +223,21 @@ export function GrilleQuantites({
             <div
               key={p.produitId}
               className={cx(
-                "overflow-hidden rounded-2xl bg-white shadow-sm ring-1",
-                e === "erreur" ? "ring-2 ring-red-500" : v !== null && nullable ? "ring-emerald-300" : "ring-stone-200",
+                "overflow-hidden rounded-2xl bg-card shadow-sm ring-1",
+                e === "erreur" ? "ring-2 ring-destructive" : v !== null && nullable ? "ring-success/40" : "ring-border",
               )}
             >
               <div className="relative">
                 <PhotoProduit photoId={p.photoId} nom={p.nom} categorie={p.categorie} />
                 {v !== null && nullable && e !== "erreur" && (
-                  <span className="absolute top-2 right-2 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">
-                    {e === "en_cours" ? "…" : "✓"}
+                  <span className="absolute top-2 right-2 rounded-full bg-success px-2 py-0.5 text-xs font-bold text-success-foreground">
+                    {e === "en_cours" ? <Loader2 aria-label="Enregistrement" className="size-3.5 animate-spin" /> : <Check aria-label="Enregistré" className="size-3.5" strokeWidth={3} />}
                   </span>
                 )}
               </div>
               <div className="p-2">
                 <div className="line-clamp-2 min-h-10 text-sm leading-tight font-semibold">{p.nom}</div>
-                <div className="text-xs text-stone-500">
+                <div className="text-xs text-muted-foreground">
                   en {g ? "gâteaux" : UNITE_PLURIEL[p.unite]}
                   {g && v !== null ? ` · ${v} parts` : ""}
                   {p.aide ? ` · ${p.aide}` : ""}
@@ -230,9 +254,9 @@ export function GrilleQuantites({
                       setTextes((x) => ({ ...x, [p.produitId]: "" }));
                       enregistrer(p.produitId, versStock(Math.max(0, Math.round(((affiche ?? pas) - pas) * 1000) / 1000)));
                     }}
-                    className="size-11 shrink-0 rounded-xl bg-stone-100 text-2xl font-bold active:bg-stone-200"
+                    className="size-11 shrink-0 rounded-xl bg-muted text-2xl font-bold active:bg-muted-strong"
                   >
-                    −
+                    <Minus aria-hidden className="mx-auto size-6" strokeWidth={2.25} />
                   </button>
                   <input
                     inputMode={decimales ? "decimal" : "numeric"}
@@ -254,7 +278,7 @@ export function GrilleQuantites({
                     }}
                     onBlur={() => setTextes((x) => ({ ...x, [p.produitId]: "" }))}
                     onFocus={(ev) => ev.target.select()}
-                    className="h-11 w-full min-w-0 rounded-xl bg-white text-center text-xl font-bold ring-1 ring-stone-300 focus:ring-2 focus:ring-marque-500 focus:outline-none"
+                    className="h-11 w-full min-w-0 rounded-xl bg-card text-center text-lg font-bold ring-1 ring-input focus:ring-2 focus:ring-primary focus:outline-none"
                   />
                   <button
                     aria-label={`Plus ${p.nom}`}
@@ -262,31 +286,31 @@ export function GrilleQuantites({
                       setTextes((x) => ({ ...x, [p.produitId]: "" }));
                       enregistrer(p.produitId, versStock(Math.round(((affiche ?? 0) + pas) * 1000) / 1000));
                     }}
-                    className="size-11 shrink-0 rounded-xl bg-stone-100 text-2xl font-bold active:bg-stone-200"
+                    className="size-11 shrink-0 rounded-xl bg-muted text-2xl font-bold active:bg-muted-strong"
                   >
-                    +
+                    <Plus aria-hidden className="mx-auto size-6" strokeWidth={2.25} />
                   </button>
                 </div>
                 )}
                 {alertes[p.produitId] && (
-                  <div className="mt-1 text-center text-xs font-semibold text-red-700" role="alert">
+                  <div className="mt-1 text-center text-xs font-semibold text-destructive" role="alert">
                     {alertes[p.produitId]}
                   </div>
                 )}
                 {e === "erreur" && (
-                  <div className="mt-1 text-center text-xs font-semibold text-red-700" role="alert">
+                  <div className="mt-1 text-center text-xs font-semibold text-destructive" role="alert">
                     Non enregistré : ressaisir
                   </div>
                 )}
                 {estQuantiteInhabituelle(v, p.unite) && (
-                  <div className="mt-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-center text-xs font-semibold text-amber-900" role="status">
+                  <div className="mt-1 rounded-md bg-warning-soft px-1.5 py-0.5 text-center text-xs font-semibold text-warning" role="status">
                     Quantité inhabituelle : vérifiez
                   </div>
                 )}
                 {!lectureSeule && p.unite === "part" && p.partsParGateau && !g && (
                   <button
                     onClick={() => enregistrer(p.produitId, (v ?? 0) + p.partsParGateau!)}
-                    className="mt-1 w-full rounded-lg py-1 text-xs font-semibold text-marque-700 ring-1 ring-marque-200 active:bg-marque-50"
+                    className="mt-1 w-full rounded-lg py-1 text-xs font-semibold text-primary ring-1 ring-primary/30 active:bg-primary-soft"
                   >
                     + 1 gâteau entier ({p.partsParGateau} parts)
                   </button>
@@ -296,7 +320,7 @@ export function GrilleQuantites({
           );
         })}
       </div>
-      {visibles.length === 0 && <p className="py-8 text-center text-stone-500">Aucun produit à afficher.</p>}
+      {visibles.length === 0 && <p className="py-8 text-center text-muted-foreground">Aucun produit à afficher.</p>}
     </div>
   );
 }

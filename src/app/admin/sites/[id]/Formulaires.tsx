@@ -67,24 +67,24 @@ export function EditeurCreneaux({ siteId, initial }: { siteId: string; initial: 
   return (
     <Carte>
       <h2 className="text-lg font-semibold">Créneaux</h2>
-      <p className="mb-3 text-sm text-stone-600">
+      <p className="mb-3 text-sm text-muted-foreground">
         Une heure de fin inférieure à l&apos;heure de début signifie « le lendemain ». Le jour coché est celui où le shift <strong>commence</strong>
         : la nuit du vendredi suit les horaires du vendredi.
       </p>
       <div className="grid gap-3">
         {lignes.map((l) => (
-          <div key={l.cle} className="grid gap-2 rounded-xl bg-stone-50 p-3 ring-1 ring-stone-200">
+          <div key={l.cle} className="grid gap-2 rounded-xl bg-muted p-3 ring-1 ring-border">
             <div className="grid grid-cols-[1fr_auto_auto] items-end gap-2 sm:grid-cols-[1fr_9.5rem_9.5rem_auto]">
               <input aria-label="Nom du créneau" value={l.nom} onChange={(e) => maj(l.cle, { nom: e.target.value })} placeholder="Nom (ex. Matin)" className={cx(classesChamp, "col-span-3 sm:col-span-1")} />
-              <label className="text-xs font-semibold text-stone-600">
+              <label className="text-xs font-semibold text-muted-foreground">
                 Début
                 <input type="time" value={l.heureDebut} onChange={(e) => maj(l.cle, { heureDebut: e.target.value })} className={classesChamp} />
               </label>
-              <label className="text-xs font-semibold text-stone-600">
-                Fin {estHeure(l.heureDebut) && estHeure(l.heureFin) && finLendemain(l) && <span className="text-marque-700">(lendemain)</span>}
+              <label className="text-xs font-semibold text-muted-foreground">
+                Fin {estHeure(l.heureDebut) && estHeure(l.heureFin) && finLendemain(l) && <span className="text-primary">(lendemain)</span>}
                 <input type="time" value={l.heureFin} onChange={(e) => maj(l.cle, { heureFin: e.target.value })} className={classesChamp} />
               </label>
-              <button onClick={() => setLignes((ls) => ls.filter((x) => x.cle !== l.cle))} className="h-11 rounded-lg px-2 text-sm font-semibold text-red-700 hover:bg-red-50">
+              <button onClick={() => setLignes((ls) => ls.filter((x) => x.cle !== l.cle))} className="h-11 rounded-lg px-2 text-sm font-semibold text-destructive hover:bg-destructive-soft">
                 Retirer
               </button>
             </div>
@@ -96,19 +96,19 @@ export function EditeurCreneaux({ siteId, initial }: { siteId: string; initial: 
                     key={j}
                     aria-pressed={actif}
                     onClick={() => maj(l.cle, { jours: actif ? l.jours.filter((x) => x !== j) : [...l.jours, j].sort() })}
-                    className={cx("min-w-12 rounded-lg px-2 py-1.5 text-sm font-semibold ring-1", actif ? "bg-marque-700 text-white ring-marque-700" : "bg-white ring-stone-300")}
+                    className={cx("min-w-12 rounded-lg px-2 py-1.5 text-sm font-semibold ring-1", actif ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-input")}
                   >
                     {NOMS_JOURS_COURTS[j]}
                   </button>
                 );
               })}
-              <button onClick={() => maj(l.cle, { jours: [1, 2, 3, 4, 5] })} className="rounded-lg px-2 text-xs text-marque-700 underline">
+              <button onClick={() => maj(l.cle, { jours: [1, 2, 3, 4, 5] })} className="rounded-lg px-2 text-xs text-primary underline">
                 Semaine
               </button>
-              <button onClick={() => maj(l.cle, { jours: [6, 7] })} className="rounded-lg px-2 text-xs text-marque-700 underline">
+              <button onClick={() => maj(l.cle, { jours: [6, 7] })} className="rounded-lg px-2 text-xs text-primary underline">
                 Week-end
               </button>
-              <button onClick={() => maj(l.cle, { jours: TOUS })} className="rounded-lg px-2 text-xs text-marque-700 underline">
+              <button onClick={() => maj(l.cle, { jours: TOUS })} className="rounded-lg px-2 text-xs text-primary underline">
                 Tous
               </button>
             </div>
@@ -146,7 +146,7 @@ export function EditeurCreneaux({ siteId, initial }: { siteId: string; initial: 
         >
           Enregistrer les créneaux
         </Bouton>
-        <p className="text-xs text-stone-500">Les shifts déjà planifiés gardent leurs horaires ; les modifications s&apos;appliquent aux nouvelles planifications.</p>
+        <p className="text-xs text-muted-foreground">Les shifts déjà planifiés gardent leurs horaires ; les modifications s&apos;appliquent aux nouvelles planifications.</p>
       </div>
     </Carte>
   );

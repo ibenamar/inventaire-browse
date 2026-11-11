@@ -7,8 +7,9 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Inventaire inter-shifts des points de vente Browse",
     start_url: "/",
     display: "standalone",
-    background_color: "#faf8f6",
-    theme_color: "#7d401d",
+    // Valeurs des tokens --background et --primary (le manifeste exige des couleurs littérales).
+    background_color: "#fcfcf4",
+    theme_color: "#753b36",
     lang: "fr",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

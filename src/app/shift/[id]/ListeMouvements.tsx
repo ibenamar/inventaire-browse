@@ -20,13 +20,13 @@ export function ListeMouvements({ shiftId, titre, mouvements }: { shiftId: strin
   return (
     <section className="mt-6">
       <h2 className="mb-2 text-lg font-semibold">{titre}</h2>
-      <ul className="divide-y divide-stone-100 rounded-2xl bg-white ring-1 ring-stone-200">
+      <ul className="divide-y divide-border rounded-2xl bg-card ring-1 ring-border">
         {mouvements.map((m) => (
           <li key={m.id} className="flex items-center gap-3 px-4 py-3">
             <span className="max-w-32 shrink-0 text-right font-bold">{m.quantite}</span>
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{m.produit}</span>
-              <span className="block text-xs text-stone-500">
+              <span className="block text-xs text-muted-foreground">
                 {m.detail} · {m.utilisateur} · {m.heure}
               </span>
             </span>
@@ -40,7 +40,7 @@ export function ListeMouvements({ shiftId, titre, mouvements }: { shiftId: strin
                     if (!r.ok) window.alert(r.erreur);
                   });
                 }}
-                className="rounded-lg px-2 py-1 text-sm font-semibold text-red-700 hover:bg-red-50"
+                className="rounded-lg px-2 py-1 text-sm font-semibold text-destructive hover:bg-destructive-soft"
               >
                 Supprimer
               </button>

@@ -42,18 +42,18 @@ export function ListeBons({ shiftId, titre, bons, enGateaux = false }: { shiftId
       <h2 className="mb-2 text-lg font-semibold">{titre}</h2>
       <div className="grid gap-3">
         {bons.map((b) => (
-          <div key={b.id} className="rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+          <div key={b.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold">
                 Bon n° {b.numero} → {b.destination}
               </span>
               <Pastille ton={STATUTS[b.statut].ton}>{STATUTS[b.statut].l}</Pastille>
               {b.ecarts > 0 && <Pastille ton="rouge">{b.ecarts} écart(s) à la réception</Pastille>}
-              <span className="ml-auto text-sm text-stone-500">{b.quand}</span>
+              <span className="ml-auto text-sm text-muted-foreground">{b.quand}</span>
             </div>
             <ul className="mt-2 text-sm">
               {b.lignes.map((l) => (
-                <li key={l.produitId} className="flex items-center justify-between gap-2 border-t border-stone-100 py-1">
+                <li key={l.produitId} className="flex items-center justify-between gap-2 border-t border-border py-1">
                   <span>{l.nom}</span>
                   {edition?.bonId === b.id ? (
                     <label className="flex items-center gap-1">
@@ -62,15 +62,15 @@ export function ListeBons({ shiftId, titre, bons, enGateaux = false }: { shiftId
                         aria-label={`Quantité ${l.nom}`}
                         value={edition.textes[l.produitId] ?? ""}
                         onChange={(e) => setEdition({ ...edition, textes: { ...edition.textes, [l.produitId]: e.target.value.replace(/[^\d.,]/g, "") } })}
-                        className="h-9 w-20 rounded-lg text-center font-bold ring-1 ring-stone-300"
+                        className="h-9 w-20 rounded-lg text-center font-bold ring-1 ring-input"
                       />
-                      <span className="text-xs text-stone-500">{parGateau(l) > 1 ? "gâteaux" : l.unite === "part" ? "parts" : ""}</span>
+                      <span className="text-xs text-muted-foreground">{parGateau(l) > 1 ? "gâteaux" : l.unite === "part" ? "parts" : ""}</span>
                     </label>
                   ) : (
                   <span className="tabular-nums">
                     {libelleQuantite(l.quantiteExpediee, l)}
                     {l.quantiteRecue !== null && l.quantiteRecue !== l.quantiteExpediee && (
-                      <span className="font-semibold text-red-700"> · reçu {libelleQuantite(l.quantiteRecue, l)}</span>
+                      <span className="font-semibold text-destructive"> · reçu {libelleQuantite(l.quantiteRecue, l)}</span>
                     )}
                   </span>
                   )}
@@ -78,7 +78,7 @@ export function ListeBons({ shiftId, titre, bons, enGateaux = false }: { shiftId
               ))}
             </ul>
             {(b.commentaire || b.commentaireReception) && (
-              <p className="mt-1 text-xs text-stone-500">{[b.commentaire, b.commentaireReception && `Réception : ${b.commentaireReception}`].filter(Boolean).join(" · ")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{[b.commentaire, b.commentaireReception && `Réception : ${b.commentaireReception}`].filter(Boolean).join(" · ")}</p>
             )}
             {(b.statut === "prepare" || b.annulable) && (
               <div className="mt-3 flex flex-wrap gap-2">

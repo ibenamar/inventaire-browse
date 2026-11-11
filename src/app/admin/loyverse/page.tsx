@@ -43,19 +43,19 @@ export default async function Loyverse() {
         )}
         <Carte>
           <h2 className="mb-1 text-lg font-semibold">Articles et prix</h2>
-          <p className="mb-3 text-sm text-stone-600">
+          <p className="mb-3 text-sm text-muted-foreground">
             Importe tous les articles Loyverse avec leur prix dans chaque magasin. Les articles de la catégorie « Glovo » vont sur le canal Glovo. Le
             rattachement aux produits suit la table de correspondances validée (y compris les gâteaux entiers et les boîtes), puis les noms
             identiques. Les articles déjà rattachés gardent leur rattachement ; seuls leurs nom, catégorie et prix sont mis à jour.
           </p>
           <ImportLoyverse actif={configure} />
-          <p className="mt-3 text-sm text-stone-600">
+          <p className="mt-3 text-sm text-muted-foreground">
             Articles rattachés : {parCanal.map((c) => `${c.nom} ${c.n}`).join(" · ")}
           </p>
         </Carte>
         <Carte>
           <h2 className="mb-1 text-lg font-semibold">Magasins Loyverse</h2>
-          <p className="mb-3 text-sm text-stone-600">
+          <p className="mb-3 text-sm text-muted-foreground">
             Les prix peuvent différer d&apos;un magasin à l&apos;autre (ex. Carrot Cake 45 MAD au Coffee Shop, 40 MAD chez Browse Sweet) : indiquez le
             magasin Loyverse de chaque site.
           </p>
@@ -66,7 +66,7 @@ export default async function Loyverse() {
         </Carte>
         <Carte>
           <h2 className="mb-1 text-lg font-semibold">Articles à rattacher ({total})</h2>
-          <p className="mb-3 text-sm text-stone-600">
+          <p className="mb-3 text-sm text-muted-foreground">
             Articles Loyverse non reconnus automatiquement. Indiquez le produit qu&apos;ils font sortir du stock et leur canal. Tant qu&apos;un article
             n&apos;est pas rattaché, ses ventes ne seront pas importées.
           </p>
@@ -79,32 +79,32 @@ export default async function Loyverse() {
         <Carte>
           <details>
             <summary className="cursor-pointer text-lg font-semibold">Articles ignorés ({ignores.length})</summary>
-            <p className="my-2 text-sm text-stone-600">Hors inventaire : leurs ventes ne sont pas importées. Rétablir un article ignoré par erreur.</p>
+            <p className="my-2 text-sm text-muted-foreground">Hors inventaire : leurs ventes ne sont pas importées. Rétablir un article ignoré par erreur.</p>
             <ArticlesIgnores articles={ignores} />
           </details>
         </Carte>
         <Carte>
           <h2 className="mb-1 text-lg font-semibold">Derniers imports de ventes</h2>
-          <p className="mb-3 text-sm text-stone-600">
+          <p className="mb-3 text-sm text-muted-foreground">
             Les ventes de chaque shift sont importées des tickets Loyverse pendant le shift et à sa clôture.
           </p>
           {synchros.length === 0 ? (
-            <p className="text-sm text-stone-500">Aucun import pour le moment.</p>
+            <p className="text-sm text-muted-foreground">Aucun import pour le moment.</p>
           ) : (
-            <ul className="divide-y divide-stone-100 text-sm">
+            <ul className="divide-y divide-border text-sm">
               {synchros.map((x) => (
                 <li key={x.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                  <span className="w-32 shrink-0 text-stone-500">{formatLocal(x.horodatage, "dd/MM HH:mm")}</span>
-                  <Link href={`/shift/${x.shiftId}/cloture`} className="font-semibold text-marque-700 underline">
+                  <span className="w-32 shrink-0 text-muted-foreground">{formatLocal(x.horodatage, "dd/MM HH:mm")}</span>
+                  <Link href={`/shift/${x.shiftId}/cloture`} className="font-semibold text-primary underline">
                     {x.site} · {x.creneau} du {x.journee.split("-").reverse().join("/")}
                   </Link>
                   {x.statut === "ok" ? (
-                    <span className="text-stone-600">
+                    <span className="text-muted-foreground">
                       {x.nbRecus} ticket(s), {formatMad(x.montant)}
                       {Array.isArray(x.nonReconnus) && x.nonReconnus.length > 0 && ` · ${x.nonReconnus.length} article(s) non rattaché(s)`}
                     </span>
                   ) : (
-                    <span className="text-red-700">Échec : {x.erreur}</span>
+                    <span className="text-destructive">Échec : {x.erreur}</span>
                   )}
                 </li>
               ))}

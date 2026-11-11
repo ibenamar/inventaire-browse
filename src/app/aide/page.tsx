@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Marked, type Tokens } from "marked";
@@ -43,26 +44,26 @@ export default function PageAide() {
   const { html, sommaire } = chargerGuide();
   return (
     <>
-      <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-border bg-card ">
         <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-2">
           <Link href="/" className="flex min-w-0 items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icon.svg" alt="" className="size-8" />
             <span className="truncate text-sm font-bold">Inventaire Browse</span>
           </Link>
-          <Link href="/" className="ml-auto rounded-lg px-3 py-2 text-sm font-semibold text-marque-700 hover:bg-marque-50">
-            ← Retour
+          <Link href="/" className="inline-flex items-center gap-1 ml-auto rounded-lg px-3 py-2 text-sm font-semibold text-primary hover:bg-primary-soft">
+            <ArrowLeft aria-hidden className="size-4" /> Retour
           </Link>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-5">
+      <main id="contenu" tabIndex={-1} className="focus:outline-none mx-auto max-w-3xl px-4 py-5">
         <h1 className="text-2xl font-bold">Guide d&apos;utilisation</h1>
-        <nav aria-label="Sommaire" className="mt-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-200">
-          <p className="mb-2 text-sm font-semibold text-stone-500">Sommaire</p>
+        <nav aria-label="Sommaire" className="mt-4 rounded-2xl bg-card p-4 shadow-sm ring-1 ring-border">
+          <p className="mb-2 text-sm font-semibold text-muted-foreground">Sommaire</p>
           <ol className="grid gap-1 text-sm">
             {sommaire.map((s) => (
               <li key={s.id}>
-                <a href={`#${s.id}`} className="text-marque-700 hover:underline">
+                <a href={`#${s.id}`} className="text-primary hover:underline">
                   {s.titre}
                 </a>
               </li>

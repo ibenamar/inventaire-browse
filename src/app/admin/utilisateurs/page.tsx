@@ -18,14 +18,14 @@ export default async function Utilisateurs() {
   return (
     <>
       <Titre sousTitre="Chaque personne a son propre code PIN : chaque saisie lui est attribuée.">Utilisateurs</Titre>
-      <ul className="mb-6 divide-y divide-stone-100 rounded-2xl bg-white ring-1 ring-stone-200">
+      <ul className="mb-6 divide-y divide-border rounded-2xl bg-card ring-1 ring-border">
         {us.map((u) => (
           <li key={u.id}>
-            <Link href={`/admin/utilisateurs/${u.id}`} className="flex flex-wrap items-center gap-2 px-4 py-3 hover:bg-stone-50">
+            <Link href={`/admin/utilisateurs/${u.id}`} className="flex flex-wrap items-center gap-2 px-4 py-3 hover:bg-muted">
               <span className="font-semibold">{u.nom}</span>
               <Pastille ton={u.role === "direction" ? "marque" : u.role === "manager" ? "bleu" : "neutre"}>{ROLES[u.role]}</Pastille>
               {!u.actif && <Pastille ton="rouge">Désactivé</Pastille>}
-              <span className="ml-auto text-sm text-stone-500">
+              <span className="ml-auto text-sm text-muted-foreground">
                 {u.role === "direction" ? "Tous les sites" : u.siteIds.map((id) => noms.get(id)).filter(Boolean).join(", ")}
               </span>
             </Link>

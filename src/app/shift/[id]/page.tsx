@@ -1,3 +1,4 @@
+import { Check, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cx, LienBouton, Message } from "@/components/ui";
@@ -24,24 +25,24 @@ function Etape({
     <Link
       href={href}
       className={cx(
-        "flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 hover:bg-marque-50",
-        fait ? "ring-emerald-300" : "ring-stone-200",
+        "flex items-center gap-4 rounded-2xl bg-card p-4 shadow-sm ring-1 hover:bg-primary-soft",
+        fait ? "ring-success/40" : "ring-border",
       )}
     >
       <span
         className={cx(
           "flex size-10 shrink-0 items-center justify-center rounded-full text-lg font-bold",
-          fait ? "bg-emerald-600 text-white" : "bg-marque-100 text-marque-900",
+          fait ? "bg-success text-success-foreground" : "bg-primary-soft text-primary-soft-foreground",
         )}
       >
-        {fait ? "✓" : numero}
+        {fait ? <Check aria-label="Fait" className="size-5" strokeWidth={2.5} /> : numero}
       </span>
       <span className="min-w-0">
         <span className="block text-lg font-semibold">{titre}</span>
-        <span className="block text-sm text-stone-600">{detail}</span>
-        {alerte && <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">{alerte}</span>}
+        <span className="block text-sm text-muted-foreground">{detail}</span>
+        {alerte && <span className="mt-1 inline-block rounded-full bg-warning-soft px-2 py-0.5 text-xs font-bold text-warning">{alerte}</span>}
       </span>
-      <span className="ml-auto text-2xl text-stone-400">›</span>
+      <ChevronRight aria-hidden className="ml-auto size-6 shrink-0 text-muted-foreground" />
     </Link>
   );
 }
@@ -119,7 +120,7 @@ export default async function HubShift({ params }: { params: Promise<{ id: strin
         fait={a.compteesFin === a.aCompterFin}
       />
       {!labo && (
-        <Link href={`/shift/${id}/livraisons`} className="text-center text-sm font-semibold text-marque-700 hover:underline">
+        <Link href={`/shift/${id}/livraisons`} className="text-center text-sm font-semibold text-primary hover:underline">
           Transférer des produits vers un autre point de vente{aExpedier ? ` · ${aExpedier} bon(s) à expédier` : ""}
         </Link>
       )}

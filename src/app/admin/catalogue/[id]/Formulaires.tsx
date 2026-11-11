@@ -19,7 +19,7 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
       </Champ>
       {p.nature === "ingredient" ? (
         <Champ label="Nature">
-          <p className="py-2 text-sm text-stone-600">Ingrédient du laboratoire : compté au labo, valorisé au coût de revient.</p>
+          <p className="py-2 text-sm text-muted-foreground">Ingrédient du laboratoire : compté au labo, valorisé au coût de revient.</p>
         </Champ>
       ) : (
         <Champ label="Prix de référence (MAD)" aide="Prix sur place ; suit l'article Loyverse « sur place ». Sert à valoriser pertes et écarts.">
@@ -160,7 +160,7 @@ export function PrisePhoto({ produitId, photoId, nom, categorie }: { produitId: 
       <Bouton onClick={() => entree.current?.click()} disabled={enCours}>
         {enCours ? "Envoi…" : photoId ? "Remplacer la photo" : "Prendre une photo"}
       </Bouton>
-      <p className="text-xs text-stone-500">Sur téléphone, l&apos;appareil photo s&apos;ouvre directement. Cadrez le produit au centre.</p>
+      <p className="text-xs text-muted-foreground">Sur téléphone, l&apos;appareil photo s&apos;ouvre directement. Cadrez le produit au centre.</p>
       {retour && <Message ton={retour.ok ? "succes" : "erreur"}>{retour.texte}</Message>}
     </div>
   );
@@ -183,14 +183,14 @@ export function ArticlesCaisse({
   return (
     <div className="grid gap-3">
       {articles.length ? (
-        <ul className="divide-y divide-stone-100 rounded-xl ring-1 ring-stone-200">
+        <ul className="divide-y divide-border rounded-xl ring-1 ring-border">
           {articles.map((a) => (
             <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
               <span className="w-24 font-semibold">{a.canal}</span>
               <span className="min-w-0 flex-1">
                 {a.nom}
-                {a.facteur > 1 && <span className="ml-1 rounded bg-marque-100 px-1.5 text-xs font-bold text-marque-900">× {a.facteur}</span>}
-                <span className="text-stone-500"> · SKU {a.sku ?? "—"}</span>
+                {a.facteur > 1 && <span className="ml-1 rounded bg-primary-soft px-1.5 text-xs font-bold text-primary-soft-foreground">× {a.facteur}</span>}
+                <span className="text-muted-foreground"> · SKU {a.sku ?? "—"}</span>
               </span>
               <span className="font-semibold">{a.prix}</span>
               <button
@@ -203,7 +203,7 @@ export function ArticlesCaisse({
                     else window.alert(r.erreur);
                   })
                 }
-                className="rounded-lg px-2 py-1 font-semibold text-red-700 hover:bg-red-50"
+                className="rounded-lg px-2 py-1 font-semibold text-destructive hover:bg-destructive-soft"
               >
                 Retirer
               </button>
@@ -211,10 +211,10 @@ export function ArticlesCaisse({
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-stone-500">Aucun article rattaché : lancez l&apos;import Loyverse ou ajoutez-le ci-dessous.</p>
+        <p className="text-sm text-muted-foreground">Aucun article rattaché : lancez l&apos;import Loyverse ou ajoutez-le ci-dessous.</p>
       )}
       <details>
-        <summary className="cursor-pointer text-sm font-semibold text-marque-700">Ajouter un article à la main (ex. SKU Glovo)</summary>
+        <summary className="cursor-pointer text-sm font-semibold text-primary">Ajouter un article à la main (ex. SKU Glovo)</summary>
         <form onSubmit={soumettre(action)} className="mt-2 grid gap-2 sm:grid-cols-[9rem_1fr_7rem_6rem_5rem_auto] sm:items-end">
           <Champ label="Canal">
             <select name="canalId" className={classesChamp}>
@@ -270,7 +270,7 @@ export function FormulaireStocksMinimum({
           <label key={m.siteId} className="flex items-center gap-2">
             <span className="w-44 shrink-0 text-sm font-semibold">
               {m.site}
-              {m.statut !== "actif" && <span className="block text-xs font-normal text-stone-500">en ouverture</span>}
+              {m.statut !== "actif" && <span className="block text-xs font-normal text-muted-foreground">en ouverture</span>}
             </span>
             <input
               name={`min_${m.siteId}`}
@@ -279,7 +279,7 @@ export function FormulaireStocksMinimum({
               placeholder="—"
               className={`${classesChamp} w-24 text-center`}
             />
-            <span className="text-xs text-stone-500">{libelle}</span>
+            <span className="text-xs text-muted-foreground">{libelle}</span>
           </label>
         ))}
       </div>

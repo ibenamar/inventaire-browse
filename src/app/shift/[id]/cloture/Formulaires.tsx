@@ -33,14 +33,18 @@ export function FormulaireCloture({
           obligatoire).
         </Message>
       )}
+      <label htmlFor="commentaire-cloture" className="text-sm font-medium">
+        {obligatoire ? "Explication de l'écart (obligatoire)" : "Commentaire de passation (facultatif)"}
+      </label>
       <textarea
+        id="commentaire-cloture"
         name="commentaire"
         rows={2}
         value={commentaire}
         onChange={(e) => setCommentaire(e.target.value)}
         required={obligatoire}
         minLength={obligatoire ? 5 : undefined}
-        placeholder={obligatoire ? "Explication de l'écart (obligatoire)" : "Commentaire de passation (facultatif)"}
+        placeholder={obligatoire ? "Ce qui explique l'écart après recomptage" : "Pour l'équipe suivante"}
         className={classesChamp}
       />
       {etat && !etat.ok && <Message ton="erreur">{etat.erreur}</Message>}
@@ -54,13 +58,16 @@ export function FormulaireCloture({
 export function FormulaireForcer({ shiftId }: { shiftId: string }) {
   const [etat, action, enCours] = useActionState(actionForcerCloture.bind(null, shiftId), null);
   return (
-    <details className="rounded-2xl bg-white p-4 ring-1 ring-stone-200">
-      <summary className="cursor-pointer font-semibold text-red-800">Forcer la clôture (manager)</summary>
-      <p className="my-2 text-sm text-stone-600">
+    <details className="rounded-2xl bg-card p-4 ring-1 ring-border">
+      <summary className="cursor-pointer font-semibold text-destructive">Forcer la clôture (manager)</summary>
+      <p className="my-2 text-sm text-muted-foreground">
         Pour un shift abandonné : les produits non comptés prennent leur stock théorique. La clôture est marquée comme forcée.
       </p>
       <form onSubmit={soumettre(action)} className="grid gap-2">
-        <input name="motif" required minLength={5} placeholder="Motif (obligatoire)" className={classesChamp} />
+        <label htmlFor="motif-forcer" className="text-sm font-medium">
+          Motif (obligatoire)
+        </label>
+        <input id="motif-forcer" name="motif" required minLength={5} placeholder="Ex. équipe partie sans clôturer" className={classesChamp} />
         {etat && !etat.ok && <Message ton="erreur">{etat.erreur}</Message>}
         <Bouton variante="danger" disabled={enCours} type="submit">
           Forcer la clôture

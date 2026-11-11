@@ -8,6 +8,7 @@ import { listerProduits } from "@/server/services/catalogue";
 import { suiviRemontees } from "@/server/services/remontees";
 import { evolutionStock, tableauDeBord } from "@/server/services/tableau-de-bord";
 import { ListeAlertes } from "@/components/ListeAlertes";
+import { TableauTriable } from "@/components/TableauTriable";
 import { alertesExploitation } from "@/server/services/alertes";
 import { exigerEncadrant, sitesPilotables } from "./acces";
 import { Filtres } from "./Filtres";
@@ -92,7 +93,7 @@ export default async function TableauDeBord({
       <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Carte>
           <h2 className="font-semibold">Ventes par jour et par canal</h2>
-          <p className="mb-2 text-sm text-stone-500">Montants encaissés (Loyverse) des produits suivis, en MAD.</p>
+          <p className="mb-2 text-sm text-muted-foreground">Montants encaissés (Loyverse) des produits suivis, en MAD.</p>
           {t.caParJour.length ? (
             <>
               <ColonnesEmpilees
@@ -100,9 +101,9 @@ export default async function TableauDeBord({
                 jours={t.caParJour.map((j) => ({ cle: j.journee, libelle: jj(j.journee), valeurs: j.parCanal }))}
               />
               <details className="mt-2 text-sm">
-                <summary className="cursor-pointer text-stone-600">Voir les données</summary>
+                <summary className="cursor-pointer text-muted-foreground">Voir les données</summary>
                 <table className="mt-2 w-full text-sm">
-                  <thead className="text-xs text-stone-500">
+                  <thead className="text-xs text-muted-foreground">
                     <tr>
                       <th className="text-left">Jour</th>
                       {t.canaux.map((c) => (
@@ -114,7 +115,7 @@ export default async function TableauDeBord({
                   </thead>
                   <tbody>
                     {t.caParJour.map((j) => (
-                      <tr key={j.journee} className="border-t border-stone-100">
+                      <tr key={j.journee} className="border-t border-border">
                         <td>{libelleJournee(j.journee)}</td>
                         {t.canaux.map((c) => (
                           <td key={c.id} className="text-right tabular-nums">
@@ -128,7 +129,7 @@ export default async function TableauDeBord({
               </details>
             </>
           ) : (
-            <p className="py-6 text-center text-sm text-stone-500">Pas de ventes sur la période.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">Pas de ventes sur la période.</p>
           )}
         </Carte>
 
@@ -137,7 +138,7 @@ export default async function TableauDeBord({
             <h2 className="font-semibold">Évolution du stock</h2>
             {produit && <SelecteurProduit produits={produits} valeur={produit.id} />}
           </div>
-          <p className="mb-2 text-sm text-stone-500">Stock compté à chaque clôture{produit ? ` (${produit.unite === "part" ? "parts" : "unités"})` : ""}.</p>
+          <p className="mb-2 text-sm text-muted-foreground">Stock compté à chaque clôture{produit ? ` (${produit.unite === "part" ? "parts" : "unités"})` : ""}.</p>
           <CourbesStock
             unite={produit?.unite === "part" ? "parts" : "u."}
             minimum={minimums.length === 1 ? minimums[0] : null}
@@ -152,23 +153,23 @@ export default async function TableauDeBord({
       <div className="mt-4 grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Carte>
           <h2 className="mb-2 font-semibold">Alertes de réapprovisionnement</h2>
-          <p className="mb-2 text-sm text-stone-500">Produits sous le stock minimum au dernier comptage de clôture de chaque site.</p>
+          <p className="mb-2 text-sm text-muted-foreground">Produits sous le stock minimum au dernier comptage de clôture de chaque site.</p>
           {t.alertes.length ? (
-            <ul className="divide-y divide-stone-100 text-sm">
+            <ul className="divide-y divide-border text-sm">
               {t.alertes.map((a) => (
                 <li key={`${a.shiftId}-${a.produit}`} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span>
                     <span className="font-semibold">{a.produit}</span>
-                    {siteIds.length > 1 && <span className="text-stone-500"> · {a.site}</span>}
+                    {siteIds.length > 1 && <span className="text-muted-foreground"> · {a.site}</span>}
                   </span>
                   <span className="tabular-nums">
-                    <span className="font-bold text-red-700">{libelleQuantite(a.stock, a)}</span> / minimum {libelleQuantite(a.minimum, a)}
+                    <span className="font-bold text-destructive">{libelleQuantite(a.stock, a)}</span> / minimum {libelleQuantite(a.minimum, a)}
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-stone-500">
+            <p className="text-sm text-muted-foreground">
               Aucune alerte. Les minimums se règlent sur chaque{" "}
               <Link href="/admin/catalogue" className="underline">
                 fiche produit
@@ -182,7 +183,7 @@ export default async function TableauDeBord({
           <h2 className="mb-2 font-semibold">Pertes par produit</h2>
           {t.pertes.length ? (
             <table className="w-full text-sm">
-              <thead className="text-xs text-stone-500">
+              <thead className="text-xs text-muted-foreground">
                 <tr>
                   <th className="py-1 text-left">Produit</th>
                   <th className="px-1 text-right">Périmé</th>
@@ -192,16 +193,16 @@ export default async function TableauDeBord({
               </thead>
               <tbody>
                 {t.pertes.slice(0, 12).map((x) => (
-                  <tr key={x.produitId} className="border-t border-stone-100">
+                  <tr key={x.produitId} className="border-t border-border">
                     <td className="py-1.5">{x.produit}</td>
                     <td className="text-right tabular-nums">{x.peremption ? formatQuantite(x.peremption) : ""}</td>
                     <td className="text-right tabular-nums">{x.endommage ? formatQuantite(x.endommage) : ""}</td>
-                    <td className="text-right whitespace-nowrap tabular-nums">{x.prixConnu ? formatMad(x.valeur) : <span className="text-stone-400">prix inconnu</span>}</td>
+                    <td className="text-right whitespace-nowrap tabular-nums">{x.prixConnu ? formatMad(x.valeur) : <span className="text-muted-foreground">prix inconnu</span>}</td>
                   </tr>
                 ))}
-                <tr className="border-t border-stone-200 font-semibold">
+                <tr className="border-t border-border font-semibold">
                   <td className="py-1.5">Total</td>
-                  <td className="text-right text-xs text-stone-500" colSpan={2}>
+                  <td className="text-right text-xs text-muted-foreground" colSpan={2}>
                     unités diverses
                   </td>
                   <td className="text-right whitespace-nowrap tabular-nums">{formatMad(t.kpi.valeurPertes)}</td>
@@ -209,49 +210,41 @@ export default async function TableauDeBord({
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-stone-500">Aucune perte déclarée sur la période.</p>
+            <p className="text-sm text-muted-foreground">Aucune perte déclarée sur la période.</p>
           )}
         </Carte>
       </div>
 
       <Carte className="mt-4">
         <h2 className="mb-1 font-semibold">Écarts non expliqués par produit</h2>
-        <p className="mb-2 text-sm text-stone-500">
+        <p className="mb-2 text-sm text-muted-foreground">
           Stock compté − stock théorique, cumulé sur la période. Négatif = produit manquant (vente non saisie, perte non déclarée, erreur de
           comptage).
           {t.kpi.ecartsPassation > 0 && ` ${t.kpi.ecartsPassation} écart(s) de passation entre équipes.`}
         </p>
         {t.ecarts.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] text-sm">
-              <thead className="text-xs text-stone-500">
-                <tr>
-                  <th className="py-1 text-left">Produit</th>
-                  <th className="text-right">Écart cumulé</th>
-                  <th className="text-right">Valeur</th>
-                  <th className="text-right">Shifts concernés</th>
-                </tr>
-              </thead>
-              <tbody>
-                {t.ecarts.slice(0, 15).map((e) => (
-                  <tr key={e.produitId} className="border-t border-stone-100">
-                    <td className="py-1.5">
-                      <Link href={`?${new URLSearchParams({ ...sp, produit: e.produitId } as Record<string, string>)}`} scroll={false} className="hover:underline">
-                        {e.produit}
-                      </Link>
-                    </td>
-                    <td className={cx("text-right font-semibold tabular-nums", e.quantite < 0 && "text-red-700", e.quantite > 0 && "text-amber-700")}>
-                      {formatSigne(e.quantite)}
-                    </td>
-                    <td className="text-right whitespace-nowrap tabular-nums">{e.prixConnu ? formatMad(e.valeur) : <span className="text-stone-400">prix inconnu</span>}</td>
-                    <td className="text-right tabular-nums">{e.shifts}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TableauTriable
+            libelle="Écarts non expliqués par produit"
+            colonnes={[{ libelle: "Produit" }, { libelle: "Écart cumulé", numerique: true }, { libelle: "Valeur", numerique: true }, { libelle: "Shifts concernés", numerique: true }]}
+            triInitial={{ colonne: 2, sens: "asc" }}
+            lignes={t.ecarts.map((e) => ({
+              cle: e.produitId,
+              tri: [e.produit, e.quantite, e.prixConnu ? e.valeur : null, e.shifts],
+              cellules: [
+                <Link key="p" href={`?${new URLSearchParams({ ...sp, produit: e.produitId } as Record<string, string>)}`} scroll={false} className="hover:underline">
+                  {e.produit}
+                </Link>,
+                <span key="e" className={cx("font-semibold", e.quantite < 0 && "text-destructive", e.quantite > 0 && "text-warning")}>
+                  {e.quantite > 0 ? "+" : ""}
+                  {formatQuantite(e.quantite)}
+                </span>,
+                e.prixConnu ? formatMad(e.valeur) : <span key="v" className="text-muted-foreground">prix inconnu</span>,
+                e.shifts,
+              ],
+            }))}
+          />
         ) : (
-          <p className="text-sm text-stone-500">Aucun écart sur la période.</p>
+          <p className="text-sm text-muted-foreground">Aucun écart sur la période.</p>
         )}
       </Carte>
     </>

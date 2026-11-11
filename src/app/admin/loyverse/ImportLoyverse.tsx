@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Bouton, classesChamp, formatMad, Message } from "@/components/ui";
@@ -72,7 +73,7 @@ export function ImportLoyverse({ actif }: { actif: boolean }) {
           Importer un export CSV
         </Bouton>
       </div>
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-muted-foreground">
         Export CSV : Back Office Loyverse › Articles › Liste des articles › Exporter. Sans jeton API, c&apos;est le moyen de mettre à jour articles et
         prix.
       </p>
@@ -114,7 +115,7 @@ function LigneArticle({
     <li className="grid gap-2 py-3 lg:grid-cols-[1fr_13rem_8rem_5rem_auto_auto] lg:items-center">
       <div className="min-w-0">
         <div className="font-semibold">{a.nom}</div>
-        <div className="text-xs text-stone-500">
+        <div className="text-xs text-muted-foreground">
           {a.categorie ?? "sans catégorie"} · SKU {a.sku ?? "—"} · {a.prix.map((p) => `${p.magasin} ${formatMad(p.prix)}`).join(" · ")}
         </div>
       </div>
@@ -139,7 +140,7 @@ function LigneArticle({
           </option>
         ))}
       </select>
-      <label className="flex items-center gap-1 text-xs text-stone-600" title="Unités de stock par article vendu (gâteau entier = 8 parts, boîte de 4 = 4)">
+      <label className="flex items-center gap-1 text-xs text-muted-foreground" title="Unités de stock par article vendu (gâteau entier = 8 parts, boîte de 4 = 4)">
         ×
         <input
           aria-label={`Facteur pour ${a.nom}`}
@@ -190,10 +191,10 @@ function ListeArticles({
     };
   }, [charger]);
   if (erreur) return <Message ton="erreur">{erreur}</Message>;
-  if (!articles) return <p className="py-2 text-sm text-stone-500">Chargement…</p>;
-  if (!articles.length) return <p className="py-2 text-sm text-stone-500">Aucun article.</p>;
+  if (!articles) return <p className="py-2 text-sm text-muted-foreground">Chargement…</p>;
+  if (!articles.length) return <p className="py-2 text-sm text-muted-foreground">Aucun article.</p>;
   return (
-    <ul className="divide-y divide-stone-100">
+    <ul className="divide-y divide-border">
       {articles.map((a) => (
         <LigneArticle key={a.id} a={a} produits={produits} canaux={canaux} surTraite={(id) => setArticles((l) => l?.filter((x) => x.id !== id) ?? l)} />
       ))}
@@ -229,7 +230,7 @@ export function ArticlesNonAssocies({
     () => new Map(categories.map((c) => [cle(c.categorie), () => actionArticlesCategorie(c.categorie)])),
     [categories],
   );
-  if (!categories.length) return <p className="text-sm text-stone-500">Aucun article en attente.</p>;
+  if (!categories.length) return <p className="text-sm text-muted-foreground">Aucun article en attente.</p>;
   return (
     <div>
       <input
@@ -245,7 +246,7 @@ export function ArticlesNonAssocies({
         categories.map(({ categorie: cat, n }) => {
           const ouvert = ouverts.has(cle(cat));
           return (
-            <div key={cle(cat)} className="border-t border-stone-100 py-1">
+            <div key={cle(cat)} className="border-t border-border py-1">
               <div className="flex items-center gap-2 py-2">
                 <button
                   type="button"
@@ -260,9 +261,9 @@ export function ArticlesNonAssocies({
                   }
                   className="flex items-center gap-2 text-left"
                 >
-                  <span className="w-4 text-stone-400">{ouvert ? "▾" : "▸"}</span>
+                  {ouvert ? <ChevronDown aria-hidden className="size-4 text-muted-foreground" /> : <ChevronRight aria-hidden className="size-4 text-muted-foreground" />}
                   <span className="font-semibold">{cat ?? "(sans catégorie)"}</span>
-                  <span className="text-sm text-stone-500">{n}</span>
+                  <span className="text-sm text-muted-foreground">{n}</span>
                 </button>
                 <button
                   type="button"
@@ -275,7 +276,7 @@ export function ArticlesNonAssocies({
                       router.refresh();
                     });
                   }}
-                  className="ml-auto rounded-lg px-2 py-1 text-sm font-semibold text-marque-700 hover:bg-marque-50"
+                  className="ml-auto rounded-lg px-2 py-1 text-sm font-semibold text-primary hover:bg-primary-soft"
                 >
                   Ignorer la catégorie
                 </button>

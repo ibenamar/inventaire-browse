@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { FilAriane } from "@/components/FilAriane";
 import { notFound } from "next/navigation";
 import { Carte, formatMad, Titre } from "@/components/ui";
 import { journeeLocale } from "@/domain/temps";
@@ -27,9 +27,7 @@ export default async function Produit({ params }: { params: Promise<{ id: string
   const ingredients = p.nature === "produit" ? (await listerProduits(db, { actifsSeulement: true })).filter((x) => x.nature === "ingredient") : [];
   return (
     <>
-      <Link href="/admin/catalogue" className="text-sm font-semibold text-marque-700">
-        ← Catalogue
-      </Link>
+      <FilAriane etapes={[{ libelle: "Administration", href: "/admin" }, { libelle: "Catalogue", href: "/admin/catalogue" }, { libelle: p.nom }]} />
       <Titre sousTitre={`${p.ref} · ${p.categorie}`}>{p.nom}</Titre>
       <div className="grid gap-4 md:grid-cols-[18rem_1fr]">
         <Carte>
@@ -41,7 +39,7 @@ export default async function Produit({ params }: { params: Promise<{ id: string
           </Carte>
           <Carte>
             <h2 className="mb-1 text-lg font-semibold">Articles de caisse (Loyverse)</h2>
-            <p className="mb-3 text-sm text-stone-600">
+            <p className="mb-3 text-sm text-muted-foreground">
               Un article par canal de vente (et par lot : gâteau entier, boîte), chacun avec son SKU et son prix par magasin. Toutes ces ventes font sortir le stock de ce produit ; « × 8 » = 8 unités par article vendu.
             </p>
             <ArticlesCaisse
@@ -63,7 +61,7 @@ export default async function Produit({ params }: { params: Promise<{ id: string
           {p.suiviStock && (
             <Carte>
               <h2 className="mb-1 text-lg font-semibold">Stock minimum par site</h2>
-              <p className="mb-3 text-sm text-stone-600">
+              <p className="mb-3 text-sm text-muted-foreground">
                 En dessous de ce niveau au comptage de clôture, le produit apparaît dans les alertes de réapprovisionnement. Vide = pas d&apos;alerte.
                 Pris en compte à partir du prochain shift ouvert.
               </p>
@@ -73,7 +71,7 @@ export default async function Produit({ params }: { params: Promise<{ id: string
           {recette && (
             <Carte>
               <h2 className="mb-1 text-lg font-semibold">Fiche technique</h2>
-              <p className="mb-3 text-sm text-stone-600">
+              <p className="mb-3 text-sm text-muted-foreground">
                 Ingrédients de la recette : ils donnent le coût de revient calculé et la consommation théorique d&apos;ingrédients (production du
                 labo, ventes des préparations), comparée à la consommation réelle.
               </p>
@@ -88,14 +86,14 @@ export default async function Produit({ params }: { params: Promise<{ id: string
           )}
           <Carte>
             <h2 className="mb-1 text-lg font-semibold">Coût de revient</h2>
-            <p className="mb-3 text-sm text-stone-600">
+            <p className="mb-3 text-sm text-muted-foreground">
               En vigueur : <strong>{formatMad(cout)}</strong> par {UNITE_SINGULIER[p.unite]}
               {p.nature === "ingredient" && p.format ? ` (et non par ${p.format})` : ""}. Pris en compte à partir du prochain shift ouvert. Sert à valoriser les pertes et les écarts au
               coût réel.
             </p>
             <FormulaireCout produitId={p.id} aujourdhui={aujourdhui} unite={p.unite} />
             {historique.length > 0 && (
-              <ul className="mt-3 text-sm text-stone-600">
+              <ul className="mt-3 text-sm text-muted-foreground">
                 {historique.map((h) => (
                   <li key={h.id}>
                     {formatMad(h.coutUnitaire)} à partir du {h.dateEffet.split("-").reverse().join("/")}

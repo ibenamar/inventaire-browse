@@ -57,7 +57,7 @@ async function toutCompter(page, valeur) {
   await labo.getByText(/\d+ \/ \d+ comptés/).waitFor();
   const n = await toutCompter(labo, "0");
   await labo.getByLabel("Quantité Farine T55").fill("10,5");
-  await labo.getByText("Terminé ✓").waitFor({ timeout: 60000 });
+  await labo.getByText("Terminé", { exact: true }).waitFor({ timeout: 60000 });
   console.log("produits et ingrédients comptés à l'ouverture du labo :", n);
   await labo.reload();
   // La capture masque le curseur des champs : attendre l'hydratation pour ne pas la perturber.
@@ -81,7 +81,7 @@ async function toutCompter(page, valeur) {
   await labo.getByText("Réception enregistrée").waitFor();
 
   await labo.goto(shiftLabo + "/livraisons");
-  await labo.getByLabel("Site destinataire").selectOption({ label: "Livrer à : Browse 2 Mars" });
+  await labo.getByLabel("Site destinataire").selectOption({ label: "Browse 2 Mars" });
   await labo.getByRole("button", { name: "Plus Matilda Cake" }).click();
   await labo.getByRole("button", { name: "Plus Matilda Cake" }).click();
   await labo.getByRole("button", { name: "Plus Lemon Cake" }).click();
@@ -99,7 +99,7 @@ async function toutCompter(page, valeur) {
   await toutCompter(labo, "0");
   await labo.getByLabel("Quantité Farine T55").fill("30,25");
   await labo.getByLabel("Quantité Matilda Cake").fill("1");
-  await labo.getByText("Terminé ✓").waitFor({ timeout: 60000 });
+  await labo.getByText("Terminé", { exact: true }).waitFor({ timeout: 60000 });
   await shot(labo, "L06-comptage-labo");
 
   await labo.goto(shiftLabo + "/cloture");
@@ -122,7 +122,7 @@ async function toutCompter(page, valeur) {
   await pdv.getByRole("link", { name: /Réceptions/ }).click();
   await pdv.getByText(/Expédié : 2 gâteaux \(16 parts\)/).waitFor();
   await pdv.getByLabel("Quantité reçue Matilda Cake").fill("15");
-  await pdv.getByPlaceholder(/Expliquer l'écart/).fill("Une part écrasée");
+  await pdv.getByLabel("Explication de l'écart (obligatoire)").fill("Une part écrasée");
   await shot(pdv, "P02-reception-bon");
   await pdv.getByRole("button", { name: /Réceptionner avec 1 écart/ }).click();
   await pdv.getByText(/réceptionné · 1 produit\(s\) en écart/).waitFor();

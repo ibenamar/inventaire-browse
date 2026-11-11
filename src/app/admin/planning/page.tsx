@@ -44,10 +44,10 @@ export default async function Planning({ searchParams }: { searchParams: Promise
       {vue === "semaine" ? (
         <div className="grid gap-3">
           {jours.map((j) => (
-            <section key={j.journee} className={cx("rounded-2xl bg-white p-3 ring-1", j.journee === aujourdhui ? "ring-2 ring-marque-500" : "ring-stone-200")}>
+            <section key={j.journee} className={cx("rounded-2xl bg-card p-3 ring-1", j.journee === aujourdhui ? "ring-2 ring-primary" : "ring-border")}>
               <h2 className="mb-2 font-semibold">{libelleJournee(j.journee)}</h2>
               {j.cases.length === 0 ? (
-                <p className="text-sm text-stone-500">Aucun créneau ce jour.</p>
+                <p className="text-sm text-muted-foreground">Aucun créneau ce jour.</p>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {j.cases.map((c) => {
@@ -87,7 +87,7 @@ export default async function Planning({ searchParams }: { searchParams: Promise
         <div className="overflow-x-auto">
           <div className="grid min-w-[700px] grid-cols-7 gap-1">
             {[1, 2, 3, 4, 5, 6, 7].map((j) => (
-              <div key={j} className="px-1 text-center text-xs font-semibold text-stone-500">
+              <div key={j} className="px-1 text-center text-xs font-semibold text-muted-foreground">
                 {NOMS_JOURS_COURTS[j]}
               </div>
             ))}
@@ -98,7 +98,7 @@ export default async function Planning({ searchParams }: { searchParams: Promise
               <Link
                 key={j.journee}
                 href={`/admin/planning?site=${site.id}&vue=semaine&date=${j.journee}`}
-                className={cx("min-h-24 rounded-xl bg-white p-1.5 ring-1 hover:ring-marque-500", j.journee === aujourdhui ? "ring-2 ring-marque-500" : "ring-stone-200")}
+                className={cx("min-h-24 rounded-xl bg-card p-1.5 ring-1 hover:ring-primary", j.journee === aujourdhui ? "ring-2 ring-primary" : "ring-border")}
               >
                 <div className="text-xs font-bold">{Number(j.journee.slice(8))}</div>
                 <div className="mt-1 grid gap-0.5">
@@ -108,12 +108,12 @@ export default async function Planning({ searchParams }: { searchParams: Promise
                       <div
                         key={c.shift?.id ?? c.creneau?.id}
                         className={cx(
-                          "truncate rounded px-1 text-[11px] leading-5",
-                          !c.shift && "bg-stone-100 text-stone-400",
-                          st === "a_l_heure" && "bg-emerald-100 text-emerald-900",
-                          (st === "a_venir" || st === "en_cours") && "bg-sky-100 text-sky-900",
-                          st === "en_retard" && "bg-amber-100 text-amber-900",
-                          st === "manquant" && "bg-red-100 text-red-900",
+                          "truncate rounded px-1 text-xs leading-5",
+                          !c.shift && "bg-muted text-muted-foreground",
+                          st === "a_l_heure" && "bg-success-soft text-success",
+                          (st === "a_venir" || st === "en_cours") && "bg-info-soft text-info",
+                          st === "en_retard" && "bg-warning-soft text-warning",
+                          st === "manquant" && "bg-destructive-soft text-destructive",
                         )}
                         title={`${c.nomCreneau} : ${c.shift?.responsable ?? "non planifié"}`}
                       >
@@ -125,10 +125,10 @@ export default async function Planning({ searchParams }: { searchParams: Promise
               </Link>
             ))}
           </div>
-          <p className="mt-2 text-xs text-stone-500">Touchez un jour pour modifier la semaine correspondante.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Touchez un jour pour modifier la semaine correspondante.</p>
         </div>
       )}
-      <p className="mt-4 text-xs text-stone-500">
+      <p className="mt-4 text-xs text-muted-foreground">
         Les shifts de nuit sont rattachés au jour où ils commencent (ex. vendredi 20:00 → samedi 04:00 apparaît le vendredi).
       </p>
     </>
