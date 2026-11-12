@@ -67,8 +67,9 @@ describe("fiche technique et coût de revient", () => {
     expect(r).toMatchObject({ coutRecette: 34, parGateau: 8, coutParUnite: 4.25, complet: true });
     await appliquerCoutRecette(db, matilda, "2026-11-16", dir);
     expect(await coutEnVigueur(db, matilda, "2026-11-16")).toBe(4.25);
-    await expect(enregistrerRecette(db, farine, [{ ingredientId: nutella, quantite: 1 }], dir)).rejects.toThrow(/ingrédient n'a pas/);
-    await expect(enregistrerRecette(db, matilda, [{ ingredientId: matilda, quantite: 1 }], dir)).rejects.toThrow(/inconnu/);
+    await expect(enregistrerRecette(db, farine, [{ ingredientId: nutella, quantite: 1 }], dir)).rejects.toThrow(/matière première n'a pas/);
+    await expect(enregistrerRecette(db, matilda, [{ ingredientId: matilda, quantite: 1 }], dir)).rejects.toThrow(/propre fiche/);
+    await expect(enregistrerRecette(db, matilda, [{ ingredientId: crepe, quantite: 1 }], dir)).rejects.toThrow(/inconnu/);
   });
 });
 

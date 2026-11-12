@@ -18,6 +18,7 @@ import {
   UNITES_DECIMALES,
 } from "@/db/schema";
 import { estQuantiteValide } from "@/domain/calculs";
+import { creeUneBoucle } from "@/domain/recettes";
 import type { Journee } from "@/domain/temps";
 import type { Acteur } from "../acteur";
 import { tracer } from "../audit";
@@ -128,6 +129,11 @@ export async function modifierProduit(db: Db, id: string, v: SaisieProduit, acte
       .limit(1);
     exiger(!enCours, "Unité non modifiable : un bon de livraison en cours contient ce produit");
   }
+  // Matière première et préparation intermédiaire : toujours suivies en stock, fabriquées ou achetées
+  // pour le labo (jamais livrées comme produit fini) ; seule une matière première peut être comptée
+  // dans les points de vente.
+  if (avant.nature !== "produit") Object.assign(v, { suiviStock: true, fabriqueLabo: false });
+  if (avant.nature !== "ingredient") v.ingredientPointsDeVente = false;
   await db
     .update(produits)
     .set({ ...v, nom: v.nom.trim(), format: v.format?.trim() || null })
@@ -206,7 +212,10 @@ export interface SaisieNouveauProduit {
   partsParGateau: number | null;
   format: string | null;
   suiviStock: boolean;
-  /** « ingredient » : matière première du laboratoire, toujours suivie en stock, jamais vendue. */
+  /**
+   * « ingredient » : matière première du laboratoire ; « intermediaire » : préparation du laboratoire
+   * (pâte, crème…). Toujours suivis en stock, jamais vendus.
+   */
   nature?: (typeof NATURES_PRODUIT)[number];
   fabriqueLabo?: boolean;
 }
@@ -240,9 +249,9 @@ export async function creerProduit(db: Db, v: SaisieNouveauProduit, acteur: Acte
       unite: v.unite,
       partsParGateau: v.unite === "part" ? v.partsParGateau : null,
       format: v.format?.trim() || null,
-      suiviStock: v.nature === "ingredient" ? true : v.suiviStock,
+      suiviStock: v.nature && v.nature !== "produit" ? true : v.suiviStock,
       nature: v.nature ?? "produit",
-      fabriqueLabo: v.nature !== "ingredient" && (v.fabriqueLabo ?? false),
+      fabriqueLabo: (v.nature ?? "produit") === "produit" && (v.fabriqueLabo ?? false),
       ordre: Math.max(0, ...tous.map((x) => x.ordre)) + 1,
     })
     .returning({ id: produits.id });
@@ -252,13 +261,13 @@ export async function creerProduit(db: Db, v: SaisieNouveauProduit, acteur: Acte
 
 /**
  * Stock minimum d'un produit sur chaque site qui le stocke (null = pas d'alerte) : les points de vente
- * pour un produit, le laboratoire pour un ingrédient ou un produit qu'il fabrique.
+ * pour un produit, le laboratoire pour un ingrédient, une préparation intermédiaire ou un produit qu'il fabrique.
  */
 export async function stocksMinimum(db: Db, produitId: string) {
   const [p] = await db.select({ nature: produits.nature, fabriqueLabo: produits.fabriqueLabo }).from(produits).where(eq(produits.id, produitId));
   exiger(p, "Produit introuvable");
   const ss = (await db.select().from(sites).orderBy(asc(sites.ordre))).filter((s) =>
-    s.type === "laboratoire" ? p.nature === "ingredient" || p.fabriqueLabo : p.nature === "produit",
+    s.type === "laboratoire" ? p.nature !== "produit" || p.fabriqueLabo : p.nature === "produit",
   );
   const vals = await db.select().from(produitsSites).where(eq(produitsSites.produitId, produitId));
   return ss.map((s) => ({ siteId: s.id, site: s.nom, statut: s.statut, stockMinimum: vals.find((v) => v.siteId === s.id)?.stockMinimum ?? null }));
@@ -285,29 +294,43 @@ export async function definirStocksMinimum(db: Db, produitId: string, valeurs: {
 export interface LigneRecette {
   ingredientId: string;
   ingredient: string;
+  /** Matière première ou préparation intermédiaire. */
+  nature: (typeof NATURES_PRODUIT)[number];
   unite: (typeof UNITES)[number];
   quantite: number;
   coutUnitaire: number | null;
+  /** Intermédiaire sans coût saisi : coût tiré de sa propre fiche technique. */
+  coutDeSaFiche: boolean;
   cout: number | null;
 }
 
+/** Profondeur maximale des fiches imbriquées (garde-fou ; les boucles sont refusées à l'enregistrement). */
+const PROFONDEUR_FICHES = 6;
+
 /**
- * Fiche technique d'un produit (pour un gâteau entier si le produit se vend en parts) et son coût :
- * Σ quantité × coût en vigueur de l'ingrédient. `coutParUnite` est ramené à l'unité de stock (la part).
+ * Coût unitaire d'un composant : le coût en vigueur ; à défaut, pour une préparation intermédiaire,
+ * le coût calculé de sa fiche technique (si elle est complète).
  */
-export async function lireRecette(db: Db, produitId: string, journee: Journee) {
+async function coutComposant(db: Db, id: string, nature: string, journee: Journee, profondeur: number) {
+  const c = await coutEnVigueur(db, id, journee);
+  if (c !== null || nature !== "intermediaire" || profondeur >= PROFONDEUR_FICHES) return { cout: c, deSaFiche: false };
+  const r = await calculerRecette(db, id, journee, profondeur + 1);
+  return r.complet ? { cout: r.coutParUnite, deSaFiche: true } : { cout: null, deSaFiche: false };
+}
+
+async function calculerRecette(db: Db, produitId: string, journee: Journee, profondeur: number) {
   const [p] = await db.select().from(produits).where(eq(produits.id, produitId));
   exiger(p, "Produit introuvable");
   const rows = await db
-    .select({ ingredientId: recettes.ingredientId, ingredient: produits.nom, unite: produits.unite, quantite: recettes.quantite })
+    .select({ ingredientId: recettes.ingredientId, ingredient: produits.nom, nature: produits.nature, unite: produits.unite, quantite: recettes.quantite })
     .from(recettes)
     .innerJoin(produits, eq(produits.id, recettes.ingredientId))
     .where(eq(recettes.produitId, produitId))
-    .orderBy(asc(produits.nom));
+    .orderBy(asc(produits.nature), asc(produits.nom));
   const lignes: LigneRecette[] = [];
   for (const r of rows) {
-    const c = await coutEnVigueur(db, r.ingredientId, journee);
-    lignes.push({ ...r, coutUnitaire: c, cout: c === null ? null : Math.round(c * r.quantite * 100) / 100 });
+    const c = await coutComposant(db, r.ingredientId, r.nature, journee, profondeur);
+    lignes.push({ ...r, coutUnitaire: c.cout, coutDeSaFiche: c.deSaFiche, cout: c.cout === null ? null : Math.round(c.cout * r.quantite * 100) / 100 });
   }
   const complet = lignes.length > 0 && lignes.every((l) => l.cout !== null);
   const total = Math.round(lignes.reduce((t, l) => t + (l.cout ?? 0), 0) * 100) / 100;
@@ -315,24 +338,50 @@ export async function lireRecette(db: Db, produitId: string, journee: Journee) {
   return {
     lignes,
     complet,
-    /** Coût de la recette (un gâteau entier, ou une unité). */
+    /** Coût de la recette (un gâteau entier, ou une unité : 1 kg de crème, une pièce…). */
     coutRecette: total,
     parGateau,
     coutParUnite: parGateau ? Math.round((total / parGateau) * 100) / 100 : total,
   };
 }
 
+/**
+ * Fiche technique d'un produit fini ou d'une préparation intermédiaire (pour un gâteau entier si le
+ * produit se vend en parts, sinon pour une unité de stock) et son coût : Σ quantité × coût du
+ * composant. `coutParUnite` est ramené à l'unité de stock (la part).
+ */
+export async function lireRecette(db: Db, produitId: string, journee: Journee) {
+  return calculerRecette(db, produitId, journee, 0);
+}
+
+/** Fiches techniques qui utilisent un composant (matière première ou intermédiaire). */
+export async function lireUtilisations(db: Db, composantId: string) {
+  return db
+    .select({ produitId: recettes.produitId, produit: produits.nom, nature: produits.nature, quantite: recettes.quantite })
+    .from(recettes)
+    .innerJoin(produits, eq(produits.id, recettes.produitId))
+    .where(eq(recettes.ingredientId, composantId))
+    .orderBy(asc(produits.nature), asc(produits.nom));
+}
+
 export async function enregistrerRecette(db: Db, produitId: string, lignes: { ingredientId: string; quantite: number }[], acteur: Acteur) {
   const [p] = await db.select().from(produits).where(eq(produits.id, produitId));
   exiger(p, "Produit introuvable");
-  exiger(p.nature === "produit", "Un ingrédient n'a pas de fiche technique");
+  exiger(p.nature !== "ingredient", "Une matière première n'a pas de fiche technique");
   const utiles = lignes.filter((l) => l.quantite !== 0);
-  exiger(new Set(utiles.map((l) => l.ingredientId)).size === utiles.length, "Un ingrédient apparaît deux fois");
-  const ingredients = new Set((await db.select({ id: produits.id }).from(produits).where(eq(produits.nature, "ingredient"))).map((x) => x.id));
+  exiger(new Set(utiles.map((l) => l.ingredientId)).size === utiles.length, "Un composant apparaît deux fois");
+  const composants = new Set(
+    (await db.select({ id: produits.id }).from(produits).where(inArray(produits.nature, ["ingredient", "intermediaire"]))).map((x) => x.id),
+  );
   for (const l of utiles) {
-    exiger(ingredients.has(l.ingredientId), "Ingrédient inconnu");
+    exiger(l.ingredientId !== produitId, "Une préparation ne peut pas entrer dans sa propre fiche technique");
+    exiger(composants.has(l.ingredientId), "Composant inconnu : choisir une matière première ou une préparation intermédiaire");
     exiger(Number.isFinite(l.quantite) && l.quantite > 0 && l.quantite <= 100000, "Quantité invalide dans la fiche technique");
   }
+  exiger(
+    !creeUneBoucle(produitId, utiles.map((l) => l.ingredientId), await db.select().from(recettes)),
+    "Fiche impossible : une des préparations choisies utilise déjà celle-ci (boucle)",
+  );
   await db.transaction(async (tx) => {
     await tx.delete(recettes).where(eq(recettes.produitId, produitId));
     if (utiles.length) await tx.insert(recettes).values(utiles.map((l) => ({ produitId, ingredientId: l.ingredientId, quantite: l.quantite })));
@@ -344,7 +393,7 @@ export async function enregistrerRecette(db: Db, produitId: string, lignes: { in
 export async function appliquerCoutRecette(db: Db, produitId: string, journee: Journee, acteur: Acteur) {
   const r = await lireRecette(db, produitId, journee);
   exiger(r.lignes.length, "La fiche technique est vide");
-  exiger(r.complet, "Le coût d'au moins un ingrédient est inconnu : saisissez-le sur sa fiche");
+  exiger(r.complet, "Le coût d'au moins un composant est inconnu : saisissez-le sur sa fiche (ou complétez la fiche de la préparation)");
   await ajouterCout(db, produitId, r.coutParUnite, journee, acteur);
   return r.coutParUnite;
 }

@@ -190,11 +190,11 @@ Le laboratoire fonctionne comme un point de vente : planning avec un responsable
 
 | Étape | Ce qu'on fait |
 |---|---|
-| **Production** | ce qui sort du four ou de la préparation ; les cakes se saisissent **en gâteaux entiers** (convertis en parts) |
-| **Réceptions** | ingrédients et fournitures reçus des fournisseurs (décimales acceptées : 2,5 kg) |
+| **Production** | ce qui sort du four, en **gâteaux entiers** pour les cakes (convertis en parts), et les **préparations intermédiaires** faites (pâtes, crèmes, ganaches… en kg ou en litres) |
+| **Réceptions** | matières premières et fournitures reçues des fournisseurs (décimales acceptées : 2,5 kg) |
 | **Livraisons** | bons de livraison vers les points de vente : choisir le site, les quantités, puis **Préparer** ou **Expédier** au départ du livreur |
 | **Pertes** | comme au point de vente ; les cakes en gâteaux entiers |
-| **Comptage** | produits finis (cakes en gâteaux entiers) **et ingrédients** |
+| **Comptage** | produits finis (cakes en gâteaux entiers), **préparations intermédiaires** et **matières premières** |
 
 ### Préparer et expédier un bon de livraison
 
@@ -216,26 +216,39 @@ Contrôles :
 - on ne peut pas **expédier plus que le stock** : saisir d'abord la production ;
 - un bon préparé s'annule par l'équipe du labo ; un bon expédié non reçu, par un manager seulement (la sortie de stock est retirée) ; un bon reçu ne s'annule plus.
 
-À la clôture, pour un **ingrédient**, la différence entre le théorique et le compté n'est pas un écart mais la **consommation** du shift, valorisée au coût. Si les produits ont une **fiche technique**, la consommation attendue (production × recette) est affichée : « +0,5 vs fiche » signale une surconsommation.
+### Matières premières et préparations intermédiaires
 
-L'onglet **Laboratoire** (managers, direction) présente : la **prévision de production** du jour choisi (moyenne des ventes des 4 mêmes jours de semaine, stock minimum, stocks et livraisons en route), la production par jour, les livraisons par point de vente, les écarts de livraison, la consommation des ingrédients et les pertes du labo.
+Le stock du laboratoire a trois niveaux :
+
+```
+Matières premières ──▶ Préparations intermédiaires ──▶ Produits finis ──▶ points de vente
+(farine, beurre, lait)   (pâte sucrée, crème pâtissière)   (tartes, cakes)
+```
+
+- Une **préparation intermédiaire** est faite au labo à partir de matières premières (ou d'une autre préparation : crème mousseline ← crème pâtissière), saisie en **Production**, comptée à la fin du shift, puis utilisée dans les produits finis. Elle n'est ni vendue ni livrée.
+- Chaque fabrication consomme le niveau du dessous **d'après les fiches techniques** : produire 2 kg de pâte sucrée consomme sa farine et son beurre ; produire 4 tartes consomme la pâte et la crème (pas une deuxième fois leur farine).
+
+À la clôture, pour une **matière première** comme pour une **préparation**, la différence entre le théorique et le compté n'est pas un écart mais la **consommation** du shift. Si les produits ont une **fiche technique**, la consommation attendue (production × fiche, niveau par niveau) est affichée : « +0,5 vs fiche » signale une surconsommation (gaspillage, perte non déclarée, production non saisie). La valeur consommée du shift ne compte que les matières premières : les préparations en sont faites.
+
+L'onglet **Laboratoire** (managers, direction) présente : la **prévision de production** du jour choisi (moyenne des ventes des 4 mêmes jours de semaine, stock minimum, stocks et livraisons en route) et les **besoins** qui en découlent — préparations à faire (déduction faite de leur stock) et matières premières manquantes —, la production par jour (produits et préparations), les livraisons par point de vente, les écarts de livraison, la consommation des matières premières et des préparations, et les pertes du labo.
 
 ### Journée type au laboratoire
 
 | Moment | Qui | Action |
 |---|---|---|
 | Avant le début | Responsable | Se connecte sur le site « Laboratoire », **ouvre le shift** |
-| Début | Manager / équipe | Consulte la **prévision de production** et les bons préparés (réapprovisionnement) |
-| Pendant | Équipe | **Production** à chaque fournée, **réceptions** d'ingrédients, **pertes** au fil de l'eau |
+| Début | Manager / équipe | Consulte la **prévision de production**, les **préparations à faire** et les matières manquantes, et les bons préparés (réapprovisionnement) |
+| Pendant | Équipe | **Production** à chaque fournée et à chaque préparation, **réceptions** de matières premières, **pertes** au fil de l'eau |
 | Départ du livreur | Équipe | **Livraisons** : ajuste puis **expédie** les bons vers les points de vente |
-| Fin | Équipe | **Comptage** des produits finis et des ingrédients |
-| Fin | Responsable | **Récapitulatif** (écarts produits, consommation d'ingrédients), **clôture** |
+| Fin | Équipe | **Comptage** des produits finis, des préparations et des matières premières |
+| Fin | Responsable | **Récapitulatif** (écarts produits, consommation des matières et des préparations), **clôture** |
 
-## 12. Catalogue : ingrédients, fiches techniques, conservation (direction)
+## 12. Catalogue : matières premières, préparations, fiches techniques, conservation (direction)
 
-- **Ingrédient** : Catalogue › Nouveau produit › « Ingrédient du laboratoire », en kg, litre, pièce, sachet, boîte ou bouteille. Coché « aussi compté dans les points de vente », il est compté dans les points de vente pour suivre les préparations à la commande (crêpes, pancakes…).
+- **Matière première** : Catalogue › Nouveau produit › « Matière première », en kg, litre, pièce, sachet, boîte ou bouteille. Coché « aussi compté dans les points de vente », elle est comptée dans les points de vente pour suivre les préparations à la commande (crêpes, pancakes…).
+- **Préparation intermédiaire** : Catalogue › Nouveau produit › « Préparation intermédiaire » (catégorie « Préparations intermédiaires »), en kg, litre ou pièce. Comptée au labo seulement ; sa fiche indique ce qu'elle utilise et la carte « Utilisé dans » les produits qui l'emploient.
 - **Produit fabriqué par le laboratoire** : case sur la fiche produit ; il est compté au labo et livré aux points de vente.
-- **Fiche technique** : ingrédients et quantités pour un gâteau entier (ou une unité). Elle donne le coût de la recette et par part ; « Appliquer comme coût de revient » l'enregistre. Elle sert aussi à calculer la consommation théorique d'ingrédients.
+- **Fiche technique** : composants (matières premières et préparations) et quantités pour un gâteau entier, une unité, ou **1 kg / 1 litre** de préparation. Elle donne le coût de la recette et par part ; « Appliquer comme coût de revient » l'enregistre. Une préparation sans coût saisi est valorisée par sa propre fiche. Une fiche ne peut pas boucler (une crème qui utiliserait une pâte faite avec cette crème est refusée). Elle sert aussi à calculer la consommation théorique et les besoins de production.
 - **Durée de conservation** (jours) : alimente l'alerte « DLC dépassée ? ».
 
 ## 13. Résumé : la journée type (point de vente)

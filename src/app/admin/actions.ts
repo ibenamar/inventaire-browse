@@ -358,7 +358,7 @@ export async function actionCreerProduit(_e: unknown, form: FormData): Promise<R
         partsParGateau: unite === "part" ? nombreOuNull(form.get("partsParGateau")) : null,
         format: String(form.get("format") ?? "") || null,
         suiviStock: form.get("suiviStock") === "on",
-        nature: form.get("nature") === "ingredient" ? "ingredient" : "produit",
+        nature: form.get("nature") === "ingredient" ? "ingredient" : form.get("nature") === "intermediaire" ? "intermediaire" : "produit",
         fabriqueLabo: form.get("fabriqueLabo") === "on",
       },
       acteur,

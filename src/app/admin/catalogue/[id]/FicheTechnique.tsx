@@ -10,9 +10,11 @@ interface Ingredient {
   id: string;
   nom: string;
   unite: Unite;
+  /** Préparation intermédiaire (sinon matière première). */
+  intermediaire: boolean;
 }
 
-/** Fiche technique : ingrédients et quantités pour un gâteau entier (ou une unité). */
+/** Fiche technique : composants (matières premières, préparations) et quantités pour un gâteau entier (ou une unité). */
 export function FicheTechnique({
   produitId,
   ingredients,
@@ -43,7 +45,7 @@ export function FicheTechnique({
     });
 
   if (!ingredients.length)
-    return <p className="text-sm text-muted-foreground">Créez d&apos;abord les ingrédients (Catalogue › Nouveau produit › Ingrédient du laboratoire).</p>;
+    return <p className="text-sm text-muted-foreground">Créez d&apos;abord les matières premières (Catalogue › Nouveau produit › Matière première).</p>;
 
   return (
     <div className="grid gap-2">
@@ -53,16 +55,29 @@ export function FicheTechnique({
         return (
           <div key={i} className="flex flex-wrap items-center gap-2">
             <select
-              aria-label="Ingrédient"
+              aria-label="Composant"
               value={l.ingredientId}
               onChange={(e) => setLignes((x) => x.map((y, j) => (j === i ? { ...y, ingredientId: e.target.value } : y)))}
               className={`${classesChamp} min-w-0 flex-1`}
             >
-              {dispo(l.ingredientId).map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.nom}
-                </option>
-              ))}
+              {(
+                [
+                  ["Préparations intermédiaires", true],
+                  ["Matières premières", false],
+                ] as const
+              ).map(([groupe, inter]) =>
+                dispo(l.ingredientId).some((x) => x.intermediaire === inter) ? (
+                  <optgroup key={groupe} label={groupe}>
+                    {dispo(l.ingredientId)
+                      .filter((x) => x.intermediaire === inter)
+                      .map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.nom}
+                        </option>
+                      ))}
+                  </optgroup>
+                ) : null,
+              )}
             </select>
             <input
               aria-label={`Quantité ${ing?.nom ?? ""}`}
@@ -85,14 +100,14 @@ export function FicheTechnique({
           disabled={!dispo("").length}
           onClick={() => setLignes((x) => [...x, { ingredientId: dispo("")[0].id, texte: "" }])}
         >
-          + Ingrédient
+          + Composant
         </Bouton>
         <Bouton
           type="button"
           disabled={enCours}
           onClick={() => {
             const valeurs = lignes.map((l) => ({ ingredientId: l.ingredientId, quantite: lireQuantite(l.texte) }));
-            if (valeurs.some((v) => v.quantite === null || v.quantite <= 0)) return setRetour({ ok: false, texte: "Indiquer une quantité positive pour chaque ingrédient" });
+            if (valeurs.some((v) => v.quantite === null || v.quantite <= 0)) return setRetour({ ok: false, texte: "Indiquer une quantité positive pour chaque composant" });
             agir(() => actionEnregistrerRecette(produitId, valeurs as { ingredientId: string; quantite: number }[]));
           }}
         >
@@ -109,7 +124,7 @@ export function FicheTechnique({
               soit <strong>{formatMad(cout.parUnite)}</strong> par {cout.libelleUnite}
             </>
           )}
-          {!cout.complet && <span className="text-warning"> — coût d&apos;un ingrédient inconnu : saisissez-le sur sa fiche</span>}
+          {!cout.complet && <span className="text-warning"> — coût d&apos;un composant inconnu : saisissez-le sur sa fiche (ou complétez la fiche de la préparation)</span>}
         </p>
       )}
       {cout?.complet && !modifiee && (

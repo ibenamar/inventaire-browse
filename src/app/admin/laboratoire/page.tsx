@@ -45,7 +45,9 @@ export default async function Laboratoire({
 
   return (
     <>
-      <Titre sousTitre="Production, livraisons aux points de vente, écarts de livraison et consommation des ingrédients.">Laboratoire</Titre>
+      <Titre sousTitre="Production, préparations intermédiaires, livraisons aux points de vente, écarts de livraison et consommation des matières premières.">
+        Laboratoire
+      </Titre>
       <Filtres sites={labos} siteId={labo.id} vue={vue} {...p} />
       {labo.statut !== "actif" && (
         <Message ton="alerte">
@@ -58,7 +60,7 @@ export default async function Laboratoire({
         <Kpi label="Shifts clôturés" valeur={r.shiftsClos} />
         <Kpi label="Bons expédiés" valeur={totalBons} />
         <Kpi label="Bons avec écart" valeur={bonsEcart} ton={bonsEcart ? "rouge" : totalBons ? "vert" : undefined} />
-        <Kpi label="Ingrédients consommés (coût)" valeur={formatMad(r.valeurConsommation)} />
+        <Kpi label="Matières premières consommées (coût)" valeur={formatMad(r.valeurConsommation)} />
       </div>
 
       <Carte className="mb-4">
@@ -120,11 +122,61 @@ export default async function Laboratoire({
         ) : (
           <p className="text-sm text-muted-foreground">Rien à produire d&apos;après l&apos;historique (ou pas encore assez de shifts clôturés).</p>
         )}
+        {(prev.besoins.intermediaires.length > 0 || prev.besoins.matieres.length > 0) && (
+          <div className="mt-4 border-t border-border pt-3">
+            <h3 className="font-semibold">Besoins pour cette production</h3>
+            <p className="mb-2 text-sm text-muted-foreground">
+              D&apos;après les fiches techniques : préparations intermédiaires à faire (déduction faite de leur stock au labo), puis matières
+              premières pour les produits et pour ces préparations. Stock = dernier comptage du labo.
+            </p>
+            <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
+              {(
+                [
+                  ["Préparations intermédiaires", "À préparer", prev.besoins.intermediaires],
+                  ["Matières premières", "Manque", prev.besoins.matieres],
+                ] as const
+              ).map(([titre, colonne, liste]) =>
+                liste.length ? (
+                  <div key={titre} className="overflow-x-auto" tabIndex={0} role="region" aria-label={titre}>
+                    <table className="w-full text-sm">
+                      <caption className="text-left text-sm font-semibold">{titre}</caption>
+                      <thead className="text-xs text-muted-foreground">
+                        <tr>
+                          <th className="py-1 text-left">Composant</th>
+                          <th className="text-right">Besoin</th>
+                          <th className="text-right">Stock</th>
+                          <th className="text-right">{colonne}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {liste.map((b) => (
+                          <tr key={b.produitId} className="border-t border-border">
+                            <td className="py-1.5">{b.produit}</td>
+                            <td className="text-right whitespace-nowrap tabular-nums">
+                              {formatQuantite(b.besoin)} {UNITE_PLURIEL[b.unite]}
+                            </td>
+                            <td className="text-right whitespace-nowrap tabular-nums">{formatQuantite(b.stock)}</td>
+                            <td className={cx("text-right font-bold whitespace-nowrap tabular-nums", b.manque > 0 && titre === "Matières premières" && "text-destructive")}>
+                              {b.manque > 0 ? formatQuantite(b.manque) : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null,
+              )}
+            </div>
+            {prev.besoins.sansFiche.length > 0 && (
+              <p className="mt-2 text-xs text-warning">Sans fiche technique, non comptés dans les besoins : {prev.besoins.sansFiche.join(", ")}.</p>
+            )}
+          </div>
+        )}
       </Carte>
 
       <Carte>
         <h2 className="font-semibold">Production par jour</h2>
-        <p className="mb-2 text-sm text-muted-foreground">Cakes en gâteaux entiers, autres produits en pièces.</p>
+        <p className="mb-2 text-sm text-muted-foreground">Cakes en gâteaux entiers, autres produits en pièces ; préparations intermédiaires dans leur unité (kg, litre…).</p>
         {r.production.length ? (
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)">
             <table className="w-full min-w-[480px] text-sm">
@@ -142,7 +194,15 @@ export default async function Laboratoire({
               <tbody>
                 {r.production.map((x) => (
                   <tr key={x.produitId} className="border-t border-border">
-                    <td className="py-1.5">{x.produit}</td>
+                    <td className="py-1.5">
+                      {x.produit}
+                      {x.nature === "intermediaire" && (
+                        <span className="text-xs text-muted-foreground">
+                          {" "}
+                          (préparation, {UNITE_PLURIEL[x.unite]})
+                        </span>
+                      )}
+                    </td>
                     {r.jours.map((j) => (
                       <td key={j} className="px-1 text-right tabular-nums">
                         {x.parJour[j] ? enGateaux(x.parJour[j], x) : ""}
@@ -239,42 +299,63 @@ export default async function Laboratoire({
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Carte>
-          <h2 className="mb-1 font-semibold">Consommation des ingrédients</h2>
+          <h2 className="mb-1 font-semibold">Consommation des matières premières et des préparations</h2>
           <p className="mb-2 text-sm text-muted-foreground">
-            Réelle : stock d&apos;ouverture + réceptions − pertes − stock compté, cumulé sur les shifts clôturés, valorisée au coût de
-            l&apos;ingrédient. Fiche : consommation attendue d&apos;après les fiches techniques (en rouge si la réelle la dépasse).
+            Réelle : stock d&apos;ouverture + réceptions et production − pertes − stock compté, cumulé sur les shifts clôturés, valorisée au coût.
+            Fiche : consommation attendue d&apos;après les fiches techniques, niveau par niveau (production des produits finis et des
+            préparations) ; en rouge si la réelle la dépasse.
           </p>
           {r.consommation.length ? (
-            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)"><table className="w-full text-sm">
-              <thead className="text-xs text-muted-foreground">
-                <tr>
-                  <th className="py-1 text-left">Ingrédient</th>
-                  <th className="text-right">Réelle</th>
-                  <th className="text-right">Fiche</th>
-                  <th className="text-right">Valeur</th>
-                </tr>
-              </thead>
-              <tbody>
-                {r.consommation.map((c) => (
-                  <tr key={c.produitId} className="border-t border-border">
-                    <td className="py-1.5">{c.produit}</td>
-                    <td className={cx("text-right whitespace-nowrap tabular-nums", c.quantite < 0 && "text-warning")}>
-                      {formatQuantite(c.quantite)} {UNITE_PLURIEL[c.unite]}
-                    </td>
-                    <td className={cx("text-right whitespace-nowrap tabular-nums", c.theorique !== null && c.quantite > c.theorique && "font-semibold text-destructive")}>
-                      {c.theorique === null ? "—" : formatQuantite(c.theorique)}
-                    </td>
-                    <td className="text-right whitespace-nowrap tabular-nums">{c.coutConnu ? formatMad(c.valeur) : <span className="text-muted-foreground">coût inconnu</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
+            (
+              [
+                ["Matières premières", r.consommation.filter((c) => c.nature === "ingredient")],
+                ["Préparations intermédiaires", r.consommation.filter((c) => c.nature === "intermediaire")],
+              ] as const
+            ).map(([titre, liste]) =>
+              liste.length ? (
+                <div key={titre} className="mb-3 overflow-x-auto" tabIndex={0} role="region" aria-label={titre}>
+                  <table className="w-full text-sm">
+                    <caption className="text-left text-sm font-semibold">{titre}</caption>
+                    <thead className="text-xs text-muted-foreground">
+                      <tr>
+                        <th className="py-1 text-left">{titre === "Matières premières" ? "Matière" : "Préparation"}</th>
+                        <th className="text-right">Réelle</th>
+                        <th className="text-right">Fiche</th>
+                        <th className="text-right">Valeur</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {liste.map((c) => (
+                        <tr key={c.produitId} className="border-t border-border">
+                          <td className="py-1.5">{c.produit}</td>
+                          <td className={cx("text-right whitespace-nowrap tabular-nums", c.quantite < 0 && "text-warning")}>
+                            {formatQuantite(c.quantite)} {UNITE_PLURIEL[c.unite]}
+                          </td>
+                          <td className={cx("text-right whitespace-nowrap tabular-nums", c.theorique !== null && c.quantite > c.theorique && "font-semibold text-destructive")}>
+                            {c.theorique === null ? "—" : formatQuantite(c.theorique)}
+                          </td>
+                          <td className="text-right whitespace-nowrap tabular-nums">
+                            {c.coutConnu ? formatMad(c.valeur) : <span className="text-muted-foreground">coût inconnu</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null,
+            )
           ) : (
             <p className="text-sm text-muted-foreground">Pas de consommation calculée sur la période (shifts clôturés nécessaires).</p>
           )}
+          {r.consommation.some((c) => c.nature === "intermediaire") && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              La valeur des préparations consommées n&apos;est pas ajoutée au total : elle est déjà comptée dans les matières premières utilisées
+              pour les préparer.
+            </p>
+          )}
           {r.consommation.some((c) => c.quantite < 0) && (
             <p className="mt-2 text-xs text-warning">
-              Une consommation négative signale plus de stock compté que prévu : réception non saisie ou erreur de comptage.
+              Une consommation négative signale plus de stock compté que prévu : réception ou production non saisie, ou erreur de comptage.
             </p>
           )}
         </Carte>

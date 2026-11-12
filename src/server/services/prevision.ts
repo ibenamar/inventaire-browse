@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import type { Db } from "@/db";
-import { bonsLivraison, lignesBon, lignesShift, mouvements, produits, shifts, sites, type Unite } from "@/db/schema";
+import { bonsLivraison, lignesBon, lignesShift, mouvements, produits, recettes, shifts, sites, type Unite } from "@/db/schema";
 import { arrondiQ } from "@/domain/calculs";
+import { besoinsProduction, indexerFiches } from "@/domain/recettes";
 import { ajouterJours, type Journee } from "@/domain/temps";
 import { lignesCalculeesPlusieurs } from "./shifts";
 
@@ -19,6 +20,19 @@ export interface LignePrevision {
   parSite: Record<string, { besoin: number; stock: number; enRoute: number; aLivrer: number }>;
   stockLabo: number;
   aProduire: number;
+}
+
+/** Préparation intermédiaire ou matière première nécessaire à la production prévue. */
+export interface BesoinPrevision {
+  produitId: string;
+  produit: string;
+  unite: Unite;
+  /** Quantité nécessaire d'après les fiches techniques. */
+  besoin: number;
+  /** Stock du labo au dernier comptage. */
+  stock: number;
+  /** Intermédiaire : à préparer ; matière première : manquante (à commander ou à sortir de réserve). */
+  manque: number;
 }
 
 export const SEMAINES_HISTORIQUE = 4;
@@ -80,10 +94,13 @@ export async function previsionProduction(db: Db, journee: Journee, siteIds?: st
     }
   }
 
+  // Stock du labo au dernier comptage : produits finis, préparations intermédiaires, matières premières.
+  const stockLabo = new Map<string, number>();
   if (labo) {
     const dernier = await dernierClos(db, labo.id);
     if (dernier)
       for (const l of await db.select().from(lignesShift).where(eq(lignesShift.shiftId, dernier.id))) {
+        stockLabo.set(l.produitId, l.stockReelFin ?? 0);
         const x = lignes.get(l.produitId);
         if (x) x.stockLabo = l.stockReelFin ?? 0;
       }
@@ -92,11 +109,33 @@ export async function previsionProduction(db: Db, journee: Journee, siteIds?: st
     const total = Object.values(x.parSite).reduce((t, v) => t + v.aLivrer, 0);
     x.aProduire = arrondiProduit(total - x.stockLabo, x);
   }
+
+  // Besoins en préparations intermédiaires et en matières premières pour cette production,
+  // d'après les fiches techniques (en unités de recette : gâteaux entiers pour les cakes).
+  const aProduire = new Map(
+    [...lignes.values()].filter((x) => x.aProduire > 0).map((x) => [x.produitId, x.partsParGateau ? x.aProduire / x.partsParGateau : x.aProduire]),
+  );
+  const besoins: { intermediaires: BesoinPrevision[]; matieres: BesoinPrevision[]; sansFiche: string[] } = { intermediaires: [], matieres: [], sansFiche: [] };
+  if (aProduire.size) {
+    const fiches = indexerFiches(await db.select().from(recettes));
+    const composants = new Map(
+      (await db.select({ id: produits.id, nom: produits.nom, nature: produits.nature, unite: produits.unite, ordre: produits.ordre }).from(produits)).map((p) => [p.id, p]),
+    );
+    const calcul = besoinsProduction(aProduire, fiches, (id) => composants.get(id)?.nature === "intermediaire", (id) => stockLabo.get(id) ?? 0);
+    for (const [id, b] of calcul) {
+      const c = composants.get(id);
+      if (!c) continue;
+      (c.nature === "intermediaire" ? besoins.intermediaires : besoins.matieres).push({ produitId: id, produit: c.nom, unite: c.unite, ...b });
+    }
+    for (const liste of [besoins.intermediaires, besoins.matieres]) liste.sort((a, b) => b.manque - a.manque || a.produit.localeCompare(b.produit));
+    besoins.sansFiche = [...aProduire.keys()].filter((id) => !fiches.has(id)).map((id) => lignes.get(id)!.produit);
+  }
   return {
     journee,
     jours,
     sites: pdv.map((s) => s.nom),
     lignes: [...lignes.values()].filter((x) => x.aProduire > 0 || Object.keys(x.parSite).length),
+    besoins,
   };
 }
 

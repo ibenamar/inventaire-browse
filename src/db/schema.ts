@@ -29,7 +29,14 @@ export const ROLES = ["employe", "manager", "direction", "labo"] as const;
 export const UNITES = ["piece", "part", "bouteille", "kg", "litre", "sachet", "boite"] as const;
 /** Unités dont le comptage accepte des décimales (ingrédients au poids ou au volume). */
 export const UNITES_DECIMALES: readonly Unite[] = ["kg", "litre"];
-export const NATURES_PRODUIT = ["produit", "ingredient"] as const;
+/**
+ * « produit » : produit fini (vendu) ; « ingredient » : matière première achetée ;
+ * « intermediaire » : préparation du laboratoire (pâte, crème, ganache…) fabriquée à partir de
+ * matières premières et utilisée dans les produits finis (ou d'autres intermédiaires).
+ */
+export const NATURES_PRODUIT = ["produit", "ingredient", "intermediaire"] as const;
+/** Natures consommées au laboratoire : la différence théorique − compté est une consommation, pas un écart. */
+export const NATURES_CONSOMMEES: readonly NatureProduit[] = ["ingredient", "intermediaire"];
 export const STATUTS_BON = ["prepare", "expedie", "recu", "annule"] as const;
 export const STATUTS_SHIFT = ["planifie", "ouvert", "cloture", "valide"] as const;
 /** « sortie » : expédition d'un bon de livraison (labo → point de vente, ou transfert). */
@@ -86,7 +93,7 @@ export const produits = pgTable(
     /** Prix de référence (canal « sur place ») : sert à valoriser les pertes et les écarts. */
     prixVente: numeric("prix_vente", { precision: 10, scale: 2, mode: "number" }),
     suiviStock: boolean("suivi_stock").notNull().default(true),
-    /** « ingredient » : matière première comptée au laboratoire (non vendue). */
+    /** « ingredient » : matière première ; « intermediaire » : préparation du labo. Ni l'un ni l'autre n'est vendu. */
     nature: text("nature", { enum: NATURES_PRODUIT }).notNull().default("produit"),
     /** Produit fabriqué par le laboratoire : compté dans le stock du labo et livré aux points de vente. */
     fabriqueLabo: boolean("fabrique_labo").notNull().default(false),
@@ -155,8 +162,10 @@ export const prixArticlesMagasins = pgTable(
 );
 
 /**
- * Fiche technique : ingrédients d'un produit, pour un gâteau entier (produits en parts) ou une unité.
- * Sert au coût de revient calculé et à la consommation théorique d'ingrédients.
+ * Fiche technique : composants d'un produit fini ou d'une préparation intermédiaire, pour un gâteau
+ * entier (produits en parts) ou une unité de stock (1 kg de crème, 1 pièce…). Un composant est une
+ * matière première ou une préparation intermédiaire (`ingredientId` désigne l'un ou l'autre).
+ * Sert au coût de revient calculé, à la consommation théorique et aux besoins de production.
  */
 export const recettes = pgTable(
   "recettes",

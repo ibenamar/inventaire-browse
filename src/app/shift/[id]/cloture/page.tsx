@@ -55,7 +55,8 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
   const enGateaux = (l: LigneDetail) => labo && l.unite === "part" && l.partsParGateau ? l.partsParGateau : null;
   const aff = (v: number | null, l: LigneDetail) => (v === null ? "—" : enGateaux(l) ? q(Math.round((v / enGateaux(l)!) * 100) / 100) : q(v));
   const nbPertes = d.mouvements.filter((m) => m.type === "perte").length;
-  const avecIngredients = suivis.some((l) => l.nature === "ingredient");
+  // Matières premières et préparations intermédiaires : la différence théorique − compté est une consommation.
+  const avecIngredients = suivis.some((l) => l.nature !== "produit");
   const parCategorie = new Map<string, LigneDetail[]>();
   for (const l of suivis) parCategorie.set(l.categorie, [...(parCategorie.get(l.categorie) ?? []), l]);
 
@@ -109,7 +110,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           <>
             <Kpi label="Produits fabriqués" valeur={d.lignes.filter((l) => l.production > 0).length} />
             <Kpi label="Lignes livrées" valeur={d.mouvements.filter((m) => m.type === "sortie").length} />
-            <Kpi label="Ingrédients consommés (coût)" valeur={formatMad(syn.valeurConsommation)} />
+            <Kpi label="Matières premières consommées (coût)" valeur={formatMad(syn.valeurConsommation)} />
           </>
         ) : (
           <>
@@ -214,7 +215,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
                       {l.unite === "part" && <span className="text-xs text-muted-foreground">{enGateaux(l) ? " (gâteaux)" : " (parts)"}</span>}
                       {(l.unite === "kg" || l.unite === "litre") && <span className="text-xs text-muted-foreground"> ({l.unite})</span>}
                     </td>
-                    {!montrer ? null : l.nature === "ingredient" ? (
+                    {!montrer ? null : l.nature !== "produit" ? (
                       <td className="px-2 py-1.5 text-right text-xs whitespace-nowrap text-muted-foreground tabular-nums">
                         {l.calcul.consommation !== null ? `conso ${q(l.calcul.consommation)}` : "—"}
                         {l.calcul.ecartConsommation !== null && l.calcul.ecartConsommation !== 0 && (

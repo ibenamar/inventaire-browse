@@ -17,6 +17,8 @@ import {
   sites,
   utilisateurs,
   UNITES_DECIMALES,
+  NATURES_CONSOMMEES,
+  type NatureProduit,
   type MotifPerte,
   type OrigineEntree,
   type TypeMouvement,
@@ -31,6 +33,7 @@ import {
   type LigneCalculee,
   type Synthese,
 } from "@/domain/calculs";
+import { consommationDirecte, indexerFiches } from "@/domain/recettes";
 import { creneauEnCours } from "@/domain/creneaux";
 import { ecartsImportants } from "@/domain/vraisemblance";
 import { journeeLocale, libelleJournee, type Journee } from "@/domain/temps";
@@ -193,9 +196,12 @@ export async function ouvrirShift(db: Db, shiftId: string, acteur: Acteur, maint
   const clotures = new Map(lignesPrec.map((l) => [l.produitId, l.stockReelFin]));
 
   const [site] = await db.select({ type: sites.type }).from(sites).where(eq(sites.id, s.siteId));
-  // Laboratoire : ses ingrédients et les produits qu'il fabrique ; point de vente : les produits.
+  // Laboratoire : ses matières premières, ses préparations intermédiaires et les produits qu'il
+  // fabrique ; point de vente : les produits (et les ingrédients des préparations à la commande).
   const prods = (await db.select().from(produits).where(eq(produits.actif, true))).filter((p) =>
-    site?.type === "laboratoire" ? p.nature === "ingredient" || p.fabriqueLabo : p.nature === "produit" || p.ingredientPointsDeVente,
+    site?.type === "laboratoire"
+      ? p.nature === "ingredient" || p.nature === "intermediaire" || p.fabriqueLabo
+      : p.nature === "produit" || p.ingredientPointsDeVente,
   );
   const minimums = new Map(
     (await db.select().from(produitsSites).where(eq(produitsSites.siteId, s.siteId))).map((m) => [m.produitId, m]),
@@ -265,7 +271,7 @@ export interface LigneDetail {
   format: string | null;
   partsParGateau: number | null;
   photoId: string | null;
-  nature: "produit" | "ingredient";
+  nature: NatureProduit;
   suiviStock: boolean;
   ouvertureTheorique: number | null;
   ouvertureComptee: number | null;
@@ -276,7 +282,7 @@ export interface LigneDetail {
   pertes: number;
   /** Expédié sur des bons de livraison. */
   sorties: number;
-  /** Ingrédients : consommation attendue d'après les fiches techniques (null sans fiche). */
+  /** Matières premières et intermédiaires : consommation attendue d'après les fiches techniques (null sans fiche). */
   consommationTheorique?: number | null;
   pertesPeremption: number;
   pertesEndommage: number;
@@ -369,7 +375,7 @@ export async function lignesCalculeesPlusieurs(db: Db, shiftIds: string[]): Prom
     parProduit.set(cle, x);
   }
   // Fiches techniques et type de site : lus une fois, seulement s'il y a des ingrédients.
-  const avecIngredients = rows.some((r) => r.nature === "ingredient");
+  const avecIngredients = rows.some((r) => NATURES_CONSOMMEES.includes(r.nature));
   const rec = avecIngredients ? await db.select().from(recettes) : [];
   const typeSite = new Map<string, string>();
   if (rec.length)
@@ -396,8 +402,9 @@ export async function lignesCalculeesPlusieurs(db: Db, shiftIds: string[]): Prom
           ventes: l.ventes,
           pertes: a.pertes,
           sorties: a.sorties,
-          ingredient: p.nature === "ingredient",
-          consommationTheorique: p.nature === "ingredient" && theorique ? (theorique.get(l.produitId) ?? 0) : null,
+          ingredient: NATURES_CONSOMMEES.includes(p.nature),
+          intermediaire: p.nature === "intermediaire",
+          consommationTheorique: NATURES_CONSOMMEES.includes(p.nature) && theorique ? (theorique.get(l.produitId) ?? 0) : null,
           stockReelFin: l.stockReelFin,
           prixVente: l.prixVente,
           cout: l.cout,
@@ -423,30 +430,32 @@ export async function lignesCalculeesPlusieurs(db: Db, shiftIds: string[]): Prom
 }
 
 /**
- * Consommation théorique d'ingrédients du shift, d'après les fiches techniques : au laboratoire,
- * la production × recette ; en point de vente, les ventes des préparations à la commande × recette.
- * Null si le shift ne compte aucun ingrédient.
+ * Consommation théorique de matières premières et d'intermédiaires du shift, d'après les fiches
+ * techniques : au laboratoire, la production (produits finis et préparations intermédiaires) × fiche,
+ * niveau par niveau ; en point de vente, les ventes des préparations à la commande × fiche.
+ * Null si le shift ne compte ni matière première ni intermédiaire.
  */
 function consommationTheorique(
   shiftId: string,
   typeSite: string | undefined,
-  rows: { l: { produitId: string; ventes: number; suiviStock: boolean }; nature: string; partsParGateau: number | null }[],
+  rows: { l: { produitId: string; ventes: number; suiviStock: boolean }; nature: NatureProduit; partsParGateau: number | null }[],
   ag: Map<string, Agregats>,
   rec: (typeof recettes.$inferSelect)[],
 ): Map<string, number> | null {
-  if (!rows.some((r) => r.nature === "ingredient")) return null;
-  const res = new Map<string, number>();
+  if (!rows.some((r) => NATURES_CONSOMMEES.includes(r.nature))) return null;
+  const faits = new Map<string, number>();
   for (const r of rows) {
-    if (r.nature !== "produit") continue;
+    if (r.nature === "ingredient") continue;
     // Quantité « faite » pendant le shift, en unités de recette (gâteaux entiers pour les cakes).
-    const faite = typeSite === "laboratoire" ? (ag.get(`${shiftId}:${r.l.produitId}`)?.production ?? 0) : r.l.suiviStock ? 0 : r.l.ventes;
-    if (!faite) continue;
-    const unites = r.partsParGateau ? faite / r.partsParGateau : faite;
-    for (const x of rec.filter((y) => y.produitId === r.l.produitId)) {
-      res.set(x.ingredientId, arrondiQ((res.get(x.ingredientId) ?? 0) + unites * x.quantite));
-    }
+    const faite =
+      typeSite === "laboratoire"
+        ? (ag.get(`${shiftId}:${r.l.produitId}`)?.production ?? 0)
+        : r.nature === "produit" && !r.l.suiviStock
+          ? r.l.ventes
+          : 0;
+    if (faite) faits.set(r.l.produitId, r.partsParGateau ? faite / r.partsParGateau : faite);
   }
-  return res;
+  return consommationDirecte(faits, indexerFiches(rec));
 }
 
 export interface DetailShift {

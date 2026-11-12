@@ -2,7 +2,7 @@ import { FilAriane } from "@/components/FilAriane";
 import { Carte, Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
 import { listerCategories } from "@/server/services/catalogue";
-import { CATEGORIE_INGREDIENTS } from "@/server/seed";
+import { CATEGORIE_INGREDIENTS, CATEGORIE_INTERMEDIAIRES } from "@/server/seed";
 import { exigerDirection } from "../../acces";
 import { FormulaireNouveauProduit } from "./FormulaireNouveauProduit";
 
@@ -19,6 +19,7 @@ export default async function NouveauProduit() {
         <FormulaireNouveauProduit
           categories={categories.map((c) => ({ id: c.id, nom: c.nom }))}
           categorieIngredients={categories.find((c) => c.nom === CATEGORIE_INGREDIENTS)?.id ?? null}
+          categorieIntermediaires={categories.find((c) => c.nom === CATEGORIE_INTERMEDIAIRES)?.id ?? null}
         />
       </Carte>
     </>

@@ -18,6 +18,8 @@ export const SITES_INITIAUX = [
 
 /** Catégorie des matières premières comptées au laboratoire (créée aussi par la migration 0005). */
 export const CATEGORIE_INGREDIENTS = "Ingrédients";
+/** Catégorie des préparations intermédiaires du laboratoire (créée aussi par la migration 0009). */
+export const CATEGORIE_INTERMEDIAIRES = "Préparations intermédiaires";
 
 /** Grille d'exemple, à ajuster dans l'écran Sites & créneaux. */
 export const CRENEAUX_EXEMPLE = [
@@ -47,6 +49,7 @@ export async function initialiser(
     await db.insert(categories).values({ nom, ordre: i + 1 }).onConflictDoNothing({ target: categories.nom });
   }
   await db.insert(categories).values({ nom: CATEGORIE_INGREDIENTS, ordre: 100 }).onConflictDoNothing({ target: categories.nom });
+  await db.insert(categories).values({ nom: CATEGORIE_INTERMEDIAIRES, ordre: 99 }).onConflictDoNothing({ target: categories.nom });
   const cats = new Map((await db.select().from(categories)).map((c) => [c.nom, c.id]));
   for (const [i, r] of rows.entries()) {
     await db

@@ -17,9 +17,13 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
       <Champ label="Nom">
         <input name="nom" defaultValue={p.nom} required className={classesChamp} />
       </Champ>
-      {p.nature === "ingredient" ? (
+      {p.nature !== "produit" ? (
         <Champ label="Nature">
-          <p className="py-2 text-sm text-muted-foreground">Ingrédient du laboratoire : compté au labo, valorisé au coût de revient.</p>
+          <p className="py-2 text-sm text-muted-foreground">
+            {p.nature === "ingredient"
+              ? "Matière première : achetée, comptée au labo, valorisée au coût de revient."
+              : "Préparation intermédiaire : préparée au labo à partir de matières premières, utilisée dans les produits finis."}
+          </p>
         </Champ>
       ) : (
         <Champ label="Prix de référence (MAD)" aide="Prix sur place ; suit l'article Loyverse « sur place ». Sert à valoriser pertes et écarts.">
@@ -28,7 +32,7 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
       )}
       <Champ label="Unité de comptage">
         <select name="unite" value={unite} onChange={(e) => setUnite(e.target.value as typeof unite)} className={classesChamp}>
-          {(p.nature === "ingredient" ? UNITES_INGREDIENT : (["piece", "part", "bouteille"] as const)).map((u) => (
+          {(p.nature !== "produit" ? UNITES_INGREDIENT : (["piece", "part", "bouteille"] as const)).map((u) => (
             <option key={u} value={u}>
               {u === "part" ? "Part (gâteau découpé)" : UNITE_SINGULIER[u][0].toUpperCase() + UNITE_SINGULIER[u].slice(1)}
             </option>
@@ -48,13 +52,15 @@ export function FormulaireProduit({ produit: p }: { produit: ProduitVue }) {
         <input name="dureeConservationJours" inputMode="numeric" defaultValue={p.dureeConservationJours ?? ""} placeholder="—" className={classesChamp} />
       </Champ>
       <div className="grid content-end gap-2">
-        {p.nature === "ingredient" ? (
+        {p.nature !== "produit" ? (
           <>
             <input type="hidden" name="suiviStock" value="on" />
-            <label className="flex items-center gap-2">
-              <input type="checkbox" name="ingredientPointsDeVente" defaultChecked={p.ingredientPointsDeVente} className="size-5" />
-              Aussi compté dans les points de vente (préparations à la commande : crêpes, pancakes…)
-            </label>
+            {p.nature === "ingredient" && (
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="ingredientPointsDeVente" defaultChecked={p.ingredientPointsDeVente} className="size-5" />
+                Aussi compté dans les points de vente (préparations à la commande : crêpes, pancakes…)
+              </label>
+            )}
           </>
         ) : (
           <>
