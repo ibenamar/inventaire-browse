@@ -99,6 +99,15 @@ describe("préparations intermédiaires au catalogue", () => {
     expect((await lireUtilisations(db, id.pate)).map((u) => u.produitId)).toEqual([id.matilda]);
   });
 
+  it("fiche saisie pour une fournée : même coût et même consommation qu'une fiche pour 1 kg", async () => {
+    // 5 kg de pâte : 2,5 kg de farine, 1,25 kg de beurre, 1 kg de sucre (soit la fiche par kg × 5).
+    await enregistrerRecette(db, id.pate, [{ ingredientId: id.farine, quantite: 2.5 }, { ingredientId: id.beurre, quantite: 1.25 }, { ingredientId: id.sucre, quantite: 1 }], dir, 5);
+    const r = await lireRecette(db, id.pate, "2026-11-16");
+    expect(r).toMatchObject({ rendement: 5, coutRecette: 144.5, coutParUnite: 28.9 });
+    expect(r.lignes.find((l) => l.ingredientId === id.farine)!.quantite).toBe(2.5); // relue telle que saisie
+    await expect(enregistrerRecette(db, id.pate, [{ ingredientId: id.farine, quantite: 1 }], dir, 0)).rejects.toThrow(/ce que donne la recette/);
+  });
+
   it("refuse les boucles et la fiche d'une matière première", async () => {
     await enregistrerRecette(db, id.pate, [{ ingredientId: id.creme, quantite: 0.1 }, { ingredientId: id.farine, quantite: 0.5 }], dir);
     await expect(enregistrerRecette(db, id.creme, [{ ingredientId: id.pate, quantite: 1 }], dir)).rejects.toThrow(/boucle/);

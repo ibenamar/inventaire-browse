@@ -14,6 +14,7 @@ export default async function Comptage({ params }: { params: Promise<{ id: strin
       <EnteteEtape id={id} titre="Comptage de fin de shift" aide="Comptez le stock réellement présent. Saisissez 0 pour un produit épuisé." />
       <GrilleQuantites
         shiftId={id}
+        retour={{ href: `/shift/${id}`, libelle: "Revenir au shift pour clôturer" }}
         champ="stockReelFin"
         produits={d.lignes.filter((l) => l.suiviStock).map((l) => ({ ...pourSaisie(l), valeur: l.stockReelFin, parGateau: partsSiEnGateaux(d.shift.typeSite, l) }))}
       />

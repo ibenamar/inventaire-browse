@@ -1,3 +1,4 @@
+import { nb } from "@/domain/unites";
 import { Carte, Message, Titre } from "@/components/ui";
 import { getDb } from "@/lib/db";
 import { articlesIgnores, categoriesARattacher, compterArticlesRattaches, listerCanaux, magasinsConnus } from "@/server/services/caisse";
@@ -100,8 +101,8 @@ export default async function Loyverse() {
                   </Link>
                   {x.statut === "ok" ? (
                     <span className="text-muted-foreground">
-                      {x.nbRecus} ticket(s), {formatMad(x.montant)}
-                      {Array.isArray(x.nonReconnus) && x.nonReconnus.length > 0 && ` · ${x.nonReconnus.length} article(s) non rattaché(s)`}
+                      {nb(x.nbRecus, "ticket")}, {formatMad(x.montant)}
+                      {Array.isArray(x.nonReconnus) && x.nonReconnus.length > 0 && ` · ${nb(x.nonReconnus.length, "article non rattaché", "articles non rattachés")}`}
                     </span>
                   ) : (
                     <span className="text-destructive">Échec : {x.erreur}</span>

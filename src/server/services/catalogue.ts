@@ -335,13 +335,17 @@ async function calculerRecette(db: Db, produitId: string, journee: Journee, prof
   const complet = lignes.length > 0 && lignes.every((l) => l.cout !== null);
   const total = Math.round(lignes.reduce((t, l) => t + (l.cout ?? 0), 0) * 100) / 100;
   const parGateau = p.unite === "part" && p.partsParGateau ? p.partsParGateau : null;
+  const rendement = p.rendementFiche || 1;
   return {
     lignes,
     complet,
-    /** Coût de la recette (un gâteau entier, ou une unité : 1 kg de crème, une pièce…). */
+    /** Ce que donne la recette écrite, en unités de recette (gâteaux entiers, kg, pièces). */
+    rendement,
+    /** Coût de la recette écrite (toute la fournée). */
     coutRecette: total,
     parGateau,
-    coutParUnite: parGateau ? Math.round((total / parGateau) * 100) / 100 : total,
+    /** Coût par unité de stock (la part, le kg, la pièce). */
+    coutParUnite: Math.round((total / rendement / (parGateau ?? 1)) * 100) / 100,
   };
 }
 
@@ -364,10 +368,21 @@ export async function lireUtilisations(db: Db, composantId: string) {
     .orderBy(asc(produits.nature), asc(produits.nom));
 }
 
-export async function enregistrerRecette(db: Db, produitId: string, lignes: { ingredientId: string; quantite: number }[], acteur: Acteur) {
+/**
+ * Enregistre une fiche technique telle qu'elle est écrite : les quantités de chaque composant pour
+ * une recette qui donne `rendement` unités (gâteaux entiers, kg de préparation, pièces) ; 1 par défaut.
+ */
+export async function enregistrerRecette(
+  db: Db,
+  produitId: string,
+  lignes: { ingredientId: string; quantite: number }[],
+  acteur: Acteur,
+  rendement = 1,
+) {
   const [p] = await db.select().from(produits).where(eq(produits.id, produitId));
   exiger(p, "Produit introuvable");
   exiger(p.nature !== "ingredient", "Une matière première n'a pas de fiche technique");
+  exiger(Number.isFinite(rendement) && rendement > 0 && rendement <= 100000, "Indiquer ce que donne la recette (une quantité positive)");
   const utiles = lignes.filter((l) => l.quantite !== 0);
   exiger(new Set(utiles.map((l) => l.ingredientId)).size === utiles.length, "Un composant apparaît deux fois");
   const composants = new Set(
@@ -385,8 +400,9 @@ export async function enregistrerRecette(db: Db, produitId: string, lignes: { in
   await db.transaction(async (tx) => {
     await tx.delete(recettes).where(eq(recettes.produitId, produitId));
     if (utiles.length) await tx.insert(recettes).values(utiles.map((l) => ({ produitId, ingredientId: l.ingredientId, quantite: l.quantite })));
+    await tx.update(produits).set({ rendementFiche: rendement === 1 ? null : rendement }).where(eq(produits.id, produitId));
   });
-  await tracer(db, acteur.id, "fiche_technique", "produit", produitId, { lignes: utiles });
+  await tracer(db, acteur.id, "fiche_technique", "produit", produitId, { lignes: utiles, rendement });
 }
 
 /** Enregistre le coût calculé de la fiche technique comme coût de revient en vigueur. */

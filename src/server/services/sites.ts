@@ -1,3 +1,4 @@
+import { nb } from "@/domain/unites";
 import { and, asc, eq, gt } from "drizzle-orm";
 import type { Db } from "@/db";
 import { creneaux, MODES_OUVERTURE, shifts, sites, STATUTS_SITE } from "@/db/schema";
@@ -81,7 +82,7 @@ export async function enregistrerCreneaux(db: Db, siteId: string, saisie: Saisie
       .select({ id: shifts.id })
       .from(shifts)
       .where(and(eq(shifts.creneauId, c.id), eq(shifts.statut, "planifie"), gt(shifts.finPrevue, new Date())));
-    exiger(!avenir.length, `Le créneau « ${c.nom} » a encore ${avenir.length} shift(s) planifié(s) à venir : retirez-les d'abord du planning.`);
+    exiger(!avenir.length, `Le créneau « ${c.nom} » a encore ${nb(avenir.length, "shift planifié", "shifts planifiés")} à venir : retirez-les d'abord du planning.`);
   }
   const conserves = new Set<string>();
   await db.transaction(async (tx) => {

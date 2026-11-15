@@ -1,5 +1,6 @@
 "use server";
 
+import { nb } from "@/domain/unites";
 import { revalidatePath } from "next/cache";
 import { MODES_OUVERTURE, ROLES, STATUTS_SITE, UNITES } from "@/db/schema";
 import type { Journee } from "@/domain/temps";
@@ -76,7 +77,7 @@ export async function actionDupliquerSemaine(siteId: string, lundi: Journee, sem
       ignores += r.ignores;
     }
     revalidatePath("/admin/planning");
-    return `${copies} shift(s) copiés${ignores ? `, ${ignores} ignoré(s) (déjà planifiés ou indisponibles)` : ""}.`;
+    return `${nb(copies, "shift copié", "shifts copiés")}${ignores ? `, ${nb(ignores, "ignoré", "ignorés")} (déjà planifiés ou indisponibles)` : ""}.`;
   });
 }
 
@@ -393,10 +394,14 @@ export async function actionPreparerReappro(siteId: string): Promise<Resultat> {
   );
 }
 
-export async function actionEnregistrerRecette(produitId: string, lignes: { ingredientId: string; quantite: number }[]): Promise<Resultat> {
+export async function actionEnregistrerRecette(
+  produitId: string,
+  lignes: { ingredientId: string; quantite: number }[],
+  rendement = 1,
+): Promise<Resultat> {
   const r = await executer(async () => {
     const { acteur } = await exigerDirection();
-    await enregistrerRecette(await getDb(), produitId, lignes, acteur);
+    await enregistrerRecette(await getDb(), produitId, lignes, acteur, rendement);
   }, "Fiche technique enregistrée");
   revalidatePath(`/admin/catalogue/${produitId}`);
   return r;

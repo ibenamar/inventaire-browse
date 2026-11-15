@@ -28,6 +28,12 @@ describe("fiches techniques à plusieurs niveaux", () => {
     expect(creeUneBoucle("mousseline", ["lait"], FICHES)).toBe(false);
   });
 
+  it("recette écrite pour une fournée : ramenée à une unité par son rendement", () => {
+    const f = indexerFiches([{ produitId: "creme", ingredientId: "lait", quantite: 2.5 }], new Map([["creme", 2.5]]));
+    expect(f.get("creme")).toEqual([{ ingredientId: "lait", quantite: 1 }]);
+    expect(Object.fromEntries(consommationDirecte(new Map([["creme", 3]]), f))).toEqual({ lait: 3 });
+  });
+
   it("consommation directe : un niveau à la fois (les intermédiaires ont leur propre production)", () => {
     const c = consommationDirecte(new Map([["tarte", 4], ["creme", 3]]), fiches);
     expect(Object.fromEntries(c)).toEqual({ pate: 1.6, creme: 2, beurre: 0.4, lait: 3, sucre: 0.6 });

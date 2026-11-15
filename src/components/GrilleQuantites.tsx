@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Loader2, Minus, Plus, X, XCircle } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { actionSaisirQuantite, actionSaisirVentes } from "@/app/actions-shift";
 import type { Unite } from "@/db/schema";
@@ -38,6 +39,7 @@ export function GrilleQuantites({
   nullable = true,
   libelleProgression = "comptés",
   lectureSeule = false,
+  retour,
 }: {
   shiftId: string;
   /** « ventes » : ventes du canal `canalId` (sur place, Glovo…). */
@@ -48,6 +50,8 @@ export function GrilleQuantites({
   libelleProgression?: string;
   /** Affichage seul (ex. ventes importées de Loyverse : une saisie serait écrasée au prochain import). */
   lectureSeule?: boolean;
+  /** Lien de fin (« Revenir au shift ») : mis en avant quand tout est compté et enregistré. */
+  retour?: { href: string; libelle: string };
 }) {
   const [valeurs, setValeurs] = useState<Record<string, number | null>>(() =>
     Object.fromEntries(produits.map((p) => [p.produitId, p.valeur])),
@@ -159,7 +163,7 @@ export function GrilleQuantites({
         )}
         {!nullable && (
           <div className={cx("mb-1 h-5 text-right text-sm font-semibold", enErreur ? "text-destructive" : "text-muted-foreground")} aria-live="polite">
-            {enErreur ? `${enErreur} valeur(s) non enregistrée(s)` : enAttente ? "Enregistrement…" : Object.keys(etats).length ? "Tout est enregistré" : ""}
+            {enErreur ? `${enErreur} valeur${enErreur > 1 ? "s" : ""} non enregistrée${enErreur > 1 ? "s" : ""}` : enAttente ? "Enregistrement…" : Object.keys(etats).length ? "Tout est enregistré" : ""}
           </div>
         )}
         <label htmlFor={`recherche-${champ}`} className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -320,7 +324,34 @@ export function GrilleQuantites({
           );
         })}
       </div>
-      {visibles.length === 0 && <p className="py-8 text-center text-muted-foreground">Aucun produit à afficher.</p>}
+      {visibles.length === 0 && (
+        <p className="py-8 text-center text-muted-foreground">
+          {restants && faits === produits.length ? "Tous les produits sont comptés." : "Aucun produit à afficher."}
+        </p>
+      )}
+      {retour &&
+        (nullable && faits === produits.length && !enAttente && !enErreur ? (
+          // Tout est compté : la suite est proposée en bas de l'écran, sans avoir à chercher.
+          <div className="sticky bottom-0 z-10 -mx-4 mt-4 border-t border-border bg-background px-4 py-3">
+            <p className="mb-2 flex items-center justify-center gap-1 text-sm font-semibold text-success" role="status">
+              <Check aria-hidden className="size-4" strokeWidth={2.5} /> Tout est compté et enregistré
+            </p>
+            <Link
+              href={retour.href}
+              className="flex min-h-14 items-center justify-center rounded-2xl bg-primary px-4 text-lg font-semibold text-primary-foreground hover:bg-primary-hover"
+            >
+              {retour.libelle}
+            </Link>
+          </div>
+        ) : (
+          <Link
+            href={retour.href}
+            className="mt-4 flex min-h-12 items-center justify-center rounded-2xl bg-card px-4 font-semibold text-primary ring-1 ring-input hover:bg-muted"
+          >
+            {retour.libelle}
+            {nullable && faits < produits.length ? ` (${produits.length - faits} restant${produits.length - faits > 1 ? "s" : ""}, enregistré automatiquement)` : ""}
+          </Link>
+        ))}
     </div>
   );
 }

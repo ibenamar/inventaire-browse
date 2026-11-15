@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ColonnesEmpilees, CourbesStock } from "@/components/Graphiques";
 import { Carte, classesBouton, cx, formatMad, formatSigne, Kpi, Message, Titre } from "@/components/ui";
 import { heureLocale, libelleJournee } from "@/domain/temps";
-import { formatQuantite, libelleQuantite } from "@/domain/unites";
+import { formatQuantite, libelleQuantite, nb } from "@/domain/unites";
 import { getDb } from "@/lib/db";
 import { listerProduits } from "@/server/services/catalogue";
 import { suiviRemontees } from "@/server/services/remontees";
@@ -218,9 +218,9 @@ export default async function TableauDeBord({
       <Carte className="mt-4">
         <h2 className="mb-1 font-semibold">Écarts non expliqués par produit</h2>
         <p className="mb-2 text-sm text-muted-foreground">
-          Stock compté − stock théorique, cumulé sur la période. Négatif = produit manquant (vente non saisie, perte non déclarée, erreur de
+          Stock compté − stock attendu, cumulé sur la période. Négatif = produit manquant (vente non saisie, perte non déclarée, erreur de
           comptage).
-          {t.kpi.ecartsPassation > 0 && ` ${t.kpi.ecartsPassation} écart(s) de passation entre équipes.`}
+          {t.kpi.ecartsPassation > 0 && ` ${nb(t.kpi.ecartsPassation, "écart")} de passation entre équipes.`}
         </p>
         {t.ecarts.length ? (
           <TableauTriable

@@ -10,14 +10,23 @@ export interface LigneFiche {
   produitId: string;
   /** Composant : matière première ou préparation intermédiaire. */
   ingredientId: string;
-  /** Quantité du composant pour une unité de recette (un gâteau entier, 1 kg, une pièce…). */
+  /** Quantité du composant pour la recette telle qu'elle est écrite (voir le rendement). */
   quantite: number;
 }
 
-/** Index des fiches : produit → composants. */
-export function indexerFiches(lignes: readonly LigneFiche[]): Map<string, { ingredientId: string; quantite: number }[]> {
+/**
+ * Index des fiches : produit → composants, ramenés à une unité de recette (un gâteau entier, 1 kg,
+ * une pièce). `rendements` : ce que donne chaque recette écrite (2,5 kg de crème…), 1 par défaut.
+ */
+export function indexerFiches(
+  lignes: readonly LigneFiche[],
+  rendements: ReadonlyMap<string, number | null> = new Map(),
+): Map<string, { ingredientId: string; quantite: number }[]> {
   const res = new Map<string, { ingredientId: string; quantite: number }[]>();
-  for (const l of lignes) res.set(l.produitId, [...(res.get(l.produitId) ?? []), { ingredientId: l.ingredientId, quantite: l.quantite }]);
+  for (const l of lignes) {
+    const r = rendements.get(l.produitId) || 1;
+    res.set(l.produitId, [...(res.get(l.produitId) ?? []), { ingredientId: l.ingredientId, quantite: l.quantite / r }]);
+  }
   return res;
 }
 

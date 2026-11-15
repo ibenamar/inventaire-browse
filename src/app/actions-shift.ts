@@ -1,5 +1,6 @@
 "use server";
 
+import { nb } from "@/domain/unites";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { MotifPerte, OrigineEntree } from "@/db/schema";
@@ -189,7 +190,7 @@ export async function actionReceptionnerBon(
   revalidatePath(`/shift/${shiftId}`, "layout");
   if (r.ok && r.valeur) {
     const { numero, ecarts } = r.valeur;
-    return { ok: true, message: `Bon n° ${numero} réceptionné${ecarts ? ` · ${ecarts} produit(s) en écart signalé(s) au labo` : ""}` };
+    return { ok: true, message: `Bon n° ${numero} réceptionné${ecarts ? ` · ${nb(ecarts, "produit en écart signalé", "produits en écart signalés")} au labo` : ""}` };
   }
   return r;
 }

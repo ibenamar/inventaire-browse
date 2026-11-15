@@ -24,6 +24,7 @@ export default async function Ouverture({ params }: { params: Promise<{ id: stri
       />
       <GrilleQuantites
         shiftId={id}
+        retour={{ href: `/shift/${id}`, libelle: "Revenir au shift" }}
         champ="ouvertureComptee"
         produits={lignes.map((l) => ({ ...pourSaisie(l), valeur: l.ouvertureComptee, parGateau: partsSiEnGateaux(d.shift.typeSite, l) }))}
       />

@@ -80,15 +80,20 @@ export default async function Produit({ params }: { params: Promise<{ id: string
               <h2 className="mb-1 text-lg font-semibold">Fiche technique</h2>
               <p className="mb-3 text-sm text-muted-foreground">
                 Matières premières et préparations intermédiaires de la recette : elles donnent le coût de revient calculé et la consommation
-                théorique (production du labo, ventes des préparations à la commande), comparée à la consommation réelle.
+                attendue (production du labo, ventes des préparations à la commande), comparée à la consommation réelle.
                 {p.nature === "intermediaire" && " Une préparation peut elle-même en utiliser une autre (ex. crème mousseline ← crème pâtissière)."}
               </p>
               <FicheTechnique
                 produitId={p.id}
                 ingredients={composants.map((x) => ({ id: x.id, nom: x.nom, unite: x.unite, intermediaire: x.nature === "intermediaire" }))}
                 lignes={recette.lignes.map((l) => ({ ingredientId: l.ingredientId, quantite: l.quantite }))}
-                pour={recette.parGateau ? `un gâteau entier (${recette.parGateau} parts)` : p.nature === "intermediaire" ? `1 ${UNITE_SINGULIER[p.unite]} de préparation` : "une unité"}
-                cout={recette.lignes.length ? { recette: recette.coutRecette, parUnite: recette.coutParUnite, complet: recette.complet, libelleUnite: recette.parGateau ? "part" : "unité" } : null}
+                rendement={recette.rendement}
+                uniteRecette={recette.parGateau ? `gâteaux entiers (${recette.parGateau} parts chacun)` : UNITE_PLURIEL[p.unite]}
+                cout={
+                  recette.lignes.length
+                    ? { recette: recette.coutRecette, parUnite: recette.coutParUnite, complet: recette.complet, libelleUnite: UNITE_SINGULIER[p.unite] }
+                    : null
+                }
               />
             </Carte>
           )}

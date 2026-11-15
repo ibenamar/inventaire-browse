@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { actionAnnulerBon, actionExpedierBon, actionModifierBon } from "@/app/actions-shift";
 import { Bouton, Pastille } from "@/components/ui";
 import type { StatutBon, Unite } from "@/db/schema";
-import { formatQuantite, libelleQuantite, lireQuantite } from "@/domain/unites";
+import { formatQuantite, libelleQuantite, lireQuantite, nb } from "@/domain/unites";
 
 export interface BonListe {
   id: string;
@@ -48,7 +48,7 @@ export function ListeBons({ shiftId, titre, bons, enGateaux = false }: { shiftId
                 Bon n° {b.numero} → {b.destination}
               </span>
               <Pastille ton={STATUTS[b.statut].ton}>{STATUTS[b.statut].l}</Pastille>
-              {b.ecarts > 0 && <Pastille ton="rouge">{b.ecarts} écart(s) à la réception</Pastille>}
+              {b.ecarts > 0 && <Pastille ton="rouge">{nb(b.ecarts, "écart")} à la réception</Pastille>}
               <span className="ml-auto text-sm text-muted-foreground">{b.quand}</span>
             </div>
             <ul className="mt-2 text-sm">

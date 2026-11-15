@@ -4,7 +4,7 @@ import { bonsLivraison, lignesBon, lignesShift, mouvements, produits, recettes, 
 import { arrondiQ } from "@/domain/calculs";
 import { besoinsProduction, indexerFiches } from "@/domain/recettes";
 import { ajouterJours, type Journee } from "@/domain/temps";
-import { lignesCalculeesPlusieurs } from "./shifts";
+import { lignesCalculeesPlusieurs, rendementsFiches } from "./shifts";
 
 /**
  * Prévision de production du laboratoire pour une journée : pour chaque point de vente, la moyenne
@@ -117,7 +117,7 @@ export async function previsionProduction(db: Db, journee: Journee, siteIds?: st
   );
   const besoins: { intermediaires: BesoinPrevision[]; matieres: BesoinPrevision[]; sansFiche: string[] } = { intermediaires: [], matieres: [], sansFiche: [] };
   if (aProduire.size) {
-    const fiches = indexerFiches(await db.select().from(recettes));
+    const fiches = indexerFiches(await db.select().from(recettes), await rendementsFiches(db));
     const composants = new Map(
       (await db.select({ id: produits.id, nom: produits.nom, nature: produits.nature, unite: produits.unite, ordre: produits.ordre }).from(produits)).map((p) => [p.id, p]),
     );

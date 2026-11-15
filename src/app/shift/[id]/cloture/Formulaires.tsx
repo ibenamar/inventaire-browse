@@ -61,7 +61,7 @@ export function FormulaireForcer({ shiftId }: { shiftId: string }) {
     <details className="rounded-2xl bg-card p-4 ring-1 ring-border">
       <summary className="cursor-pointer font-semibold text-destructive">Forcer la clôture (manager)</summary>
       <p className="my-2 text-sm text-muted-foreground">
-        Pour un shift abandonné : les produits non comptés prennent leur stock théorique. La clôture est marquée comme forcée.
+        Pour un shift abandonné : les produits non comptés prennent leur stock attendu. La clôture est marquée comme forcée.
       </p>
       <form onSubmit={soumettre(action)} className="grid gap-2">
         <label htmlFor="motif-forcer" className="text-sm font-medium">

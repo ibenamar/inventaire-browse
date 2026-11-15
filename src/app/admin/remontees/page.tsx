@@ -1,3 +1,4 @@
+import { nb } from "@/domain/unites";
 import Link from "next/link";
 import { PastilleRemontee } from "@/components/StatutRemontee";
 import { cx, formatMad, Titre } from "@/components/ui";
@@ -77,7 +78,7 @@ export default async function Remontees({ searchParams }: { searchParams: Promis
               <div className="text-sm text-muted-foreground">
                 {!siteId && `${s.site} · `}
                 {s.responsable ?? "Responsable non désigné"}
-                {s.produitsAvecEcart !== null && ` · ${s.produitsAvecEcart} écart(s), ${formatMad(s.valeurEcartsVente)}`}
+                {s.produitsAvecEcart !== null && ` · ${nb(s.produitsAvecEcart, "écart")}, ${formatMad(s.valeurEcartsVente)}`}
               </div>
             </div>
             <PastilleRemontee statut={s.statutRemontee} />

@@ -99,6 +99,12 @@ export const produits = pgTable(
     fabriqueLabo: boolean("fabrique_labo").notNull().default(false),
     /** Ingrédient aussi compté dans les points de vente (préparations à la commande : crêpes, pancakes…). */
     ingredientPointsDeVente: boolean("ingredient_points_de_vente").notNull().default(false),
+    /**
+     * Rendement de la fiche technique : ce que donne la recette telle qu'elle est écrite, en unités
+     * de recette (gâteaux entiers, kg de crème, pièces). Null = 1 : les quantités de la fiche sont
+     * pour une unité. Ex. 2,5 : la fiche liste les ingrédients d'une fournée de 2,5 kg.
+     */
+    rendementFiche: numeric("rendement_fiche", { precision: 12, scale: 3, mode: "number" }),
     /** Durée de conservation en jours (DLC) : sert à repérer le stock probablement périmé. */
     dureeConservationJours: integer("duree_conservation_jours"),
     photoId: uuid("photo_id").references(() => photos.id, { onDelete: "set null" }),

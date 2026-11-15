@@ -1,3 +1,4 @@
+import { nb } from "@/domain/unites";
 import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
@@ -377,6 +378,7 @@ export async function lignesCalculeesPlusieurs(db: Db, shiftIds: string[]): Prom
   // Fiches techniques et type de site : lus une fois, seulement s'il y a des ingrédients.
   const avecIngredients = rows.some((r) => NATURES_CONSOMMEES.includes(r.nature));
   const rec = avecIngredients ? await db.select().from(recettes) : [];
+  const rendements = rec.length ? await rendementsFiches(db) : new Map<string, number | null>();
   const typeSite = new Map<string, string>();
   if (rec.length)
     for (const x of await db
@@ -389,7 +391,7 @@ export async function lignesCalculeesPlusieurs(db: Db, shiftIds: string[]): Prom
   for (const r of rows) parShift.set(r.l.shiftId, [...(parShift.get(r.l.shiftId) ?? []), r]);
   for (const shiftId of shiftIds) {
     const lignes = parShift.get(shiftId) ?? [];
-    const theorique = rec.length ? consommationTheorique(shiftId, typeSite.get(shiftId), lignes, ag, rec) : null;
+    const theorique = rec.length ? consommationTheorique(shiftId, typeSite.get(shiftId), lignes, ag, rec, rendements) : null;
     res.set(
       shiftId,
       lignes.map(({ l, ...p }) => {
@@ -441,6 +443,7 @@ function consommationTheorique(
   rows: { l: { produitId: string; ventes: number; suiviStock: boolean }; nature: NatureProduit; partsParGateau: number | null }[],
   ag: Map<string, Agregats>,
   rec: (typeof recettes.$inferSelect)[],
+  rendements: ReadonlyMap<string, number | null>,
 ): Map<string, number> | null {
   if (!rows.some((r) => NATURES_CONSOMMEES.includes(r.nature))) return null;
   const faits = new Map<string, number>();
@@ -455,7 +458,16 @@ function consommationTheorique(
           : 0;
     if (faite) faits.set(r.l.produitId, r.partsParGateau ? faite / r.partsParGateau : faite);
   }
-  return consommationDirecte(faits, indexerFiches(rec));
+  return consommationDirecte(faits, indexerFiches(rec, rendements));
+}
+
+/** Rendement de chaque fiche technique écrite pour une fournée (produits sans rendement : 1). */
+export async function rendementsFiches(db: Db): Promise<Map<string, number | null>> {
+  const rows = await db
+    .select({ id: produits.id, r: produits.rendementFiche })
+    .from(produits)
+    .where(sql`${produits.rendementFiche} is not null`);
+  return new Map(rows.map((x) => [x.id, x.r]));
 }
 
 export interface DetailShift {
@@ -767,9 +779,9 @@ export async function cloturerShift(db: Db, shiftId: string, acteur: Acteur, mai
   const sansOuverture = d.lignes.filter(
     (l) => l.suiviStock && (l.calcul.ouverture === null || (ouvertureACompter(s.modeOuverture, l) && l.ouvertureComptee === null)),
   );
-  exiger(!sansOuverture.length, `${sansOuverture.length} produit(s) sans stock d'ouverture : compléter le comptage d'ouverture.`);
+  exiger(!sansOuverture.length, `Il reste ${nb(sansOuverture.length, "produit")} à compter à l'ouverture : terminez d'abord le comptage d'ouverture.`);
   const nonComptes = d.lignes.filter((l) => l.suiviStock && l.stockReelFin === null);
-  exiger(!nonComptes.length, `${nonComptes.length} produit(s) non comptés en fin de shift.`);
+  exiger(!nonComptes.length, `Il reste ${nb(nonComptes.length, "produit")} à compter en fin de shift : terminez d'abord le comptage.`);
   // Un écart important doit être expliqué : le commentaire devient obligatoire.
   const importants = ecartsImportants(d.lignes.map((l) => ({ nom: l.nom, ecart: l.calcul.ecart })), d.synthese.valeurEcartsVente);
   exiger(

@@ -71,6 +71,13 @@
       "when": 1794344206614,
       "tag": "0009_intermediaires",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794750664944,
+      "tag": "0010_rendement_fiche",
+      "breakpoints": true
     }
   ]
 }
