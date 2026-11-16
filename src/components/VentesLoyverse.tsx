@@ -1,5 +1,6 @@
 "use client";
 
+import { nb } from "@/domain/unites";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -69,7 +70,7 @@ export function VentesLoyverse({
             <div className="text-muted-foreground">Import des tickets de caisse en cours…</div>
           ) : derniere?.statut === "ok" ? (
             <div className="text-muted-foreground">
-              Importées à {derniere.heure} : {derniere.nbRecus} ticket(s), {formatMad(derniere.montant)} encaissés.
+              Importées à {derniere.heure} : {nb(derniere.nbRecus, "ticket")}, {formatMad(derniere.montant)} encaissés.
             </div>
           ) : derniere?.statut === "erreur" ? (
             <div className="text-destructive">Dernier import en échec à {derniere.heure} : {derniere.erreur}</div>
@@ -87,7 +88,7 @@ export function VentesLoyverse({
       {derniere?.statut === "ok" && derniere.nonReconnus.length > 0 && (
         <details className="text-sm">
           <summary className="cursor-pointer text-warning">
-            {derniere.nonReconnus.length} article(s) vendu(s) non rattaché(s) à un produit : leurs ventes ne sont pas comptées
+            {nb(derniere.nonReconnus.length, "article vendu non rattaché", "articles vendus non rattachés")} à un produit : leurs ventes ne sont pas comptées
           </summary>
           <p className="mt-1 text-muted-foreground">
             {derniere.nonReconnus.map((x) => `${x.nom} ×${x.quantite}`).join(" · ")}

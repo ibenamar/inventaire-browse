@@ -8,7 +8,7 @@ import { getDb } from "@/lib/db";
 import { shifts, utilisateurs } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { formatLocal } from "@/domain/temps";
-import { formatQuantite } from "@/domain/unites";
+import { formatQuantite, nb } from "@/domain/unites";
 import { ecartsImportants } from "@/domain/vraisemblance";
 import { estEncadrant } from "@/server/acteur";
 import { ouvertureACompter, type LigneDetail } from "@/server/services/shifts";
@@ -55,7 +55,8 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
   const enGateaux = (l: LigneDetail) => labo && l.unite === "part" && l.partsParGateau ? l.partsParGateau : null;
   const aff = (v: number | null, l: LigneDetail) => (v === null ? "—" : enGateaux(l) ? q(Math.round((v / enGateaux(l)!) * 100) / 100) : q(v));
   const nbPertes = d.mouvements.filter((m) => m.type === "perte").length;
-  const avecIngredients = suivis.some((l) => l.nature === "ingredient");
+  // Matières premières et préparations intermédiaires : la différence théorique − compté est une consommation.
+  const avecIngredients = suivis.some((l) => l.nature !== "produit");
   const parCategorie = new Map<string, LigneDetail[]>();
   for (const l of suivis) parCategorie.set(l.categorie, [...(parCategorie.get(l.categorie) ?? []), l]);
 
@@ -109,7 +110,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           <>
             <Kpi label="Produits fabriqués" valeur={d.lignes.filter((l) => l.production > 0).length} />
             <Kpi label="Lignes livrées" valeur={d.mouvements.filter((m) => m.type === "sortie").length} />
-            <Kpi label="Ingrédients consommés (coût)" valeur={formatMad(syn.valeurConsommation)} />
+            <Kpi label="Matières premières consommées (coût)" valeur={formatMad(syn.valeurConsommation)} />
           </>
         ) : (
           <>
@@ -141,7 +142,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
         <Message ton="alerte">
           {sansOuverture.length > 0 && (
             <>
-              {sansOuverture.length} produit(s) sans stock d&apos;ouverture —{" "}
+              {nb(sansOuverture.length, "produit pas encore compté", "produits pas encore comptés")} à l&apos;ouverture —{" "}
               <Link className="font-semibold underline" href={`/shift/${id}/ouverture`}>
                 compléter
               </Link>
@@ -150,7 +151,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           )}
           {nonComptes.length > 0 && (
             <>
-              {nonComptes.length} produit(s) non comptés en fin de shift —{" "}
+              {nb(nonComptes.length, "produit pas encore compté", "produits pas encore comptés")} en fin de shift —{" "}
               <Link className="font-semibold underline" href={`/shift/${id}/comptage`}>
                 compter
               </Link>
@@ -161,37 +162,62 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
 
       {ouvert && !montrer && (
         <Message>
-          Comptage à l&apos;aveugle : le stock théorique et les écarts s&apos;affichent
+          Comptage à l&apos;aveugle : le stock attendu et les écarts s&apos;affichent
           {estResponsable ? " une fois tous les produits comptés." : ` au responsable (${s.responsable ?? "—"}) une fois tous les produits comptés.`}
         </Message>
       )}
 
       {montrer && suivis.some((l) => l.calcul.ecart) && (
         <div className="rounded-2xl bg-destructive-soft p-4 ring-1 ring-destructive/30">
-          <h2 className="mb-1 font-semibold text-destructive">Produits avec écart</h2>
-          <ul className="text-sm text-destructive">
+          <h2 className="mb-1 font-semibold text-destructive">
+            {nb(suivis.filter((l) => l.calcul.ecart).length, "produit ne correspond", "produits ne correspondent")} pas au stock attendu
+          </h2>
+          {ouvert && (
+            <p className="mb-2 text-sm text-destructive">
+              {suivis.filter((l) => l.calcul.ecart).length > 1 ? "Recomptez-les" : "Recomptez-le"} si possible (étape « Comptage de fin de shift ») ;
+              sinon, expliquez l&apos;écart au moment de clôturer.
+            </p>
+          )}
+          <ul className="grid gap-1 text-sm text-destructive">
             {suivis
               .filter((l) => l.calcul.ecart)
               .map((l) => (
                 <li key={l.produitId}>
-                  <strong>{l.calcul.ecart! > 0 ? "+" : ""}{q(l.calcul.ecart)}</strong> {l.nom} (théorique {q(l.calcul.theoriqueFin)}, compté {q(l.stockReelFin)}
-                  {l.unite === "part" ? " parts" : ""})
+                  <strong>{l.nom}</strong> : {q(l.stockReelFin)} compté{(l.stockReelFin ?? 0) >= 2 ? "s" : ""} au lieu de {q(l.calcul.theoriqueFin)}
+                  {l.unite === "part" ? " parts" : ""} attendu{(l.calcul.theoriqueFin ?? 0) >= 2 ? "s" : ""}{" "}
+                  <strong>
+                    ({l.calcul.ecart! > 0 ? "+" : ""}
+                    {q(l.calcul.ecart)})
+                  </strong>
                 </li>
               ))}
           </ul>
         </div>
       )}
+      {montrer && suivis.length > 0 && !nonComptes.length && !suivis.some((l) => l.calcul.ecart) && (
+        <Message ton="succes">Aucun écart : le stock compté correspond au stock attendu.</Message>
+      )}
 
       {masquerDetail && <Message>Détail des quantités masqué pendant le shift en cours (comptage à l&apos;aveugle).</Message>}
       {!masquerDetail && (
-      <div className="overflow-x-auto rounded-2xl bg-card ring-1 ring-border" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)">
+      <details className="group rounded-2xl bg-card ring-1 ring-border">
+        <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-2 px-4 py-3 font-semibold text-primary">
+          <span>Voir le détail des {nb(suivis.length, "produit")}</span>
+          <span aria-hidden className="transition-transform group-open:rotate-180">▾</span>
+        </summary>
+        {montrer && (
+          <p className="px-4 pb-2 text-sm text-muted-foreground">
+            Attendu = ouverture + réceptions{labo ? " et production" : ""} − {labo ? "livraisons" : "ventes"} − pertes. Écart = compté − attendu.
+          </p>
+        )}
+      <div className="overflow-x-auto border-t border-border" tabIndex={0} role="region" aria-label="Tableau (défilement horizontal possible)">
         <table className="w-full min-w-[560px] text-sm">
           <thead className="bg-muted text-xs text-muted-foreground">
             <tr>
               <th className="sticky left-0 bg-muted px-2 py-2 text-left">Produit</th>
               {montrer && <th className="px-2 py-2 text-right">{avecIngredients ? "Écart / conso." : "Écart"}</th>}
               <th className="px-2 py-2 text-right">Compté</th>
-              {montrer && <th className="px-2 py-2 text-right">Théorique</th>}
+              {montrer && <th className="px-2 py-2 text-right">Attendu</th>}
               {montrer && <th className="px-2 py-2 text-right">Ouverture</th>}
               {montrer && recompte && <th className="px-2 py-2 text-right">Passation</th>}
               <th className="px-2 py-2 text-right">{labo ? "Réceptions / prod." : "Réceptions"}</th>
@@ -214,7 +240,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
                       {l.unite === "part" && <span className="text-xs text-muted-foreground">{enGateaux(l) ? " (gâteaux)" : " (parts)"}</span>}
                       {(l.unite === "kg" || l.unite === "litre") && <span className="text-xs text-muted-foreground"> ({l.unite})</span>}
                     </td>
-                    {!montrer ? null : l.nature === "ingredient" ? (
+                    {!montrer ? null : l.nature !== "produit" ? (
                       <td className="px-2 py-1.5 text-right text-xs whitespace-nowrap text-muted-foreground tabular-nums">
                         {l.calcul.consommation !== null ? `conso ${q(l.calcul.consommation)}` : "—"}
                         {l.calcul.ecartConsommation !== null && l.calcul.ecartConsommation !== 0 && (
@@ -241,6 +267,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
           </tbody>
         </table>
       </div>
+      </details>
       )}
 
       {venteSeule.length > 0 && (
@@ -261,7 +288,7 @@ export default async function Cloture({ params }: { params: Promise<{ id: string
             // Rien sur les écarts tant que tout n'est pas compté (comptage à l'aveugle).
             confirmation={
               montrer
-                ? `Clôturer et signer le shift ?${syn.produitsAvecEcart ? ` ${syn.produitsAvecEcart} produit(s) en écart (${formatMad(syn.valeurEcartsVente)}).` : " Aucun écart."} L'équipe ne pourra plus rien saisir.`
+                ? `Clôturer et signer le shift ?${syn.produitsAvecEcart ? ` ${nb(syn.produitsAvecEcart, "produit")} en écart (${formatMad(syn.valeurEcartsVente)}).` : " Aucun écart."} L'équipe ne pourra plus rien saisir.`
                 : undefined
             }
             ecartsAExpliquer={

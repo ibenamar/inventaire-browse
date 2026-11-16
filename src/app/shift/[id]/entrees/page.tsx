@@ -61,7 +61,8 @@ export default async function Entrees({ params }: { params: Promise<{ id: string
       {attendus.length > 0 && <h2 className="mb-2 text-lg font-semibold">Autres réceptions</h2>}
       <FormulaireEntrees
         shiftId={id}
-        produits={d.lignes.filter((l) => l.suiviStock).map(pourSaisie)}
+        // Les préparations intermédiaires sont faites au labo : elles se saisissent en Production.
+        produits={d.lignes.filter((l) => l.suiviStock && l.nature !== "intermediaire").map(pourSaisie)}
         origines={labo ? ORIGINES_LABO : ORIGINES_POINT_DE_VENTE}
       />
       <ListeMouvements

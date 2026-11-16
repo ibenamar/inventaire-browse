@@ -6,7 +6,7 @@ import { actionAjouterEntrees, actionCreerBon } from "@/app/actions-shift";
 import { PhotoProduit } from "@/components/PhotoProduit";
 import { Bouton, Champ, classesChamp, cx, Message } from "@/components/ui";
 import type { OrigineEntree, Unite } from "@/db/schema";
-import { formatQuantite, lireQuantite, UNITE_PLURIEL } from "@/domain/unites";
+import { formatQuantite, lireQuantite, UNITE_PLURIEL, nb } from "@/domain/unites";
 import { estQuantiteInhabituelle } from "@/domain/vraisemblance";
 
 interface P {
@@ -248,7 +248,7 @@ export function FormulaireEntrees({
                 disabled={!lignes.length || !destination || enCours}
                 onClick={() => {
                   const dest = destinations.find((x) => x.id === destination)?.nom ?? "";
-                  if (window.confirm(`Expédier ${lignes.length} produit(s) à ${dest} ? Ils sortent de votre stock maintenant.`)) valider(true);
+                  if (window.confirm(`Expédier ${nb(lignes.length, "produit")} à ${dest} ? Ils sortent de votre stock maintenant.`)) valider(true);
                 }}
               >
                 {enCours ? "…" : `Expédier${lignes.length ? ` (${lignes.length})` : ""}`}

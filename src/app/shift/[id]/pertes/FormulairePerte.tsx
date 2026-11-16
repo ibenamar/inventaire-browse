@@ -6,7 +6,7 @@ import { actionAjouterPerte } from "@/app/actions-shift";
 import { PhotoProduit } from "@/components/PhotoProduit";
 import { Bouton, classesChamp, cx, Message } from "@/components/ui";
 import type { MotifPerte, Unite } from "@/db/schema";
-import { formatQuantite, lireQuantite, UNITE_PLURIEL } from "@/domain/unites";
+import { formatQuantite, lireQuantite, UNITE_PLURIEL, nb } from "@/domain/unites";
 
 interface P {
   produitId: string;
@@ -52,7 +52,7 @@ export function FormulairePerte({ shiftId, produits, gateauxParDefaut = false }:
       if (r.ok) {
         setRetour({
           ok: true,
-          texte: `${choisi.nom} : ${formatQuantite(quantite)} ${gateaux ? "gâteau(x)" : UNITE_PLURIEL[choisi.unite]} déclaré(s) en perte`,
+          texte: `Perte enregistrée : ${choisi.nom}, ${gateaux ? nb(quantite, "gâteau", "gâteaux") : `${formatQuantite(quantite)} ${UNITE_PLURIEL[choisi.unite]}`}`,
         });
         fermer();
       } else setRetour({ ok: false, texte: r.erreur });

@@ -7,8 +7,9 @@
  *   écart passation  = ouverture recomptée − clôture du shift précédent
  *   théorique fin    = ouverture + entrées − ventes − pertes − sorties (livraisons expédiées)
  *   écart            = stock réel fin − théorique fin
- * Ingrédients (laboratoire) : leur utilisation en production n'est pas saisie, donc la différence
- * entre le théorique et le compté n'est pas un écart mais la consommation du shift.
+ * Matières premières et préparations intermédiaires (laboratoire) : leur utilisation en production
+ * n'est pas saisie, donc la différence entre le théorique et le compté n'est pas un écart mais la
+ * consommation du shift.
  */
 export interface LigneEntree {
   ouvertureTheorique: number | null;
@@ -18,8 +19,13 @@ export interface LigneEntree {
   pertes: number;
   /** Quantités expédiées sur des bons de livraison. */
   sorties?: number;
-  /** Ingrédient : la différence théorique − compté est une consommation, pas un écart. */
+  /** Matière première ou préparation intermédiaire : la différence théorique − compté est une consommation, pas un écart. */
   ingredient?: boolean;
+  /**
+   * Préparation intermédiaire : sa consommation n'entre pas dans la valeur consommée du shift, déjà
+   * comptée par les matières premières utilisées pour la préparer.
+   */
+  intermediaire?: boolean;
   /** Ingrédients : consommation attendue d'après les fiches techniques (production ou ventes × recette). */
   consommationTheorique?: number | null;
   stockReelFin: number | null;
@@ -97,7 +103,7 @@ export interface Synthese {
   produitsAvecEcart: number;
   produitsAvecEcartPassation: number;
   produitsAReapprovisionner: number;
-  /** Laboratoire : valeur au coût des ingrédients consommés, et quantités expédiées. */
+  /** Laboratoire : valeur au coût des matières premières consommées, et quantités expédiées. */
   valeurConsommation: number;
   sorties: number;
 }
@@ -126,7 +132,7 @@ export function synthetiser(lignes: Array<LigneEntree & { calcul: LigneCalculee 
     if (l.calcul.ecart !== null && l.calcul.ecart !== 0) s.produitsAvecEcart++;
     if (l.calcul.ecartPassation !== null && l.calcul.ecartPassation !== 0) s.produitsAvecEcartPassation++;
     if (l.calcul.aReapprovisionner) s.produitsAReapprovisionner++;
-    s.valeurConsommation += l.calcul.valeurConsommation ?? 0;
+    if (!l.intermediaire) s.valeurConsommation += l.calcul.valeurConsommation ?? 0;
     s.sorties += l.sorties ?? 0;
   }
   s.pertes = arrondiQ(s.pertes);

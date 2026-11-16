@@ -5,40 +5,47 @@ import { Bouton, Champ, classesChamp, cx, Message, soumettre } from "@/component
 import { UNITE_SINGULIER, UNITES_INGREDIENT } from "@/domain/unites";
 import { actionCreerProduit } from "../../actions";
 
+type Nature = "produit" | "ingredient" | "intermediaire";
+
 export function FormulaireNouveauProduit({
   categories,
   categorieIngredients,
+  categorieIntermediaires,
 }: {
   categories: { id: string; nom: string }[];
   categorieIngredients: string | null;
+  categorieIntermediaires: string | null;
 }) {
   const [etat, action, enCours] = useActionState(actionCreerProduit, null);
-  const [nature, setNature] = useState<"produit" | "ingredient">("produit");
+  const [nature, setNature] = useState<Nature>("produit");
   const [unite, setUnite] = useState("piece");
-  const [categorie, setCategorie] = useState(categories.find((c) => c.id !== categorieIngredients)?.id ?? "");
-  const ingredient = nature === "ingredient";
-  const choisirNature = (n: "produit" | "ingredient") => {
+  const premiereCategorieProduit = categories.find((c) => c.id !== categorieIngredients && c.id !== categorieIntermediaires)?.id ?? "";
+  const [categorie, setCategorie] = useState(premiereCategorieProduit);
+  // Matière première ou préparation intermédiaire : comptée au labo (kg, litre…), jamais vendue.
+  const ingredient = nature !== "produit";
+  const choisirNature = (n: Nature) => {
     setNature(n);
-    setUnite(n === "ingredient" ? "kg" : "piece");
-    setCategorie(n === "ingredient" ? (categorieIngredients ?? "") : (categories.find((c) => c.id !== categorieIngredients)?.id ?? ""));
+    setUnite(n === "produit" ? "piece" : "kg");
+    setCategorie(n === "ingredient" ? (categorieIngredients ?? "") : n === "intermediaire" ? (categorieIntermediaires ?? "") : premiereCategorieProduit);
   };
   return (
     <form onSubmit={soumettre(action)} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="nature" value={nature} />
-      <div className="grid grid-cols-2 rounded-xl bg-muted p-1 text-sm font-semibold sm:col-span-2">
+      <div className="grid grid-cols-3 rounded-xl bg-muted p-1 text-sm font-semibold sm:col-span-2">
         {(
           [
             ["produit", "Produit vendu"],
-            ["ingredient", "Ingrédient du laboratoire"],
+            ["intermediaire", "Préparation intermédiaire"],
+            ["ingredient", "Matière première"],
           ] as const
         ).map(([v, l]) => (
-          <button key={v} type="button" onClick={() => choisirNature(v)} className={cx("rounded-lg py-2", nature === v ? "bg-card shadow-sm" : "text-muted-foreground")}>
+          <button key={v} type="button" onClick={() => choisirNature(v)} aria-pressed={nature === v} className={cx("rounded-lg px-1 py-2", nature === v ? "bg-card shadow-sm" : "text-muted-foreground")}>
             {l}
           </button>
         ))}
       </div>
       <Champ label="Nom">
-        <input name="nom" required className={classesChamp} placeholder={ingredient ? "ex. Farine T55" : "ex. Caramel Can"} />
+        <input name="nom" required className={classesChamp} placeholder={nature === "ingredient" ? "ex. Farine T55" : nature === "intermediaire" ? "ex. Crème pâtissière" : "ex. Caramel Can"} />
       </Champ>
       <Champ label="Catégorie">
         <select name="categorieId" value={categorie} onChange={(e) => setCategorie(e.target.value)} className={classesChamp}>
@@ -70,8 +77,14 @@ export function FormulaireNouveauProduit({
         </Champ>
       ) : (
         <Champ label="Format (facultatif)">
-          <input name="format" className={classesChamp} placeholder={ingredient ? "ex. sac de 25 kg" : "ex. 330 ml"} />
+          <input name="format" className={classesChamp} placeholder={nature === "ingredient" ? "ex. sac de 25 kg" : nature === "intermediaire" ? "ex. bac de 5 kg" : "ex. 330 ml"} />
         </Champ>
+      )}
+      {nature === "intermediaire" && (
+        <p className="text-sm text-muted-foreground sm:col-span-2">
+          Préparée au laboratoire à partir de matières premières (sa fiche technique se remplit ensuite), saisie en production, comptée au labo et
+          utilisée dans les fiches techniques des produits finis.
+        </p>
       )}
       {ingredient ? (
         <input type="hidden" name="suiviStock" value="on" />

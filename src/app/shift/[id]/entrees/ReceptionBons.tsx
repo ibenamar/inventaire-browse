@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { actionReceptionnerBon } from "@/app/actions-shift";
 import { Bouton, classesChamp, cx, Message } from "@/components/ui";
 import type { Unite } from "@/db/schema";
-import { formatQuantite, libelleQuantite, lireQuantite, UNITE_PLURIEL } from "@/domain/unites";
+import { formatQuantite, libelleQuantite, lireQuantite, UNITE_PLURIEL, nb } from "@/domain/unites";
 
 export interface BonAReceptionner {
   id: string;
@@ -73,7 +73,7 @@ export function ReceptionBons({ shiftId, bons }: { shiftId: string; bons: BonARe
                   </span>
                   <span className="block text-sm text-muted-foreground">
                     Expédié {b.expedie}
-                    {b.expediePar ? ` par ${b.expediePar}` : ""} · {b.lignes.length} produit(s)
+                    {b.expediePar ? ` par ${b.expediePar}` : ""} · {nb(b.lignes.length, "produit")}
                     {b.commentaire ? ` · ${b.commentaire}` : ""}
                   </span>
                 </span>
@@ -125,7 +125,7 @@ export function ReceptionBons({ shiftId, bons }: { shiftId: string; bons: BonARe
                     className={cx(classesChamp, "mt-1 mb-3")}
                   />
                   <Bouton grand disabled={enCours} onClick={() => valider(b)} className="w-full">
-                    {enCours ? "Enregistrement…" : ecarts ? `Réceptionner avec ${ecarts} écart(s)` : "Tout est conforme : réceptionner"}
+                    {enCours ? "Enregistrement…" : ecarts ? `Réceptionner avec ${nb(ecarts, "écart")}` : "Tout est conforme : réceptionner"}
                   </Bouton>
                 </div>
               )}

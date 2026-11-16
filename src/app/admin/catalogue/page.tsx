@@ -42,9 +42,10 @@ export default async function Catalogue() {
                 <div className="p-2">
                   <div className="line-clamp-2 min-h-10 text-sm leading-tight font-semibold">{p.nom}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                    {p.nature !== "ingredient" && <span>{formatMad(p.prixVente)} ·</span>}
+                    {p.nature === "produit" && <span>{formatMad(p.prixVente)} ·</span>}
                     <span>{UNITES[p.unite]}</span>
-                    {p.nature === "ingredient" && <Pastille ton="marque">ingrédient</Pastille>}
+                    {p.nature === "ingredient" && <Pastille ton="marque">matière première</Pastille>}
+                    {p.nature === "intermediaire" && <Pastille ton="marque">préparation</Pastille>}
                     {p.fabriqueLabo && <Pastille ton="bleu">labo</Pastille>}
                     {!p.suiviStock && <Pastille>vente seule</Pastille>}
                     {!p.actif && <Pastille ton="rouge">inactif</Pastille>}

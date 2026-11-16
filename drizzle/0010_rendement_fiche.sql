@@ -1,0 +1,1 @@
+ALTER TABLE "produits" ADD COLUMN "rendement_fiche" numeric(12, 3);

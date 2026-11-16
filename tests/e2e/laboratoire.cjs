@@ -141,7 +141,7 @@ async function toutCompter(page, valeur) {
   await labo.locator("td", { hasText: "Farine T55" }).waitFor();
   await shot(labo, "R01-rapport-labo", true);
   await labo.goto(B + "/admin/catalogue/nouveau");
-  await labo.getByRole("button", { name: "Ingrédient du laboratoire" }).click();
+  await labo.getByRole("button", { name: "Matière première" }).click();
   await shot(labo, "R02-nouvel-ingredient");
   void shiftPdv;
 

@@ -69,10 +69,10 @@ Selon le réglage du site (fait par la direction) :
 
 ## 6. Pendant le shift : les étapes
 
-L'écran du shift présente les étapes dans l'ordre. **Tous les membres de l'équipe connectés sur le site peuvent saisir** ; chaque saisie porte le nom de son auteur.
+L'écran du shift présente les étapes dans l'ordre. En haut, un **encadré dit en une phrase ce qu'il faut faire maintenant** (« Commencez par compter le stock », « Une livraison est arrivée », « Pendant le shift… », « Tout est compté ») et l'étape correspondante porte l'étiquette **« À faire maintenant »** ; une étape terminée affiche une coche verte. **Tous les membres de l'équipe connectés sur le site peuvent saisir** ; chaque saisie porte le nom de son auteur.
 
 ### 6.1 Comptage d'ouverture (si demandé)
-Grille de produits avec photo. Pour chaque produit : boutons **−** / **+** ou saisie directe ; pour les cakes, bouton **« + 1 gâteau entier »** (8 parts en général, selon le produit). Filtres par famille, recherche, bouton **« Restants »** pour ne voir que ce qui n'est pas encore compté, barre d'avancement.
+Grille de produits avec photo. Pour chaque produit : boutons **−** / **+** ou saisie directe ; pour les cakes, bouton **« + 1 gâteau entier »** (8 parts en général, selon le produit). Filtres par famille, recherche, bouton **« Restants »** pour ne voir que ce qui n'est pas encore compté, barre d'avancement. Chaque valeur s'enregistre toute seule ; quand tout est compté, un gros bouton **« Revenir au shift »** apparaît en bas de l'écran.
 
 ### 6.2 Réceptions
 Ce qui arrive pendant le shift : livraison du laboratoire, boissons du fournisseur, dépannage d'un autre point de vente.
@@ -106,7 +106,7 @@ La liste des réceptions enregistrées s'affiche dessous ; une erreur se supprim
 
 ### 6.5 Comptage de fin
 Compter **tout le stock réellement présent**, produit par produit. **Saisir 0** pour un produit épuisé (une case vide = « pas encore compté »).
-Le stock théorique **n'est pas affiché** pendant le comptage : on compte ce qu'on voit, sans être influencé. Le récapitulatif ne montre le théorique et les écarts **qu'au responsable, une fois tous les produits comptés**.
+Le stock attendu **n'est pas affiché** pendant le comptage : on compte ce qu'on voit, sans être influencé. Le récapitulatif ne montre le stock attendu et les écarts **qu'au responsable, une fois tous les produits comptés**.
 
 ### 6.6 Transférer vers un autre point de vente
 Lien « Transférer des produits vers un autre point de vente » sous les étapes : choisir le site, saisir les quantités, puis **Préparer** (bon en attente) ou **Expédier** (les produits sortent de votre stock). Le site destinataire le réceptionne comme une livraison du labo. On ne peut pas expédier plus que le stock disponible.
@@ -131,13 +131,13 @@ Contrôles sur les saisies :
 Le bouton **« Vérifier et clôturer le shift »** ouvre le **récapitulatif** :
 - ventes du shift par canal (réimportées automatiquement) ;
 - chiffres clés : articles vendus, CA, pertes, nombre et valeur des écarts, écarts de passation ;
-- **liste des produits en écart** (ex. « −1 Mango Can : théorique 6, compté 5 ») ;
-- tableau complet par famille : écart, compté, théorique, ouverture, entrées, ventes, pertes.
+- **liste des produits qui ne correspondent pas au stock attendu** (ex. « Mango Can : 5 comptés au lieu de 6 attendus (−1) »), ou un message vert « Aucun écart » ;
+- tableau complet par famille, replié sous **« Voir le détail des N produits »** : écart, compté, attendu, ouverture, entrées, ventes, pertes.
 
 Le calcul, pour chaque produit :
 
-> **Théorique** = ouverture + réceptions (et production au labo) − ventes − pertes − livraisons ou transferts expédiés
-> **Écart** = compté − théorique (négatif = il manque des produits : vente non passée en caisse, perte non déclarée, erreur de comptage)
+> **Attendu** = ouverture + réceptions (et production au labo) − ventes − pertes − livraisons ou transferts expédiés
+> **Écart** = compté − attendu (négatif = il manque des produits : vente non passée en caisse, perte non déclarée, erreur de comptage)
 
 Avant de clôturer, le responsable **vérifie les écarts** et recompte si besoin, puis ajoute un **commentaire de passation** et touche **« Clôturer et signer le shift »**. Le commentaire est **obligatoire en cas d'écart important** (au moins 3 unités sur un produit, ou 100 MAD au total) : le récapitulatif l'annonce et liste les produits concernés.
 
@@ -147,7 +147,7 @@ Contrôles à la clôture :
 - les ventes sont réimportées juste avant la clôture ; si Loyverse ne répond pas, la clôture se fait avec les ventes déjà connues et l'échec reste visible ;
 - le **stock compté devient l'ouverture du shift suivant**.
 
-**Clôture forcée** (manager uniquement, shift abandonné) : avec un motif obligatoire ; les produits non comptés prennent leur stock théorique ; le shift est marqué « Clôture forcée ».
+**Clôture forcée** (manager uniquement, shift abandonné) : avec un motif obligatoire ; les produits non comptés prennent leur stock attendu ; le shift est marqué « Clôture forcée ».
 
 ## 8. Après le shift (manager / direction)
 
@@ -190,11 +190,11 @@ Le laboratoire fonctionne comme un point de vente : planning avec un responsable
 
 | Étape | Ce qu'on fait |
 |---|---|
-| **Production** | ce qui sort du four ou de la préparation ; les cakes se saisissent **en gâteaux entiers** (convertis en parts) |
-| **Réceptions** | ingrédients et fournitures reçus des fournisseurs (décimales acceptées : 2,5 kg) |
+| **Production** | ce qui sort du four, en **gâteaux entiers** pour les cakes (convertis en parts), et les **préparations intermédiaires** faites (pâtes, crèmes, ganaches… en kg ou en litres) |
+| **Réceptions** | matières premières et fournitures reçues des fournisseurs (décimales acceptées : 2,5 kg) |
 | **Livraisons** | bons de livraison vers les points de vente : choisir le site, les quantités, puis **Préparer** ou **Expédier** au départ du livreur |
 | **Pertes** | comme au point de vente ; les cakes en gâteaux entiers |
-| **Comptage** | produits finis (cakes en gâteaux entiers) **et ingrédients** |
+| **Comptage** | produits finis (cakes en gâteaux entiers), **préparations intermédiaires** et **matières premières** |
 
 ### Préparer et expédier un bon de livraison
 
@@ -216,26 +216,39 @@ Contrôles :
 - on ne peut pas **expédier plus que le stock** : saisir d'abord la production ;
 - un bon préparé s'annule par l'équipe du labo ; un bon expédié non reçu, par un manager seulement (la sortie de stock est retirée) ; un bon reçu ne s'annule plus.
 
-À la clôture, pour un **ingrédient**, la différence entre le théorique et le compté n'est pas un écart mais la **consommation** du shift, valorisée au coût. Si les produits ont une **fiche technique**, la consommation attendue (production × recette) est affichée : « +0,5 vs fiche » signale une surconsommation.
+### Matières premières et préparations intermédiaires
 
-L'onglet **Laboratoire** (managers, direction) présente : la **prévision de production** du jour choisi (moyenne des ventes des 4 mêmes jours de semaine, stock minimum, stocks et livraisons en route), la production par jour, les livraisons par point de vente, les écarts de livraison, la consommation des ingrédients et les pertes du labo.
+Le stock du laboratoire a trois niveaux :
+
+```
+Matières premières ──▶ Préparations intermédiaires ──▶ Produits finis ──▶ points de vente
+(farine, beurre, lait)   (pâte sucrée, crème pâtissière)   (tartes, cakes)
+```
+
+- Une **préparation intermédiaire** est faite au labo à partir de matières premières (ou d'une autre préparation : crème mousseline ← crème pâtissière), saisie en **Production**, comptée à la fin du shift, puis utilisée dans les produits finis. Elle n'est ni vendue ni livrée.
+- Chaque fabrication consomme le niveau du dessous **d'après les fiches techniques** : produire 2 kg de pâte sucrée consomme sa farine et son beurre ; produire 4 tartes consomme la pâte et la crème (pas une deuxième fois leur farine).
+
+À la clôture, pour une **matière première** comme pour une **préparation**, la différence entre l'attendu et le compté n'est pas un écart mais la **consommation** du shift. Si les produits ont une **fiche technique**, la consommation attendue (production × fiche, niveau par niveau) est affichée : « +0,5 vs fiche » signale une surconsommation (gaspillage, perte non déclarée, production non saisie). La valeur consommée du shift ne compte que les matières premières : les préparations en sont faites.
+
+L'onglet **Laboratoire** (managers, direction) présente : la **prévision de production** du jour choisi (moyenne des ventes des 4 mêmes jours de semaine, stock minimum, stocks et livraisons en route) et les **besoins** qui en découlent — préparations à faire (déduction faite de leur stock) et matières premières manquantes —, la production par jour (produits et préparations), les livraisons par point de vente, les écarts de livraison, la consommation des matières premières et des préparations, et les pertes du labo.
 
 ### Journée type au laboratoire
 
 | Moment | Qui | Action |
 |---|---|---|
 | Avant le début | Responsable | Se connecte sur le site « Laboratoire », **ouvre le shift** |
-| Début | Manager / équipe | Consulte la **prévision de production** et les bons préparés (réapprovisionnement) |
-| Pendant | Équipe | **Production** à chaque fournée, **réceptions** d'ingrédients, **pertes** au fil de l'eau |
+| Début | Manager / équipe | Consulte la **prévision de production**, les **préparations à faire** et les matières manquantes, et les bons préparés (réapprovisionnement) |
+| Pendant | Équipe | **Production** à chaque fournée et à chaque préparation, **réceptions** de matières premières, **pertes** au fil de l'eau |
 | Départ du livreur | Équipe | **Livraisons** : ajuste puis **expédie** les bons vers les points de vente |
-| Fin | Équipe | **Comptage** des produits finis et des ingrédients |
-| Fin | Responsable | **Récapitulatif** (écarts produits, consommation d'ingrédients), **clôture** |
+| Fin | Équipe | **Comptage** des produits finis, des préparations et des matières premières |
+| Fin | Responsable | **Récapitulatif** (écarts produits, consommation des matières et des préparations), **clôture** |
 
-## 12. Catalogue : ingrédients, fiches techniques, conservation (direction)
+## 12. Catalogue : matières premières, préparations, fiches techniques, conservation (direction)
 
-- **Ingrédient** : Catalogue › Nouveau produit › « Ingrédient du laboratoire », en kg, litre, pièce, sachet, boîte ou bouteille. Coché « aussi compté dans les points de vente », il est compté dans les points de vente pour suivre les préparations à la commande (crêpes, pancakes…).
+- **Matière première** : Catalogue › Nouveau produit › « Matière première », en kg, litre, pièce, sachet, boîte ou bouteille. Coché « aussi compté dans les points de vente », elle est comptée dans les points de vente pour suivre les préparations à la commande (crêpes, pancakes…).
+- **Préparation intermédiaire** : Catalogue › Nouveau produit › « Préparation intermédiaire » (catégorie « Préparations intermédiaires »), en kg, litre ou pièce. Comptée au labo seulement ; sa fiche indique ce qu'elle utilise et la carte « Utilisé dans » les produits qui l'emploient.
 - **Produit fabriqué par le laboratoire** : case sur la fiche produit ; il est compté au labo et livré aux points de vente.
-- **Fiche technique** : ingrédients et quantités pour un gâteau entier (ou une unité). Elle donne le coût de la recette et par part ; « Appliquer comme coût de revient » l'enregistre. Elle sert aussi à calculer la consommation théorique d'ingrédients.
+- **Fiche technique** : se recopie **telle que la recette est écrite**. D'abord « Cette recette donne … » (ex. 2,5 kg de crème, 6 gâteaux entiers), puis chaque ingrédient ou préparation avec sa quantité pour cette fournée : l'application fait la règle de trois. Elle donne le coût de la recette et par part ou par kg ; « Utiliser ce coût comme coût de revient » l'enregistre. Une préparation sans coût saisi est valorisée par sa propre fiche. Une fiche ne peut pas boucler (une crème qui utiliserait une pâte faite avec cette crème est refusée). Elle sert aussi à calculer la consommation attendue et les besoins de production.
 - **Durée de conservation** (jours) : alimente l'alerte « DLC dépassée ? ».
 
 ## 13. Résumé : la journée type (point de vente)

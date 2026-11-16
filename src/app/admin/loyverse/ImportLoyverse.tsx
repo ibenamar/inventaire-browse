@@ -1,5 +1,6 @@
 "use client";
 
+import { nb } from "@/domain/unites";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -21,10 +22,10 @@ function Rapport({ rapport }: { rapport: RapportImport }) {
   return (
     <div className="grid gap-2 text-sm">
       <Message ton="succes">
-        {rapport.articlesImportes} article(s) Loyverse lus, {rapport.nouveauxAssocies.length} nouveau(x) rattaché(s) automatiquement.
+        {nb(rapport.articlesImportes, "article Loyverse lu", "articles Loyverse lus")}, {nb(rapport.nouveauxAssocies.length, "nouveau rattaché", "nouveaux rattachés")} automatiquement.
       </Message>
       {rapport.nonAssocies.length > 0 && (
-        <Message ton="alerte">{rapport.nonAssocies.length} article(s) en vente restent à rattacher ou à ignorer (ci-dessous).</Message>
+        <Message ton="alerte">{nb(rapport.nonAssocies.length, "article en vente reste", "articles en vente restent")} à rattacher ou à ignorer (ci-dessous).</Message>
       )}
       {rapport.produitsSansArticleSurPlace.length > 0 && (
         <Message ton="alerte">Produits sans article « sur place » en caisse : {rapport.produitsSansArticleSurPlace.join(", ")}</Message>
@@ -269,7 +270,7 @@ export function ArticlesNonAssocies({
                   type="button"
                   disabled={enCours}
                   onClick={() => {
-                    if (!window.confirm(`Ignorer les ${n} article(s) non rattachés de « ${cat ?? "sans catégorie"} » (hors inventaire) ?`)) return;
+                    if (!window.confirm(`Ignorer ${n > 1 ? `les ${n} articles non rattachés` : "l'article non rattaché"} de « ${cat ?? "sans catégorie"} » (hors inventaire) ?`)) return;
                     demarrer(async () => {
                       const r = await actionIgnorerCategorie(cat);
                       if (!r.ok) window.alert(r.erreur);

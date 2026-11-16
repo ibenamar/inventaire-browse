@@ -12,6 +12,7 @@ import {
   sites,
   utilisateurs,
   type StatutBon,
+  type NatureProduit,
   type Unite,
 } from "@/db/schema";
 import { arrondiQ, enParts, estQuantiteValide } from "@/domain/calculs";
@@ -413,14 +414,16 @@ export async function destinationsPossibles(db: Db, siteId: string) {
 // ---------------------------------------------------------------------------
 
 export interface RapportLabo {
-  production: { produitId: string; produit: string; unite: Unite; partsParGateau: number | null; total: number; parJour: Record<string, number> }[];
+  production: { produitId: string; produit: string; nature: NatureProduit; unite: Unite; partsParGateau: number | null; total: number; parJour: Record<string, number> }[];
   jours: string[];
   livraisons: { destination: string; bons: number; recus: number; enAttente: number; avecEcart: number }[];
   ecartsLivraison: { bonId: string; numero: number; destination: string; recuLe: Date | null; produit: string; unite: Unite; partsParGateau: number | null; expedie: number; recu: number }[];
   enAttente: BonVue[];
+  /** Matières premières puis préparations intermédiaires consommées. */
   consommation: {
     produitId: string;
     produit: string;
+    nature: NatureProduit;
     unite: Unite;
     quantite: number;
     /** Consommation attendue d'après les fiches techniques (null sans fiche). */
@@ -428,12 +431,16 @@ export interface RapportLabo {
     valeur: number | null;
     coutConnu: boolean;
   }[];
+  /** Valeur des matières premières consommées (les intermédiaires sont faits de ces matières). */
   valeurConsommation: number;
   pertes: { produitId: string; produit: string; unite: Unite; partsParGateau: number | null; quantite: number }[];
   shiftsClos: number;
 }
 
-/** Production, livraisons, écarts de livraison et consommation d'ingrédients d'un laboratoire sur une période. */
+/**
+ * Production (produits finis et préparations intermédiaires), livraisons, écarts de livraison et
+ * consommation des matières premières et des préparations d'un laboratoire sur une période.
+ */
 export async function rapportLabo(db: Db, siteId: string, du: string, au: string): Promise<RapportLabo> {
   const shiftsLabo = await db
     .select({ id: shifts.id, journee: shifts.journee, statut: shifts.statut })
@@ -450,6 +457,7 @@ export async function rapportLabo(db: Db, siteId: string, du: string, au: string
           shiftId: mouvements.shiftId,
           produitId: mouvements.produitId,
           produit: produits.nom,
+          nature: produits.nature,
           unite: produits.unite,
           partsParGateau: produits.partsParGateau,
           total: sql<number>`cast(sum(${mouvements.quantite}) as float8)`,
@@ -457,12 +465,12 @@ export async function rapportLabo(db: Db, siteId: string, du: string, au: string
         .from(mouvements)
         .innerJoin(produits, eq(produits.id, mouvements.produitId))
         .where(and(inArray(mouvements.shiftId, ids), eq(mouvements.type, "entree"), eq(mouvements.origine, "production")))
-        .groupBy(mouvements.shiftId, mouvements.produitId, produits.nom, produits.unite, produits.partsParGateau, produits.ordre)
+        .groupBy(mouvements.shiftId, mouvements.produitId, produits.nom, produits.nature, produits.unite, produits.partsParGateau, produits.ordre)
         .orderBy(asc(produits.ordre))
     : [];
   const production = new Map<string, RapportLabo["production"][number]>();
   for (const r of prod) {
-    const x = production.get(r.produitId) ?? { produitId: r.produitId, produit: r.produit, unite: r.unite, partsParGateau: r.partsParGateau, total: 0, parJour: {} };
+    const x = production.get(r.produitId) ?? { produitId: r.produitId, produit: r.produit, nature: r.nature, unite: r.unite, partsParGateau: r.partsParGateau, total: 0, parJour: {} };
     const j = journeeDe.get(r.shiftId)!;
     x.parJour[j] = arrondiQ((x.parJour[j] ?? 0) + Number(r.total));
     x.total = arrondiQ(x.total + Number(r.total));
@@ -506,7 +514,7 @@ export async function rapportLabo(db: Db, siteId: string, du: string, au: string
   for (const s of clos) {
     for (const l of toutes.get(s.id) ?? []) {
       if (l.calcul.consommation !== null && l.calcul.consommation !== 0) {
-        const x = conso.get(l.produitId) ?? { produitId: l.produitId, produit: l.nom, unite: l.unite, quantite: 0, theorique: null, valeur: 0, coutConnu: true };
+        const x = conso.get(l.produitId) ?? { produitId: l.produitId, produit: l.nom, nature: l.nature, unite: l.unite, quantite: 0, theorique: null, valeur: 0, coutConnu: true };
         x.quantite = arrondiQ(x.quantite + l.calcul.consommation);
         if (l.consommationTheorique !== null && l.consommationTheorique !== undefined) x.theorique = arrondiQ((x.theorique ?? 0) + l.consommationTheorique);
         if (l.calcul.valeurConsommation === null) x.coutConnu = false;
@@ -522,13 +530,14 @@ export async function rapportLabo(db: Db, siteId: string, du: string, au: string
   }
   const consommation = [...conso.values()].sort((a, b) => (b.valeur ?? 0) - (a.valeur ?? 0) || b.quantite - a.quantite);
   return {
-    production: [...production.values()],
+    // Produits finis d'abord, puis les préparations intermédiaires.
+    production: [...production.values()].sort((a, b) => Number(a.nature === "intermediaire") - Number(b.nature === "intermediaire")),
     jours: [...new Set(shiftsLabo.map((s) => s.journee))],
     livraisons: [...parDest.values()],
     ecartsLivraison,
     enAttente: (await listerBons(db, { siteOrigineId: siteId, statuts: ["expedie"], limite: 50 })),
     consommation,
-    valeurConsommation: Math.round(consommation.reduce((t, c) => t + (c.valeur ?? 0), 0) * 100) / 100,
+    valeurConsommation: Math.round(consommation.reduce((t, c) => t + (c.nature === "ingredient" ? (c.valeur ?? 0) : 0), 0) * 100) / 100,
     pertes: [...pertes.values()],
     shiftsClos: clos.length,
   };

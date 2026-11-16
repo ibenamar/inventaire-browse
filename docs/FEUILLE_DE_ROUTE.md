@@ -208,6 +208,7 @@ JournalAudit(id, utilisateur_id, action, entite, avant, apres, horodatage)
 - [x] Inventaire des ingrédients en point de vente (case « aussi compté dans les points de vente »)
 - [x] Suivi des DLC : stock plus ancien que la durée de conservation signalé (premier entré, premier sorti)
 - [x] Prévision de production **du labo** par point de vente et jour de semaine (ventes + pertes, minimum, stocks, livraisons en route) — pas encore par créneau
+- [x] **Préparations intermédiaires** du laboratoire (pâtes, crèmes, ganaches) entre matières premières et produits finis : fiches techniques à plusieurs niveaux (sans boucle), coût calculé niveau par niveau, production et comptage au labo, consommation attendue par niveau, besoins en préparations et en matières premières tirés de la prévision
 - [ ] Multilingue (FR / AR / EN) — à cadrer : arabe standard ou darija, écrans concernés, relecture par des locuteurs
 
 ## 7. Indicateurs de réussite

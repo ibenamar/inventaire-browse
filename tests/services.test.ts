@@ -1,3 +1,4 @@
+import "./horloge";
 import { readFileSync } from "node:fs";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -215,7 +216,7 @@ describe("enchaînement des shifts", () => {
     const mango = await produitParRef("P001");
     const cake = await produitParRef("P009");
     const crepe = await produitParRef("P035");
-    await expect(cloturerShift(db, matin, amine, at("2026-11-13T15:00:00Z"), null)).rejects.toThrow(/sans stock d'ouverture/);
+    await expect(cloturerShift(db, matin, amine, at("2026-11-13T15:00:00Z"), null)).rejects.toThrow(/à compter à l'ouverture/);
     await expect(saisirQuantite(db, matin, crepe.id, "stockReelFin", 3, amine, at("2026-11-13T08:00:00Z"))).rejects.toThrow(/vente seule/);
 
     await compterTout(matin, "ouvertureComptee", () => 10, amine);

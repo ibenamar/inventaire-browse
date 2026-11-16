@@ -7,7 +7,10 @@ import { EnteteEtape } from "../EnteteEtape";
 import { FormulaireEntrees } from "../entrees/FormulaireEntrees";
 import { ListeMouvements } from "../ListeMouvements";
 
-/** Production du laboratoire : les fabrications du shift entrent dans son stock. */
+/**
+ * Production du laboratoire : produits finis et préparations intermédiaires fabriqués pendant le shift
+ * entrent dans son stock ; leurs fiches techniques donnent la consommation attendue de leurs composants.
+ */
 export default async function Production({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { d, session, peutSaisir } = await chargerShift(id);
@@ -17,10 +20,14 @@ export default async function Production({ params }: { params: Promise<{ id: str
     auteur === session.acteur.id || estEncadrant(session.acteur) || d.shift.responsableId === session.acteur.id;
   return (
     <>
-      <EnteteEtape id={id} titre="Production" aide="Saisissez ce qui sort du four ou de la préparation. Les cakes se saisissent en gâteaux entiers." />
+      <EnteteEtape
+        id={id}
+        titre="Production"
+        aide="Saisissez ce qui sort du four et les préparations intermédiaires faites (pâtes, crèmes… en kg ou en litres). Les cakes se saisissent en gâteaux entiers."
+      />
       <FormulaireEntrees
         shiftId={id}
-        produits={d.lignes.filter((l) => l.suiviStock && l.nature === "produit").map(pourSaisie)}
+        produits={d.lignes.filter((l) => l.suiviStock && l.nature !== "ingredient").map(pourSaisie)}
         origines={[{ v: "production", l: "Production" }]}
         gateauxParDefaut
         libelleAction="Enregistrer la production"

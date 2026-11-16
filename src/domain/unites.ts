@@ -60,3 +60,11 @@ export function libelleQuantite(q: number, p: { unite: Unite; partsParGateau: nu
   }
   return `${formatQuantite(q)} ${q > 1 || p.unite === "kg" ? UNITE_PLURIEL[p.unite] : UNITE_SINGULIER[p.unite]}`;
 }
+
+/**
+ * Nombre accordé, sans « (s) » : nb(1, "produit") → « 1 produit », nb(3, "produit") → « 3 produits »,
+ * nb(2, "gâteau", "gâteaux"). Accorder une expression entière : nb(n, "produit compté", "produits comptés").
+ */
+export function nb(n: number, singulier: string, pluriel = `${singulier}s`): string {
+  return `${formatQuantite(n)} ${Math.abs(n) >= 2 ? pluriel : singulier}`;
+}

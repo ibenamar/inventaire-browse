@@ -71,7 +71,7 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
   await page.getByRole("button", { name: "Endommagé" }).click();
   await shot("06-perte");
   await page.getByRole("button", { name: "Déclarer la perte" }).click();
-  await page.getByText(/déclaré\(s\) en perte/).waitFor();
+  await page.getByText(/Perte enregistrée/).waitFor();
 
   await page.goto(shiftUrl + "/ventes");
   // 9 Mango Can vendus : 6 sur place + 3 via Glovo (SKU et prix différents, même stock).
@@ -97,6 +97,8 @@ const OUT = process.env.OUT || require("node:os").tmpdir();
   await page.screenshot({ path: `${OUT}/08-recap.png`, fullPage: true, caret: "initial" });
   await page.getByRole("button", { name: "Clôturer et signer le shift" }).click();
   await page.getByText(/Clôturé le/).waitFor();
+  await page.getByText("Mango Can : 5 comptés au lieu de 6 attendus").waitFor();
+  await page.getByText(/Voir le détail des/).click(); // tableau complet replié par défaut
   const ecartMango = await page.locator("tr", { hasText: "Mango Can" }).locator("td").nth(1).innerText();
   if (ecartMango.trim() !== "-1") throw new Error("écart Mango attendu -1, obtenu " + ecartMango);
   const entreesMatilda = await page.locator("tr", { hasText: "Matilda Cake" }).locator("td").nth(5).innerText();
